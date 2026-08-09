@@ -6,8 +6,8 @@ import { useState } from "react";
 import { ExperienceCoverThumb } from "@/components/experience-cover-thumb";
 import {
   countryCodeFromPlaceLabel,
-  countryNameFromPlaceLabel,
   shortPlaceCaption,
+  usStateCodeFromPlaceLabel,
 } from "@moments-forever/shared";
 
 import type { OwnerPlaceCardItem } from "@/lib/experiences/load-owner-place-cards";
@@ -43,21 +43,16 @@ export function ProfilePlaceCard({
   const [editOpen, setEditOpen] = useState(false);
   const [mergeOpen, setMergeOpen] = useState(false);
 
-  const countryCode =
-    place.countryCode ?? countryCodeFromPlaceLabel(place.title);
   const caption = shortPlaceCaption(place.title);
-  const countryLabel =
-    countryNameFromPlaceLabel(place.title) ??
-    caption?.shortLabel ??
-    place.title;
-  const placeLine =
-    place.title.trim().toLowerCase() !== countryLabel.trim().toLowerCase()
-      ? place.title
-      : caption?.shortLabel &&
-          caption.shortLabel.trim().toLowerCase() !==
-            countryLabel.trim().toLowerCase()
-        ? caption.shortLabel
-        : null;
+  const countryCode =
+    place.countryCode ??
+    caption?.countryCode ??
+    countryCodeFromPlaceLabel(place.title);
+  // One label only (flag + name). Auto captions stay short; US "City, ST"
+  // and other manual titles keep what the owner typed.
+  const displayLabel = usStateCodeFromPlaceLabel(place.title)
+    ? place.title.trim()
+    : caption?.shortLabel?.trim() || place.title.trim();
   const metaLine = [
     formatCardDate(place.startsAt, place.endsAt),
     `${place.photoCount} foto${place.photoCount === 1 ? "" : "s"}`,
@@ -90,11 +85,8 @@ export function ProfilePlaceCard({
                 width={20}
               />
             ) : null}
-            <span>{countryLabel}</span>
+            <span>{displayLabel}</span>
           </p>
-          {placeLine ? (
-            <h3 className={styles.cardTitle}>{placeLine}</h3>
-          ) : null}
           {metaLine ? <p className={styles.cardMetaLine}>{metaLine}</p> : null}
         </div>
       </div>

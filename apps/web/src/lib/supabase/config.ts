@@ -1,8 +1,12 @@
 import {
-  assertLocalSupabaseUrl,
+  assertSupabaseUrl,
   readSupabasePublicConfig,
 } from "@moments-forever/shared";
 
+/**
+ * Public Supabase config for the web app.
+ * Returns null when unset/invalid so Next.js build/prerender does not crash.
+ */
 export function getSupabaseConfig() {
   const config = readSupabasePublicConfig(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -12,9 +16,12 @@ export function getSupabaseConfig() {
     return null;
   }
 
-  // Stage 1: web persistence and auth point only at local Supabase.
-  return {
-    url: assertLocalSupabaseUrl(config.url),
-    anonKey: config.anonKey,
-  };
+  try {
+    return {
+      url: assertSupabaseUrl(config.url),
+      anonKey: config.anonKey,
+    };
+  } catch {
+    return null;
+  }
 }

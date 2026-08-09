@@ -1132,26 +1132,57 @@ export function suggestExperienceSlug(
   return `${base}-${cleanSuffix}`;
 }
 
-/** Stage 1 guard: persistence clients must target local Supabase only. */
-export function assertLocalSupabaseUrl(url: string): string {
-  const trimmed = url.trim().replace(/\/$/, "");
-  let parsed: URL;
+function normalizeSupabaseUrlInput(url: string): string {
+  return url.trim().replace(/\/$/, "");
+}
+
+function parseSupabaseUrl(url: string): URL {
   try {
-    parsed = new URL(trimmed);
+    return new URL(normalizeSupabaseUrlInput(url));
   } catch {
     throw new Error("SUPABASE_URL must be a valid URL.");
   }
+}
 
+function isLocalSupabaseHost(parsed: URL): boolean {
   const host = parsed.hostname.toLowerCase();
-  const isLocal =
+  return (
     (host === "127.0.0.1" || host === "localhost") &&
-    (parsed.protocol === "http:" || parsed.protocol === "https:");
+    (parsed.protocol === "http:" || parsed.protocol === "https:")
+  );
+}
 
-  if (!isLocal) {
+function isHostedSupabaseUrl(parsed: URL): boolean {
+  const host = parsed.hostname.toLowerCase();
+  return (
+    parsed.protocol === "https:" &&
+    (host.endsWith(".supabase.co") || host.endsWith(".supabase.in"))
+  );
+}
+
+/** Local-only guard (backend / local tooling). */
+export function assertLocalSupabaseUrl(url: string): string {
+  const trimmed = normalizeSupabaseUrlInput(url);
+  const parsed = parseSupabaseUrl(trimmed);
+  if (!isLocalSupabaseHost(parsed)) {
     throw new Error(
       "Stage 1 persistence accepts only a local Supabase URL (localhost/127.0.0.1).",
     );
   }
+  return trimmed;
+}
 
+/**
+ * Web/runtime guard: local Supabase or hosted project URL (*.supabase.co).
+ * Used by the Next.js app for Vercel + local development.
+ */
+export function assertSupabaseUrl(url: string): string {
+  const trimmed = normalizeSupabaseUrlInput(url);
+  const parsed = parseSupabaseUrl(trimmed);
+  if (!isLocalSupabaseHost(parsed) && !isHostedSupabaseUrl(parsed)) {
+    throw new Error(
+      "SUPABASE_URL must be a local Supabase URL or a https://*.supabase.co project URL.",
+    );
+  }
   return trimmed;
 }

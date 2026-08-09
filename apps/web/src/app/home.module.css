@@ -1,0 +1,371 @@
+/* Home — institutional landing, mobile first. */
+
+.home {
+  --home-max: 960px;
+  --home-radius: 22px;
+  position: relative;
+  min-height: 100vh;
+  overflow-x: clip;
+  padding: 16px 16px 40px;
+  background:
+    radial-gradient(
+      120% 80% at 10% -10%,
+      color-mix(in srgb, var(--accent) 12%, transparent),
+      transparent 55%
+    ),
+    radial-gradient(
+      90% 60% at 100% 0%,
+      color-mix(in srgb, var(--surface-secondary) 80%, transparent),
+      transparent 50%
+    ),
+    var(--background);
+}
+
+.header {
+  display: flex;
+  max-width: var(--home-max);
+  min-height: 52px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 auto;
+}
+
+.header :global(.wordmark) {
+  width: 156px;
+  height: 58px;
+  background-position: -35px -47px;
+  background-size: 226px 151px;
+}
+
+.header :global(.auth-actions) {
+  gap: 6px 8px;
+}
+
+.header :global(.text-link),
+.header :global(.link-button) {
+  min-height: 40px;
+  font-size: 0.92rem;
+}
+
+@media (max-width: 430px) {
+  .header :global(.home-nav-viagens),
+  .header :global(.home-nav-perfil) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}
+
+.main {
+  display: grid;
+  gap: 48px;
+  max-width: var(--home-max);
+  margin: 0 auto;
+  padding-top: 28px;
+}
+
+/* —— Hero —— */
+
+.hero {
+  display: grid;
+  gap: 24px;
+  justify-items: center;
+  text-align: center;
+}
+
+.heroVisual {
+  width: min(220px, 56vw);
+  animation: homeRise 0.9s ease both;
+}
+
+.heroMark {
+  overflow: hidden;
+  border-radius: 28px;
+  background: var(--surface);
+  box-shadow:
+    0 18px 40px var(--shadow),
+    0 0 0 1px color-mix(in srgb, var(--border) 70%, transparent);
+}
+
+.heroMark img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.heroCopy {
+  display: grid;
+  gap: 12px;
+  justify-items: center;
+  max-width: 36rem;
+  animation: homeRise 0.85s ease 0.08s both;
+}
+
+.brand {
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.title {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(2.1rem, 8.2vw, 3.2rem);
+  font-weight: 500;
+  letter-spacing: -0.04em;
+  line-height: 1.08;
+  text-wrap: balance;
+}
+
+.lead {
+  max-width: 28ch;
+  color: var(--text-secondary);
+  font-size: 1.05rem;
+  line-height: 1.55;
+}
+
+.ctaRow {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+  max-width: 360px;
+  margin-top: 8px;
+}
+
+.ctaRow :global(.button) {
+  width: 100%;
+}
+
+/* —— Concepts (typography only) —— */
+
+.section {
+  display: grid;
+  gap: 22px;
+  animation: homeRise 0.8s ease both;
+}
+
+.sectionHead {
+  display: grid;
+  gap: 8px;
+  text-align: center;
+  justify-items: center;
+}
+
+.sectionTitle {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.55rem, 5vw, 2.1rem);
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  text-wrap: balance;
+}
+
+.sectionLead {
+  max-width: 40ch;
+  color: var(--text-secondary);
+  font-size: 0.98rem;
+  line-height: 1.55;
+}
+
+.conceptList {
+  display: grid;
+  gap: 0;
+  list-style: none;
+  border-top: 1px solid var(--border);
+}
+
+.conceptItem {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 16px;
+  align-items: start;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+
+.conceptIndex {
+  color: var(--accent);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 0.95rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  line-height: 1.4;
+  padding-top: 2px;
+}
+
+.conceptItem h3 {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.3rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  margin-bottom: 4px;
+}
+
+.conceptItem p {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+/* —— Final CTA —— */
+
+.finale {
+  display: grid;
+  gap: 12px;
+  justify-items: center;
+  padding: 28px 20px;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--home-radius) + 6px);
+  text-align: center;
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--accent) 8%, var(--surface)),
+      var(--surface)
+    );
+  animation: homeRise 0.8s ease both;
+}
+
+.finale h2 {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.55rem, 5vw, 2.1rem);
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  text-wrap: balance;
+}
+
+.finale p {
+  color: var(--text-secondary);
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
+.finale .ctaRow {
+  margin-inline: auto;
+}
+
+.footer {
+  display: grid;
+  gap: 6px;
+  max-width: var(--home-max);
+  margin: 36px auto 0;
+  color: var(--text-secondary);
+  font-size: 0.86rem;
+  text-align: center;
+}
+
+@keyframes homeRise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heroVisual,
+  .heroCopy,
+  .section,
+  .finale {
+    animation: none !important;
+  }
+}
+
+/* —— Tablet+ —— */
+
+@media (min-width: 720px) {
+  .home {
+    padding: 24px 32px 56px;
+  }
+
+  .header :global(.wordmark) {
+    width: 184px;
+    height: 68px;
+    background-position: -41px -55px;
+    background-size: 267px 178px;
+  }
+
+  .main {
+    gap: 64px;
+    padding-top: 40px;
+  }
+
+  .hero {
+    grid-template-columns: auto 1fr;
+    gap: 40px;
+    align-items: center;
+    justify-items: start;
+    text-align: left;
+  }
+
+  .heroVisual {
+    width: 260px;
+  }
+
+  .heroCopy {
+    justify-items: start;
+  }
+
+  .title {
+    font-size: clamp(2.6rem, 4.2vw, 3.6rem);
+  }
+
+  .ctaRow {
+    grid-template-columns: auto auto;
+    width: auto;
+    max-width: none;
+    justify-content: start;
+  }
+
+  .ctaRow :global(.button) {
+    width: auto;
+    min-width: 180px;
+  }
+
+  .sectionHead {
+    text-align: left;
+    justify-items: start;
+  }
+
+  .conceptList {
+    max-width: 40rem;
+  }
+
+  .finale {
+    padding: 40px 48px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .home {
+    padding: 28px 48px 72px;
+  }
+
+  .main {
+    gap: 80px;
+    padding-top: 48px;
+  }
+
+  .hero {
+    gap: 56px;
+    min-height: min(58vh, 520px);
+  }
+
+  .heroVisual {
+    width: 300px;
+  }
+
+  .lead {
+    font-size: 1.12rem;
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "name": "moments-forever",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "backend"
+  ],
+  "engines": {
+    "node": ">=20.19.4",
+    "npm": ">=10"
+  },
+  "scripts": {
+    "dev:web": "npm run dev --workspace=@moments-forever/web",
+    "dev:mobile": "npm run dev --workspace=@moments-forever/mobile",
+    "dev:backend": "npm run dev --workspace=@moments-forever/backend",
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "npm run lint --workspace=@moments-forever/web && eslint apps/mobile/App.tsx apps/mobile/index.ts apps/mobile/src backend/src packages",
+    "test": "npm run test --workspaces --if-present"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "eslint": "^9.39.5",
+    "globals": "^17.9.0",
+    "typescript-eslint": "^8.66.0"
+  }
+}

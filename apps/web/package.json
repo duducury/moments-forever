@@ -1,0 +1,33 @@
+{
+  "name": "@moments-forever/web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "test": "node --import tsx --test src/lib/photo-import/browser-metadata.test.ts src/lib/location/*.test.ts src/lib/profile/profile-slug.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@moments-forever/config": "*",
+    "@moments-forever/shared": "*",
+    "@supabase/ssr": "^0.7.0",
+    "@supabase/supabase-js": "^2.55.0",
+    "exifr": "7.1.3",
+    "leaflet": "^1.9.4",
+    "next": "16.3.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@types/leaflet": "^1.9.22",
+    "@types/node": "^20",
+    "@types/react": "19.2.2",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.0",
+    "typescript": "^5"
+  }
+}

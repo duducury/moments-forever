@@ -1,0 +1,30 @@
+.strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+  width: 100%;
+}
+
+.thumb {
+  display: block;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface-secondary) 80%, var(--border));
+}
+
+.thumb[data-has-image="false"] {
+  background:
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--accent) 35%, var(--surface-secondary)),
+      var(--surface-secondary)
+    );
+}
+
+.image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}

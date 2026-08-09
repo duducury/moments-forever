@@ -1,0 +1,1902 @@
+.page {
+  width: min(100%, 960px);
+  margin: 0 auto;
+  padding: 24px 0 80px;
+}
+
+.navRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: 28px;
+  min-height: clamp(280px, 52vw, 420px);
+  color: white;
+  box-shadow: 0 24px 60px rgb(51 40 25 / 12%);
+}
+
+.heroVisual {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgb(29 29 27 / 8%) 0%, rgb(29 29 27 / 78%) 72%),
+    linear-gradient(135deg, #c8a17e 0%, #9d4e35 48%, #5f7167 100%);
+}
+
+.heroVisual[data-has-image="true"] {
+  background: rgb(29 29 27);
+}
+
+.heroImage {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  image-orientation: from-image;
+}
+
+.heroVisual[data-has-image="true"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgb(29 29 27 / 12%) 0%,
+    rgb(29 29 27 / 72%) 78%
+  );
+}
+
+.heroVisual[data-tone="a"] {
+  background:
+    linear-gradient(180deg, transparent 20%, rgb(29 29 27 / 78%)),
+    linear-gradient(140deg, #d4a574, #9d4e35, #3f4f4a);
+}
+
+.heroVisual[data-tone="b"] {
+  background:
+    linear-gradient(180deg, transparent 20%, rgb(29 29 27 / 78%)),
+    linear-gradient(150deg, #e2d3c0, #8a6a4f, #5f7167);
+}
+
+.heroVisual[data-tone="c"] {
+  background:
+    linear-gradient(180deg, transparent 20%, rgb(29 29 27 / 78%)),
+    linear-gradient(160deg, #c9b8a0, #9d4e35, #2f3d38);
+}
+
+.heroContent {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  min-height: inherit;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: clamp(20px, 4vw, 36px);
+}
+
+.eyebrow {
+  color: rgb(255 255 255 / 78%);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.title {
+  max-width: 16ch;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(2.1rem, 8vw, 3.6rem);
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  line-height: 1.02;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
+.metaLine,
+.description {
+  max-width: 42rem;
+  color: rgb(255 255 255 / 88%);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 0;
+}
+
+.summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin: 22px 0 36px;
+}
+
+.summaryItem {
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 14px 16px;
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+}
+
+.summaryItem span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.summaryItem strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 1rem;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.moments {
+  display: grid;
+  gap: 28px;
+}
+
+.moment {
+  scroll-margin-top: 24px;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 18px;
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+}
+
+.momentHeaderRow {
+  display: flex;
+  width: 100%;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+}
+
+.momentHeaderRow h2 {
+  font-size: clamp(1.35rem, 3vw, 1.7rem);
+  line-height: 1.2;
+}
+
+.momentMeta {
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.moreLink {
+  margin-top: 12px;
+  border: 0;
+  padding: 0;
+  color: var(--accent);
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: 10px;
+}
+
+.tileButton {
+  display: block;
+  width: 100%;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.tile {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 16px;
+  border: 1px solid rgb(51 40 25 / 8%);
+  background:
+    linear-gradient(160deg, rgb(255 255 255 / 28%), transparent 45%),
+    linear-gradient(135deg, #e8dccf, #c4a488 55%, #8f6d54);
+}
+
+.tile[data-has-image="true"] {
+  background: #1d1d1b;
+}
+
+.tileImage {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  image-orientation: from-image;
+}
+
+.tileImageFull {
+  z-index: 1;
+}
+
+.tile[data-tone="0"] {
+  background:
+    linear-gradient(160deg, rgb(255 255 255 / 24%), transparent 50%),
+    linear-gradient(135deg, #e8dccf, #c4a488, #8f6d54);
+}
+
+.tile[data-tone="1"] {
+  background:
+    linear-gradient(160deg, rgb(255 255 255 / 24%), transparent 50%),
+    linear-gradient(145deg, #d7e0d8, #8fa396, #5f7167);
+}
+
+.tile[data-tone="2"] {
+  background:
+    linear-gradient(160deg, rgb(255 255 255 / 24%), transparent 50%),
+    linear-gradient(150deg, #f0e2d4, #d0a58a, #9d4e35);
+}
+
+.tile[data-tone="3"] {
+  background:
+    linear-gradient(160deg, rgb(255 255 255 / 24%), transparent 50%),
+    linear-gradient(155deg, #e5ddd2, #a89988, #6b5b4d);
+}
+
+.tileLabel {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  left: 8px;
+  color: white;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.3;
+  text-shadow: 0 1px 8px rgb(0 0 0 / 45%);
+}
+
+.coverBadge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  border-radius: 999px;
+  padding: 4px 8px;
+  color: white;
+  background: rgb(29 29 27 / 55%);
+  font-size: 0.68rem;
+  font-weight: 750;
+}
+
+.collapsedHint {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.panel {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: end center;
+  padding: 16px;
+  background: rgb(29 29 27 / 45%);
+}
+
+.panelCard,
+.panelCardWide {
+  width: min(100%, 560px);
+  max-height: min(88vh, 720px);
+  overflow: auto;
+  border-radius: 24px 24px 20px 20px;
+  padding: 20px;
+  background: var(--surface);
+  box-shadow: 0 24px 60px rgb(29 29 27 / 25%);
+}
+
+.panelCardWide {
+  width: min(100%, 880px);
+}
+
+.organizePanelCard {
+  width: min(100%, 760px);
+  max-height: min(92vh, 920px);
+  overflow: auto;
+}
+
+.panelCard h2,
+.panelCardWide h2 {
+  margin-bottom: 8px;
+  font-size: 1.35rem;
+}
+
+.panelTop {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.panelEyebrow {
+  margin-bottom: 4px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.panelCard form {
+  gap: 8px;
+}
+
+.textarea {
+  width: 100%;
+  min-height: 110px;
+  resize: vertical;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  color: var(--ink);
+  background: var(--surface);
+  font: inherit;
+}
+
+.panelCard select,
+.panelCard input[type="text"],
+.photoOrganizeBar select {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  color: var(--ink);
+  background: var(--surface);
+  font: inherit;
+}
+
+.photoOrganizeBar select {
+  width: auto;
+  min-width: 160px;
+}
+
+.addPhotosPlacement {
+  display: grid;
+  gap: 10px;
+  margin: 4px 0 8px;
+  border: 0;
+  padding: 0;
+}
+
+.addPhotosPlacement legend {
+  margin-bottom: 4px;
+  font-size: 0.88rem;
+  font-weight: 750;
+}
+
+.addPhotosRadio {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: start;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  cursor: pointer;
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+}
+
+.addPhotosRadio span {
+  display: grid;
+  gap: 2px;
+  font-size: 0.94rem;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.addPhotosRadio small {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+.addPhotosFileLabel {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  margin-top: 8px;
+  border-radius: 999px;
+  padding: 0 18px;
+  color: #fff;
+  background: var(--accent);
+  cursor: pointer;
+  font-weight: 650;
+}
+
+.addPhotosFileLabel input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.tripLugaresLayout {
+  display: grid;
+  gap: 28px;
+}
+
+.photoOrganizeBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.photoOrganizeTile {
+  display: grid;
+  gap: 6px;
+}
+
+.photoOrganizeTile .tileButton[data-selected="true"] {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.photoOrganizeControls {
+  display: flex;
+  gap: 6px;
+}
+
+.photoOrganizeControls :global(.button.secondary) {
+  min-height: 36px;
+  padding: 0 10px;
+}
+
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: color-mix(in srgb, var(--background) 28%, rgb(0 0 0 / 72%));
+  touch-action: pan-y;
+}
+
+.lightboxClose {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  border-radius: 999px;
+  padding: 0;
+  color: var(--text);
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  box-shadow: 0 8px 24px var(--shadow);
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.lightboxArrow {
+  position: absolute;
+  top: 50%;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  border-radius: 999px;
+  color: var(--text);
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  box-shadow: 0 8px 24px var(--shadow);
+  cursor: pointer;
+  font-size: 1.8rem;
+  line-height: 1;
+  transform: translateY(-50%);
+}
+
+.lightboxArrowPrev {
+  left: 12px;
+}
+
+.lightboxArrowNext {
+  right: 12px;
+}
+
+.lightboxStageWrap {
+  position: relative;
+  width: min(100%, 960px);
+  max-height: min(88vh, 920px);
+}
+
+.lightboxStage {
+  position: relative;
+  width: 100%;
+  max-height: min(82vh, 860px);
+  min-height: min(42vh, 320px);
+  aspect-ratio: 4 / 3;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 24px 60px var(--shadow);
+  background: color-mix(in srgb, var(--surface-secondary) 80%, transparent);
+}
+
+.lightboxStage[data-has-image="true"] {
+  background: #111;
+}
+
+.lightboxImage {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-orientation: from-image;
+}
+
+.lightboxImageFull {
+  z-index: 1;
+}
+
+.lightboxCaption {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 2;
+  margin: 0;
+  padding: 14px 16px;
+  color: white;
+  font-size: 0.9rem;
+  font-weight: 650;
+  text-shadow: 0 1px 10px rgb(0 0 0 / 45%);
+  background: linear-gradient(180deg, transparent, rgb(0 0 0 / 55%));
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: 0 0 18px 18px;
+  pointer-events: none;
+}
+
+.panelActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.coverGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 8px;
+  margin: 12px 0 8px;
+}
+
+.coverOption {
+  aspect-ratio: 1;
+  border: 2px solid transparent;
+  border-radius: 14px;
+  padding: 0;
+  cursor: pointer;
+}
+
+.coverOption[data-selected="true"] {
+  border-color: var(--accent);
+}
+
+.error {
+  margin-top: 10px;
+  color: #9d4e35;
+  font-size: 0.9rem;
+}
+
+.breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 18px;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.breadcrumbItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.breadcrumbSep {
+  color: rgb(51 40 25 / 35%);
+}
+
+.libraryEyebrow {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.folderHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.folderTitle {
+  margin: 6px 0 8px;
+  font-size: clamp(2rem, 6vw, 3.2rem);
+  line-height: 1.05;
+}
+
+.albumSection {
+  margin-top: 28px;
+}
+
+.albumSectionHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: clamp(1.4rem, 3vw, 1.8rem);
+  line-height: 1.15;
+}
+
+.sectionHint {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+.albumGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+}
+
+.albumCard {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  box-shadow: 0 16px 40px rgb(51 40 25 / 6%);
+}
+
+.albumCardLink {
+  display: grid;
+  color: inherit;
+  text-decoration: none;
+}
+
+.albumCover {
+  position: relative;
+  display: block;
+  aspect-ratio: 16 / 11;
+  overflow: hidden;
+  background:
+    linear-gradient(160deg, rgb(255 255 255 / 24%), transparent 50%),
+    linear-gradient(135deg, #e8dccf, #c4a488, #8f6d54);
+}
+
+.albumCover[data-tone="1"] {
+  background:
+    linear-gradient(160deg, rgb(255 255 255 / 24%), transparent 50%),
+    linear-gradient(145deg, #d7e0d8, #8fa396, #5f7167);
+}
+
+.albumCover[data-tone="2"] {
+  background:
+    linear-gradient(160deg, rgb(255 255 255 / 24%), transparent 50%),
+    linear-gradient(150deg, #f0e2d4, #d0a58a, #9d4e35);
+}
+
+.albumCover[data-tone="3"] {
+  background:
+    linear-gradient(160deg, rgb(255 255 255 / 24%), transparent 50%),
+    linear-gradient(155deg, #e5ddd2, #a89988, #6b5b4d);
+}
+
+.albumCover[data-has-image="true"] {
+  background: #1d1d1b;
+}
+
+.albumCoverImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  image-orientation: from-image;
+}
+
+.albumCardBody {
+  padding: 16px 18px 8px;
+}
+
+.albumCardBody h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  line-height: 1.25;
+}
+
+.albumCardBody p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.albumCardActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 18px 18px;
+}
+
+.albumCardActions :global(.button.secondary) {
+  min-height: 40px;
+  padding: 0 12px;
+}
+
+.tripTabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 22px 0 8px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  width: fit-content;
+  max-width: 100%;
+}
+
+.tripTab {
+  min-height: 40px;
+  border: 0;
+  border-radius: 999px;
+  padding: 0 16px;
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 650;
+}
+
+.tripTab[aria-selected="true"] {
+  color: var(--ink);
+  background: var(--surface);
+  box-shadow: 0 8px 20px rgb(51 40 25 / 8%);
+}
+
+.mapLayout {
+  display: grid;
+  gap: 16px;
+}
+
+.mapFrame {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  background: #ece7df;
+  box-shadow: 0 18px 40px var(--shadow);
+}
+
+.mapCanvas {
+  width: 100%;
+  height: min(62vh, 520px);
+  min-height: 300px;
+}
+
+.mapCanvas :global(.leaflet-control-attribution),
+.mapCanvasFeatured :global(.leaflet-control-attribution),
+.mapCanvasCompact :global(.leaflet-control-attribution) {
+  font-size: 10px;
+  color: #1d1d1b;
+  background: rgb(255 255 255 / 78%);
+}
+
+.mapCanvas :global(.leaflet-control-zoom a),
+.mapCanvasFeatured :global(.leaflet-control-zoom a),
+.mapCanvasCompact :global(.leaflet-control-zoom a) {
+  border: 0 !important;
+  color: #1d1d1b !important;
+  background: rgb(255 255 255 / 94%) !important;
+}
+
+.mapEmpty {
+  display: grid;
+  place-content: center;
+  gap: 8px;
+  min-height: 280px;
+  padding: 28px;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  text-align: center;
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+}
+
+.mapEmpty p {
+  margin: 0;
+}
+
+.mapHint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.mapPanel {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  background: color-mix(in srgb, var(--surface) 96%, transparent);
+  box-shadow: 0 16px 36px rgb(51 40 25 / 7%);
+}
+
+.mapPanelHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mapPanelTitle {
+  margin: 4px 0 0;
+  font-size: 1.35rem;
+  line-height: 1.2;
+}
+
+.mapThumbs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.mapThumbButton {
+  aspect-ratio: 1;
+  overflow: hidden;
+  border: 0;
+  border-radius: 14px;
+  padding: 0;
+  cursor: pointer;
+  background: #d9cfc3;
+}
+
+.mapThumbImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  image-orientation: from-image;
+}
+
+.mapThumbFallback {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(145deg, #e8dccf, #c4a488);
+}
+
+.mapMarkerRoot {
+  background: transparent;
+  border: 0;
+}
+
+.mapMarker {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 999px;
+  color: white;
+  background: var(--accent);
+  box-shadow: 0 10px 24px var(--shadow);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 750;
+  transition: transform 160ms ease;
+}
+
+.mapMarkerActive {
+  background: color-mix(in srgb, var(--accent) 70%, var(--text));
+  transform: scale(1.08);
+}
+
+.mapPhotoPin {
+  position: relative;
+  display: block;
+  width: 42px;
+  height: 42px;
+  overflow: hidden;
+  border: 2px solid var(--surface);
+  border-radius: 999px;
+  padding: 0;
+  background: var(--surface-secondary);
+  box-shadow: 0 10px 22px var(--shadow);
+  cursor: pointer;
+  transition: transform 160ms ease;
+}
+
+.mapPhotoPin img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  image-orientation: from-image;
+  pointer-events: none;
+}
+
+.mapPhotoPinActive {
+  border-color: var(--accent);
+  transform: scale(1.06);
+}
+
+.mapPhotoPinBadge {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  min-width: 20px;
+  border: 2px solid var(--surface);
+  border-radius: 999px;
+  padding: 0 5px;
+  color: white;
+  background: var(--accent);
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.mapOverlay {
+  position: absolute;
+  z-index: 500;
+  display: grid;
+  gap: 10px;
+  width: min(calc(100% - 20px), 300px);
+  max-height: min(46vh, 340px);
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 14px;
+  color: var(--text);
+  background: color-mix(in srgb, var(--surface) 96%, transparent);
+  box-shadow: 0 -8px 28px var(--shadow);
+  backdrop-filter: blur(10px);
+  inset: auto 10px 10px 10px;
+  margin-inline: auto;
+  overscroll-behavior: contain;
+}
+
+.mapOverlayHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.mapOverlayTitle {
+  margin: 2px 0 0;
+  font-size: 1.15rem;
+  line-height: 1.2;
+}
+
+.mapOverlayClose {
+  min-height: 32px;
+  border: 0;
+  border-radius: 999px;
+  padding: 0 10px;
+  color: var(--text-secondary);
+  background: var(--surface-secondary);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 650;
+}
+
+.mapOverlayThumbs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.mapOverlayActions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
+}
+
+.mapOverlayActions :global(.button) {
+  min-height: 40px;
+  justify-content: center;
+  text-align: center;
+  text-decoration: none;
+}
+
+
+.mapLayoutCompact {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+}
+
+.mapFrameCompact {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  aspect-ratio: 1;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: #ece7df;
+  box-shadow: 0 10px 28px var(--shadow);
+}
+
+.mapCanvasCompact {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.mapEmptyCompact {
+  display: grid;
+  place-content: center;
+  gap: 8px;
+  width: 100%;
+  aspect-ratio: 1;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  text-align: center;
+  background: color-mix(in srgb, var(--surface) 96%, transparent);
+}
+
+.mapLayoutFeatured {
+  display: grid;
+  gap: 0;
+  width: 100%;
+}
+
+.mapFrameFeatured {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  background: #ece7df;
+  box-shadow: 0 18px 44px var(--shadow);
+}
+
+.mapCanvasFeatured {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  min-height: 220px;
+}
+
+.mapEmptyFeatured {
+  display: grid;
+  place-content: center;
+  gap: 8px;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  min-height: 220px;
+  padding: 28px;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  text-align: center;
+  background: color-mix(in srgb, var(--surface) 96%, transparent);
+}
+
+.mapEmptyFeatured p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.mapEmptyCompact p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+.mapPanelCompact {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid rgb(51 40 25 / 8%);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface) 97%, transparent);
+}
+
+.albumPage {
+  width: min(100%, 880px);
+  padding-top: 4px;
+  padding-bottom: 56px;
+  overflow-x: clip;
+}
+
+.albumPage .breadcrumb {
+  margin-bottom: 12px;
+  font-size: 0.86rem;
+}
+
+.albumHeroHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin-bottom: 14px;
+}
+
+.albumHeroCopy {
+  min-width: min(100%, 14rem);
+  flex: 1;
+}
+
+.albumHeroTitle {
+  margin: 0;
+  font-size: clamp(1.9rem, 8vw, 2.8rem);
+  line-height: 1.05;
+  overflow-wrap: anywhere;
+}
+
+.albumHeroCountry {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 1.05rem;
+  font-weight: 550;
+  line-height: 1.3;
+}
+
+.albumHeroMeta {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+
+.albumHeroActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  margin-top: 2px;
+}
+
+.quietAction {
+  min-height: 36px;
+  border: 0;
+  border-radius: 999px;
+  padding: 0 10px;
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.quietAction:hover {
+  color: var(--ink);
+}
+
+.albumStory {
+  display: grid;
+  gap: 22px;
+}
+
+/* Outer clips page overflow; stage stays visible so laterals are not cut mid-card. */
+.albumCarouselOuter {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  overflow: hidden;
+  background: transparent;
+}
+
+.albumCarousel {
+  position: relative;
+  width: 100%;
+  overflow: visible;
+  background: transparent;
+}
+
+.albumCarouselEmpty {
+  display: grid;
+  place-content: center;
+  height: min(42vh, 340px);
+  width: 100%;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  background: transparent;
+}
+
+.albumCarouselEmpty p {
+  margin: 0;
+}
+
+/*
+ * Book-page stack: rotateY (turn pages), not rotateZ (tilt flat cards).
+ * Same transform-origin on every slot so slot changes animate cleanly.
+ */
+.albumCarouselStage {
+  position: relative;
+  /* Card height (4/5 of width) + top offset; dots sit below this box */
+  height: calc(min(52vw, 280px) * 1.25 + 28px);
+  margin-bottom: 4px;
+  overflow: visible;
+  touch-action: pan-y;
+  user-select: none;
+  background: transparent;
+  perspective: 1400px;
+  perspective-origin: 50% 45%;
+}
+
+.albumCarouselCard {
+  --carousel-drag: 0px;
+  position: absolute;
+  top: 8px;
+  z-index: 1;
+  aspect-ratio: 4 / 5;
+  width: min(52vw, 280px);
+  overflow: hidden;
+  border-radius: 18px;
+  background: transparent;
+  box-shadow: 0 10px 28px color-mix(in srgb, var(--shadow) 48%, transparent);
+  transform-origin: center center;
+  /* preserve-3d breaks border-radius clipping on side cards */
+  transform-style: flat;
+  isolation: isolate;
+  transition:
+    transform 520ms cubic-bezier(0.22, 1, 0.36, 1),
+    left 520ms cubic-bezier(0.22, 1, 0.36, 1),
+    right 520ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 280ms ease;
+  will-change: transform, left, right, opacity;
+}
+
+.albumCarouselCard[data-slot="hidden"] {
+  left: 50%;
+  right: auto;
+  z-index: 0;
+  transform: translateX(-50%) rotateY(0deg) scale(0.86);
+  /* Don't slide across the stage while fading out */
+  transition:
+    transform 360ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 200ms ease,
+    left 0s,
+    right 0s;
+}
+
+/* Mobile / default: page turn on Y axis */
+.albumCarouselCard[data-slot="0"] {
+  left: 50%;
+  right: auto;
+  z-index: 5;
+  transform: translateX(calc(-50% + var(--carousel-drag))) rotateY(0deg)
+    scale(1);
+}
+
+.albumCarouselCard[data-slot="-1"] {
+  left: calc(50% - 48vw);
+  right: auto;
+  z-index: 3;
+  transform: translateX(var(--carousel-drag)) rotateY(20deg) scale(0.9);
+}
+
+.albumCarouselCard[data-slot="1"] {
+  left: calc(50% - 8vw);
+  right: auto;
+  z-index: 3;
+  transform: translateX(var(--carousel-drag)) rotateY(-20deg) scale(0.9);
+}
+
+.albumCarouselStage[data-dragging="true"] .albumCarouselCard {
+  transition: none;
+}
+
+.albumCarouselCard[data-active="true"] {
+  box-shadow: 0 18px 40px color-mix(in srgb, var(--shadow) 72%, transparent);
+}
+
+.albumCarouselCardButton {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border: 0;
+  border-radius: inherit;
+  padding: 0;
+  color: inherit;
+  background: transparent;
+  cursor: inherit;
+}
+
+.albumCarouselCaption {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 2;
+  padding: 28px 12px 10px;
+  color: #fff;
+  font-size: 0.88rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  text-align: left;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 55%);
+  background: linear-gradient(
+    to top,
+    rgb(0 0 0 / 72%),
+    rgb(0 0 0 / 28%) 55%,
+    transparent
+  );
+  pointer-events: none;
+}
+
+.albumCarouselSlide {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: inherit;
+  background:
+    linear-gradient(160deg, rgb(255 255 255 / 14%), transparent 45%),
+    linear-gradient(135deg, #e8dccf, #c4a488 55%, #8f6d54);
+}
+
+.albumCarouselSlide[data-has-image="true"] {
+  background: transparent;
+}
+
+.albumCarouselSlide[data-tone="1"] {
+  background:
+    linear-gradient(160deg, rgb(255 255 255 / 14%), transparent 45%),
+    linear-gradient(145deg, #d7e0d8, #8fa396, #5f7167);
+}
+
+.albumCarouselSlide[data-tone="2"] {
+  background:
+    linear-gradient(160deg, rgb(255 255 255 / 14%), transparent 45%),
+    linear-gradient(150deg, #f0e2d4, #d0a58a, #9d4e35);
+}
+
+.albumCarouselSlide[data-tone="3"] {
+  background:
+    linear-gradient(160deg, rgb(255 255 255 / 14%), transparent 45%),
+    linear-gradient(155deg, #e5ddd2, #a89988, #6b5b4d);
+}
+
+.albumCarouselImage {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  image-orientation: from-image;
+  border-radius: inherit;
+  user-select: none;
+  -webkit-user-drag: none;
+  pointer-events: none;
+}
+
+.albumCarouselImageFull {
+  z-index: 1;
+}
+
+.albumCarouselArrow {
+  position: absolute;
+  top: 50%;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 999px;
+  color: var(--text);
+  background: color-mix(in srgb, var(--surface) 78%, transparent);
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--shadow) 55%, transparent);
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+  font: inherit;
+  font-size: 1.2rem;
+  line-height: 1;
+  transform: translateY(-50%);
+}
+
+.albumCarouselArrowPrev {
+  left: 2px;
+}
+
+.albumCarouselArrowNext {
+  right: 2px;
+}
+
+.albumCarouselDots {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  max-width: 100%;
+  margin: 4px 0 0;
+  padding: 4px 12px 2px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.albumCarouselDots::-webkit-scrollbar {
+  display: none;
+}
+
+.albumCarouselDot {
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  border: 0;
+  border-radius: 999px;
+  padding: 0;
+  color: inherit;
+  background: color-mix(in srgb, var(--text-secondary) 38%, transparent);
+  cursor: pointer;
+  transition:
+    width 180ms ease,
+    background 180ms ease;
+}
+
+.albumCarouselDot[data-active="true"],
+.albumCarouselDot[aria-selected="true"] {
+  width: 18px;
+  background: var(--accent);
+}
+
+.albumMapSection {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+}
+
+.albumMapSectionHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+
+.albumInfoSection {
+  display: grid;
+  gap: 4px;
+  padding: 4px 0 0;
+}
+
+.albumInfoTitle {
+  margin: 0;
+  font-size: clamp(1.55rem, 5.5vw, 2rem);
+  line-height: 1.12;
+}
+
+.albumInfoCountry {
+  margin: 0;
+  color: var(--ink);
+  font-size: 1.05rem;
+  font-weight: 550;
+  line-height: 1.35;
+}
+
+.albumInfoLine,
+.albumInfoDescription {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.98rem;
+  line-height: 1.45;
+}
+
+.albumInfoDescription {
+  margin-top: 6px;
+  max-width: 36rem;
+}
+
+.albumMapLink {
+  width: fit-content;
+  color: var(--accent);
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.albumMapLink:hover {
+  text-decoration: underline;
+}
+
+
+.albumPhotosSection {
+  margin-top: 0;
+}
+
+.albumPhotosSection .albumSectionHeader {
+  margin-bottom: 10px;
+}
+
+.albumPage .squareGrid {
+  width: calc(100% + 40px);
+  margin-right: -20px;
+  margin-left: -20px;
+}
+
+.squareGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 3px;
+}
+
+.squareTile {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 4px;
+  background:
+    linear-gradient(160deg, rgb(255 255 255 / 28%), transparent 45%),
+    linear-gradient(135deg, #e8dccf, #c4a488 55%, #8f6d54);
+}
+
+.squareTile[data-has-image="true"] {
+  background: transparent;
+}
+
+.squareTile[data-tone="0"] {
+  background:
+    linear-gradient(160deg, rgb(255 255 255 / 24%), transparent 50%),
+    linear-gradient(135deg, #e8dccf, #c4a488, #8f6d54);
+}
+
+.squareTile[data-tone="1"] {
+  background:
+    linear-gradient(160deg, rgb(255 255 255 / 24%), transparent 50%),
+    linear-gradient(145deg, #d7e0d8, #8fa396, #5f7167);
+}
+
+.squareTile[data-tone="2"] {
+  background:
+    linear-gradient(160deg, rgb(255 255 255 / 24%), transparent 50%),
+    linear-gradient(150deg, #f0e2d4, #d0a58a, #9d4e35);
+}
+
+.squareTile[data-tone="3"] {
+  background:
+    linear-gradient(160deg, rgb(255 255 255 / 24%), transparent 50%),
+    linear-gradient(155deg, #e5ddd2, #a89988, #6b5b4d);
+}
+
+.albumOrganize {
+  margin-top: 0;
+  padding-top: 4px;
+  border-top: 0;
+}
+
+.albumOrganize .albumSection {
+  margin-top: 0;
+}
+
+.albumOrganize .albumSectionHeader {
+  margin-bottom: 10px;
+}
+
+.albumOrganize .albumCard {
+  border-radius: 18px;
+  box-shadow: none;
+}
+
+.albumOrganize .albumCardActions {
+  gap: 6px;
+  padding-top: 0;
+}
+
+.albumOrganize .albumCardActions :global(.button.secondary) {
+  min-height: 36px;
+  padding: 0 10px;
+  font-size: 0.86rem;
+}
+
+.albumOrganize .albumSectionHeader :global(.button.primary) {
+  min-height: 38px;
+  padding: 0 14px;
+  font-size: 0.9rem;
+}
+
+@media (min-width: 720px) {
+  .panel {
+    place-items: center;
+  }
+
+  .panelCard,
+  .panelCardWide {
+    border-radius: 24px;
+  }
+
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(156px, 1fr));
+  }
+
+  .albumGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .albumPage {
+    width: min(100%, 1080px);
+    padding-bottom: 72px;
+  }
+
+  .albumPage .breadcrumb {
+    margin-bottom: 16px;
+  }
+
+  .albumHeroHeader {
+    margin-bottom: 18px;
+    gap: 12px 24px;
+  }
+
+  .albumHeroTitle {
+    font-size: clamp(2.4rem, 4.5vw, 3.2rem);
+  }
+
+  .albumHeroCountry {
+    font-size: 1.15rem;
+  }
+
+  .albumHeroMeta {
+    font-size: 0.98rem;
+  }
+
+  .albumStory {
+    gap: 28px;
+  }
+
+  .albumCarouselOuter,
+  .albumCarousel,
+  .albumCarouselEmpty {
+    width: 100%;
+    margin-right: 0;
+    margin-left: 0;
+  }
+
+  .albumCarouselStage {
+    height: 400px;
+  }
+
+  .albumCarouselCard {
+    top: 28px;
+    width: min(300px, 42vw);
+    border-radius: 24px;
+  }
+
+  /* Tablet (720–1099): fill the stage out toward the arrows */
+  .albumCarouselCard[data-slot="0"] {
+    left: 50%;
+    z-index: 5;
+    transform: translateX(calc(-50% + var(--carousel-drag))) rotateY(0deg)
+      scale(1);
+  }
+
+  .albumCarouselCard[data-slot="-1"] {
+    left: 6%;
+    right: auto;
+    z-index: 3;
+    transform: translateX(var(--carousel-drag)) rotateY(26deg) scale(0.9);
+  }
+
+  .albumCarouselCard[data-slot="1"] {
+    left: auto;
+    right: 6%;
+    z-index: 3;
+    transform: translateX(var(--carousel-drag)) rotateY(-26deg) scale(0.9);
+  }
+
+  .albumCarouselArrow {
+    width: 46px;
+    height: 46px;
+    font-size: 1.45rem;
+  }
+
+  .albumCarouselArrowPrev {
+    left: 10px;
+  }
+
+  .albumCarouselArrowNext {
+    right: 10px;
+  }
+
+  .mapCanvasFeatured,
+  .mapEmptyFeatured {
+    aspect-ratio: 16 / 7.5;
+  }
+
+  .mapFrameFeatured,
+  .mapEmptyFeatured {
+    border-radius: 24px;
+  }
+
+  .albumInfoTitle {
+    font-size: clamp(1.85rem, 2.4vw, 2.25rem);
+  }
+
+  .albumInfoCountry {
+    font-size: 1.12rem;
+  }
+
+  .albumInfoLine,
+  .albumInfoDescription {
+    font-size: 1.02rem;
+  }
+
+  .albumPage .squareGrid {
+    width: 100%;
+    margin-right: 0;
+    margin-left: 0;
+  }
+
+  .squareGrid {
+    gap: 4px;
+  }
+
+  .squareTile {
+    border-radius: 6px;
+  }
+
+  .lightboxArrowPrev {
+    left: 20px;
+  }
+
+  .lightboxArrowNext {
+    right: 20px;
+  }
+
+  .mapOverlay {
+    inset: auto 16px 16px auto;
+    width: min(300px, calc(100% - 32px));
+    border-radius: 18px;
+    margin-inline: 0;
+    box-shadow: 0 16px 36px var(--shadow);
+  }
+}
+
+@media (min-width: 980px) {
+  .albumGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .squareGrid {
+    gap: 5px;
+  }
+
+  .squareTile {
+    border-radius: 8px;
+  }
+
+  .mapCanvasFeatured {
+    height: clamp(440px, 46vh, 500px);
+  }
+}
+
+/* Wide desktop: 5-page stack — spread to the arrows */
+@media (min-width: 1100px) {
+  .albumCarouselStage {
+    height: 430px;
+    min-height: 430px;
+  }
+
+  .albumCarouselCard {
+    top: 28px;
+    width: 300px;
+  }
+
+  .albumCarouselCard[data-slot="0"] {
+    left: 50%;
+    right: auto;
+    z-index: 5;
+    transform: translateX(calc(-50% + var(--carousel-drag))) rotateY(0deg)
+      scale(1);
+  }
+
+  .albumCarouselCard[data-slot="-1"] {
+    left: 18%;
+    right: auto;
+    z-index: 3;
+    transform: translateX(var(--carousel-drag)) rotateY(28deg) scale(0.9);
+  }
+
+  .albumCarouselCard[data-slot="1"] {
+    left: auto;
+    right: 18%;
+    z-index: 3;
+    transform: translateX(var(--carousel-drag)) rotateY(-28deg) scale(0.9);
+  }
+
+  .albumCarouselCard[data-slot="-2"] {
+    left: 2%;
+    right: auto;
+    z-index: 1;
+    transform: translateX(var(--carousel-drag)) rotateY(40deg) scale(0.82);
+  }
+
+  .albumCarouselCard[data-slot="2"] {
+    left: auto;
+    right: 2%;
+    z-index: 1;
+    transform: translateX(var(--carousel-drag)) rotateY(-40deg) scale(0.82);
+  }
+
+  .albumCarouselArrowPrev {
+    left: 4px;
+  }
+
+  .albumCarouselArrowNext {
+    right: 4px;
+  }
+}

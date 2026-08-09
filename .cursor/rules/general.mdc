@@ -1,0 +1,27 @@
+---
+description: Regras gerais do projeto Moments Forever
+alwaysApply: true
+---
+
+# Regras gerais
+
+- Respeite `PROJECT.md` e as decisões em `/docs`.
+- Não implemente funcionalidades fora do MVP sem aprovação explícita.
+- Explique antes de alterar decisões arquiteturais importantes.
+- Não remova funcionalidades existentes sem autorização.
+- Use TypeScript quando aplicável e mantenha tipos estritos.
+- Prefira código simples, legível, reutilizável e sem duplicação.
+- Não adicione bibliotecas sem necessidade e justificativa.
+- Evite abstrações prematuras e soluções excessivamente complexas.
+- Priorize performance, segurança, privacidade e custos previsíveis.
+- Projete mobile first e cumpra requisitos de acessibilidade.
+- Valide autorização por recurso em toda operação sensível.
+- Nunca exponha dados ou mídia de outro usuário.
+- Nunca trate URL obscura como controle de acesso.
+- Crie memórias privadas por padrão; publicação exige ação explícita.
+- Não armazene fotos originais automaticamente.
+- Não envie fotos antes da confirmação explícita do usuário.
+- Nunca exponha automaticamente GPS exato em visualizações públicas.
+- Use thumbnails no mapa; nunca carregue originais nele.
+- Faça cada NFC abrir diretamente uma única memória por URL permanente, nunca apenas a homepage.
+- Registre decisões novas no documento de responsabilidade correspondente, sem repetir contexto.

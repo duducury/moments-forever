@@ -8,6 +8,9 @@ const MIN_SCALE = 1;
 const MAX_SCALE = 4;
 const DOUBLE_TAP_MS = 280;
 const DOUBLE_TAP_SCALE = 2.4;
+const AXIS_LOCK_PX = 12;
+const DISMISS_DISTANCE_PX = 96;
+const DISMISS_VELOCITY = 0.55;
 
 function distance(
   a: { readonly clientX: number; readonly clientY: number },
@@ -24,16 +27,22 @@ export function LightboxZoomStage({
   tone,
   children,
   onSwipe,
+  onDismiss,
+  onDismissDrag,
 }: {
   readonly photoId: string;
   readonly hasImage: boolean;
   readonly tone: string;
   readonly children: ReactNode;
   readonly onSwipe?: (delta: -1 | 1) => void;
+  readonly onDismiss?: () => void;
+  /** Vertical drag distance while dismissing (0 when idle). */
+  readonly onDismissDrag?: (offsetY: number) => void;
 }) {
   const stageRef = useRef<HTMLDivElement | null>(null);
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [dragY, setDragY] = useState(0);
   const pinchRef = useRef<{
     startDistance: number;
     startScale: number;
@@ -44,12 +53,22 @@ export function LightboxZoomStage({
     originX: number;
     originY: number;
   } | null>(null);
-  const swipeRef = useRef<number | null>(null);
+  const gestureRef = useRef<{
+    startX: number;
+    startY: number;
+    axis: "undecided" | "horizontal" | "vertical";
+    lastY: number;
+    lastTime: number;
+    velocityY: number;
+  } | null>(null);
   const lastTapRef = useRef<{ time: number; x: number; y: number } | null>(
     null,
   );
   const scaleRef = useRef(scale);
   const offsetRef = useRef(offset);
+  const onSwipeRef = useRef(onSwipe);
+  const onDismissRef = useRef(onDismiss);
+  const onDismissDragRef = useRef(onDismissDrag);
 
   useEffect(() => {
     scaleRef.current = scale;
@@ -60,11 +79,25 @@ export function LightboxZoomStage({
   }, [offset]);
 
   useEffect(() => {
+    onSwipeRef.current = onSwipe;
+  }, [onSwipe]);
+
+  useEffect(() => {
+    onDismissRef.current = onDismiss;
+  }, [onDismiss]);
+
+  useEffect(() => {
+    onDismissDragRef.current = onDismissDrag;
+  }, [onDismissDrag]);
+
+  useEffect(() => {
     setScale(1);
     setOffset({ x: 0, y: 0 });
+    setDragY(0);
+    onDismissDragRef.current?.(0);
     pinchRef.current = null;
     panRef.current = null;
-    swipeRef.current = null;
+    gestureRef.current = null;
     lastTapRef.current = null;
   }, [photoId]);
 
@@ -77,6 +110,11 @@ export function LightboxZoomStage({
       x: Math.min(maxX, Math.max(-maxX, x)),
       y: Math.min(maxY, Math.max(-maxY, y)),
     };
+  }
+
+  function setDismissDrag(nextY: number) {
+    setDragY(nextY);
+    onDismissDragRef.current?.(nextY);
   }
 
   useEffect(() => {
@@ -93,8 +131,9 @@ export function LightboxZoomStage({
           startScale: scaleRef.current,
         };
         panRef.current = null;
-        swipeRef.current = null;
+        gestureRef.current = null;
         lastTapRef.current = null;
+        setDismissDrag(0);
         return;
       }
 
@@ -108,9 +147,17 @@ export function LightboxZoomStage({
           originX: offsetRef.current.x,
           originY: offsetRef.current.y,
         };
-        swipeRef.current = null;
+        gestureRef.current = null;
       } else {
-        swipeRef.current = touch.clientX;
+        const now = Date.now();
+        gestureRef.current = {
+          startX: touch.clientX,
+          startY: touch.clientY,
+          axis: "undecided",
+          lastY: touch.clientY,
+          lastTime: now,
+          velocityY: 0,
+        };
         panRef.current = null;
       }
 
@@ -129,7 +176,8 @@ export function LightboxZoomStage({
           setScale(DOUBLE_TAP_SCALE);
           setOffset({ x: 0, y: 0 });
         }
-        swipeRef.current = null;
+        gestureRef.current = null;
+        setDismissDrag(0);
         return;
       }
       lastTapRef.current = {
@@ -167,26 +215,77 @@ export function LightboxZoomStage({
           panRef.current.originY + (touch.clientY - panRef.current.startY),
         );
         setOffset(next);
+        return;
       }
+
+      const gesture = gestureRef.current;
+      const touch = event.touches[0];
+      if (!gesture || !touch || scaleRef.current > 1.01) return;
+
+      const dx = touch.clientX - gesture.startX;
+      const dy = touch.clientY - gesture.startY;
+
+      if (gesture.axis === "undecided") {
+        if (Math.hypot(dx, dy) < AXIS_LOCK_PX) return;
+        gesture.axis =
+          Math.abs(dy) >= Math.abs(dx) ? "vertical" : "horizontal";
+      }
+
+      if (gesture.axis === "vertical") {
+        event.preventDefault();
+        const now = Date.now();
+        const dt = Math.max(1, now - gesture.lastTime);
+        gesture.velocityY = (touch.clientY - gesture.lastY) / dt;
+        gesture.lastY = touch.clientY;
+        gesture.lastTime = now;
+        setDismissDrag(dy);
+        return;
+      }
+
+      // Horizontal: keep tracking; commit on touchend (same as before).
+      event.preventDefault();
     }
 
     function onTouchEnd(event: TouchEvent) {
-      if (event.touches.length === 0) {
-        pinchRef.current = null;
-        panRef.current = null;
-        if (swipeRef.current !== null && scaleRef.current <= 1.01 && onSwipe) {
-          const endX = event.changedTouches[0]?.clientX ?? swipeRef.current;
-          const distanceX = endX - swipeRef.current;
-          swipeRef.current = null;
-          if (distanceX <= -48) onSwipe(1);
-          else if (distanceX >= 48) onSwipe(-1);
-        } else {
-          swipeRef.current = null;
+      if (event.touches.length > 0) {
+        if (event.touches.length < 2) {
+          pinchRef.current = null;
         }
+        return;
       }
-      if (event.touches.length < 2) {
-        pinchRef.current = null;
+
+      pinchRef.current = null;
+      panRef.current = null;
+
+      const gesture = gestureRef.current;
+      gestureRef.current = null;
+      if (!gesture || scaleRef.current > 1.01) {
+        setDismissDrag(0);
+        return;
       }
+
+      if (gesture.axis === "vertical") {
+        const endY = event.changedTouches[0]?.clientY ?? gesture.lastY;
+        const distanceY = endY - gesture.startY;
+        const shouldDismiss =
+          Math.abs(distanceY) >= DISMISS_DISTANCE_PX ||
+          Math.abs(gesture.velocityY) >= DISMISS_VELOCITY;
+        if (shouldDismiss && onDismissRef.current) {
+          onDismissRef.current();
+          return;
+        }
+        setDismissDrag(0);
+        return;
+      }
+
+      if (gesture.axis === "horizontal" && onSwipeRef.current) {
+        const endX = event.changedTouches[0]?.clientX ?? gesture.startX;
+        const distanceX = endX - gesture.startX;
+        if (distanceX <= -48) onSwipeRef.current(1);
+        else if (distanceX >= 48) onSwipeRef.current(-1);
+      }
+
+      setDismissDrag(0);
     }
 
     el.addEventListener("touchstart", onTouchStart, { passive: true });
@@ -199,11 +298,14 @@ export function LightboxZoomStage({
       el.removeEventListener("touchend", onTouchEnd);
       el.removeEventListener("touchcancel", onTouchEnd);
     };
-  }, [onSwipe]);
+  }, []);
+
+  const dismissing = Math.abs(dragY) > 0.5;
 
   return (
     <div
       className={styles.lightboxStage}
+      data-dismissing={dismissing ? "true" : "false"}
       data-has-image={hasImage ? "true" : "false"}
       data-tone={tone}
       data-zoomed={scale > 1.01 ? "true" : "false"}
@@ -212,7 +314,8 @@ export function LightboxZoomStage({
       <div
         className={styles.lightboxZoomLayer}
         style={{
-          transform: `translate3d(${offset.x}px, ${offset.y}px, 0) scale(${scale})`,
+          transform: `translate3d(${offset.x}px, ${offset.y + dragY}px, 0) scale(${scale})`,
+          transition: dismissing ? "none" : "transform 180ms ease-out",
         }}
       >
         {children}

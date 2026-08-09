@@ -139,6 +139,11 @@ export function PhotoLightbox({
   const thumbSrc = useLocalPhotoObjectUrl(photo?.id, "thumbnail");
   const fullSrc = useLocalPhotoObjectUrl(photo?.id, "full");
   const [removingLocation, setRemovingLocation] = useState(false);
+  const [dismissDragY, setDismissDragY] = useState(0);
+
+  useEffect(() => {
+    setDismissDragY(0);
+  }, [photoId]);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -201,6 +206,9 @@ export function PhotoLightbox({
     }
   }
 
+  const dismissProgress = Math.min(1, Math.abs(dismissDragY) / 220);
+  const lightboxOpacity = Math.max(0.28, 1 - dismissProgress * 0.72);
+
   const dialog = (
     <div
       aria-label="Visualização da foto"
@@ -210,11 +218,15 @@ export function PhotoLightbox({
         if (event.target === event.currentTarget) onClose();
       }}
       role="dialog"
+      style={{
+        background: `rgb(8 8 8 / ${0.96 * lightboxOpacity})`,
+      }}
     >
       <button
         aria-label="Fechar visualização"
         className={styles.lightboxClose}
         onClick={onClose}
+        style={{ opacity: Math.max(0.2, 1 - dismissProgress) }}
         type="button"
       >
         ✕
@@ -225,6 +237,7 @@ export function PhotoLightbox({
           aria-label="Foto anterior"
           className={`${styles.lightboxArrow} ${styles.lightboxArrowPrev}`}
           onClick={() => go(-1)}
+          style={{ opacity: Math.max(0.15, 0.72 * (1 - dismissProgress)) }}
           type="button"
         >
           ‹
@@ -234,6 +247,8 @@ export function PhotoLightbox({
       <div className={styles.lightboxStageWrap}>
         <LightboxZoomStage
           hasImage={Boolean(thumbSrc || fullSrc)}
+          onDismiss={onClose}
+          onDismissDrag={setDismissDragY}
           onSwipe={
             photos.length > 1
               ? (delta) => {
@@ -267,7 +282,10 @@ export function PhotoLightbox({
         </LightboxZoomStage>
       </div>
 
-      <div className={styles.lightboxMeta}>
+      <div
+        className={styles.lightboxMeta}
+        style={{ opacity: Math.max(0.15, 1 - dismissProgress) }}
+      >
         {placeLabel ? (
           <p className={styles.lightboxMetaLine}>{placeLabel}</p>
         ) : null}
@@ -297,6 +315,7 @@ export function PhotoLightbox({
           aria-label="Próxima foto"
           className={`${styles.lightboxArrow} ${styles.lightboxArrowNext}`}
           onClick={() => go(1)}
+          style={{ opacity: Math.max(0.15, 0.72 * (1 - dismissProgress)) }}
           type="button"
         >
           ›

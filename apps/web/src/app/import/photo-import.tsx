@@ -659,9 +659,20 @@ export function PhotoImport() {
       // Permanent store: IndexedDB remains a local cache.
       try {
         await uploadManyPhotoBlobsToR2(body.id, localBlobs);
-      } catch {
-        // Metadata already persisted; photos remain visible via IndexedDB.
-        // User can re-open and we can retry upload later.
+      } catch (cloudError) {
+        const message =
+          cloudError instanceof Error
+            ? cloudError.message
+            : "Falha ao enviar fotos ao armazenamento permanente.";
+        // Trip exists; album page will retry from IndexedDB on this device.
+        try {
+          sessionStorage.setItem(
+            "mf-r2-upload-warning",
+            `Viagem criada, mas o envio à nuvem falhou: ${message}`,
+          );
+        } catch {
+          // ignore quota / private mode
+        }
       }
 
       setCreatedSlug(body.slug);

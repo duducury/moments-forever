@@ -3,6 +3,7 @@ import { countryCodeFromPlaceLabel } from "@moments-forever/shared";
 import { AppWordmark } from "@/components/app-wordmark";
 import { AuthStatus } from "@/components/auth-status";
 import { NewTripButton } from "@/components/new-trip-button";
+import { R2UploadWarningBanner } from "@/components/r2-upload-warning-banner";
 import type { TripPhoto } from "@/app/trip/[slug]/album-types";
 import type { ProfileCarouselPhoto } from "@/lib/experiences/load-owner-carousel-photos";
 import type { OwnerPlaceCardItem } from "@/lib/experiences/load-owner-place-cards";
@@ -76,6 +77,8 @@ export function ProfileView({
           photoCount={totalPhotos}
           tripCount={places.length}
         />
+
+        {isOwner ? <R2UploadWarningBanner /> : null}
 
         {loadError ? (
           <p className="placeholder-note" role="alert">

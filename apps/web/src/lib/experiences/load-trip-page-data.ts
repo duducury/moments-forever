@@ -46,7 +46,7 @@ export async function loadTripPageData(
     supabase
       .from("photos")
       .select(
-        "id, album_id, moment_id, position_in_album, position_in_moment, captured_at, width, height, exact_latitude, exact_longitude",
+        "id, album_id, moment_id, position_in_album, position_in_moment, captured_at, width, height, exact_latitude, exact_longitude, storage_key",
       )
       .eq("experience_id", experienceRow.id as string)
       .order("position_in_album"),
@@ -65,6 +65,9 @@ export async function loadTripPageData(
       exactLatitude: (photo.exact_latitude as number | null) ?? null,
       exactLongitude: (photo.exact_longitude as number | null) ?? null,
       locationLabel: null,
+      hasPermanentStorage: Boolean(
+        (photo.storage_key as string | null)?.trim(),
+      ),
     })),
     albums,
   );

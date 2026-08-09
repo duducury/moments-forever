@@ -166,6 +166,7 @@ export function AddPhotosPanel({
       }
 
       setProgress("Enviando ao armazenamento permanente…");
+      let cloudWarning: string | null = null;
       try {
         await uploadManyPhotoBlobsToR2(
           experienceId,
@@ -178,13 +179,22 @@ export function AddPhotosPanel({
             setProgress(`Enviando foto ${done} de ${total}…`);
           },
         );
-      } catch {
-        // Photos remain usable via IndexedDB cache on this device.
+      } catch (cloudError) {
+        cloudWarning =
+          cloudError instanceof Error
+            ? cloudError.message
+            : "Falha ao enviar ao armazenamento permanente.";
       }
 
       onAdded?.();
       router.refresh();
-      onClose();
+      if (cloudWarning) {
+        setError(
+          `Fotos guardadas neste aparelho, mas o envio à nuvem falhou: ${cloudWarning}`,
+        );
+      } else {
+        onClose();
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Falha ao adicionar fotos.");
     } finally {

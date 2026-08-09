@@ -30,6 +30,7 @@ import {
   PhotoGallery,
   PhotoLightbox,
 } from "../../album-ui";
+import { PendingR2Sync } from "../../pending-r2-sync";
 import {
   buildBreadcrumb,
   formatPhotoPeriod,
@@ -467,6 +468,14 @@ export function AlbumFolderView({
               <p className={styles.error} role="alert">
                 {error}
               </p>
+            ) : null}
+            {isOwner ? (
+              <PendingR2Sync
+                experienceId={experience.id}
+                photoIdsMissingStorage={photos
+                  .filter((photo) => photo.hasPermanentStorage === false)
+                  .map((photo) => photo.id)}
+              />
             ) : null}
           </div>
         </header>

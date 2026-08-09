@@ -110,10 +110,9 @@ export async function putLocalPhotoBlobs(
   }
 }
 
-export async function getLocalPhotoBlob(
+export async function getLocalPhotoBlobRecord(
   id: string,
-  variant: LocalPhotoVariant = "full",
-): Promise<Blob | null> {
+): Promise<LocalPhotoBlobRecord | null> {
   const db = await openDb();
   try {
     const tx = db.transaction(STORE_NAME, "readonly");
@@ -123,10 +122,18 @@ export async function getLocalPhotoBlob(
       >,
     );
     await transactionDone(tx);
-    return pickBlob(record, variant);
+    return record ?? null;
   } finally {
     db.close();
   }
+}
+
+export async function getLocalPhotoBlob(
+  id: string,
+  variant: LocalPhotoVariant = "full",
+): Promise<Blob | null> {
+  const record = await getLocalPhotoBlobRecord(id);
+  return pickBlob(record ?? undefined, variant);
 }
 
 export async function getLocalPhotoBlobs(

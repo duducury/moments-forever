@@ -213,8 +213,12 @@ export function EditTripDialog({
         await uploadManyPhotoBlobsToR2(experience.id, [
           { id, full: file, thumbnail: thumbnail?.blob ?? null },
         ]);
-      } catch {
-        // Usable via IndexedDB on this device.
+      } catch (cloudError) {
+        setError(
+          cloudError instanceof Error
+            ? `Capa adicionada neste aparelho, mas o envio à nuvem falhou: ${cloudError.message}`
+            : "Capa adicionada, mas o envio à nuvem falhou.",
+        );
       }
 
       setPhotos((current) => [{ id, album_id: albumId }, ...current]);

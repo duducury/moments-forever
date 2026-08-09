@@ -41,6 +41,11 @@ export interface TripPhoto {
   readonly exactLongitude: number | null;
   /** Resolved place/album label for map previews, when available. */
   readonly locationLabel: string | null;
+  /**
+   * False when `storage_key` is missing — `/api/media` will 404 until R2 upload
+   * succeeds (IndexedDB may still show the photo on the upload device).
+   */
+  readonly hasPermanentStorage?: boolean;
 }
 
 export function photosWithGps(

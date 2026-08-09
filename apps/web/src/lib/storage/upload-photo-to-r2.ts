@@ -76,13 +76,22 @@ async function putToSignedUrl(
   body: Blob,
   contentType: string,
 ): Promise<void> {
-  const response = await fetch(uploadUrl, {
-    method: "PUT",
-    headers: { "content-type": contentType },
-    body,
-  });
+  let response: Response;
+  try {
+    response = await fetch(uploadUrl, {
+      method: "PUT",
+      headers: { "content-type": contentType },
+      body,
+    });
+  } catch {
+    throw new Error(
+      "Não foi possível enviar ao armazenamento (rede ou CORS do R2). No Cloudflare R2 → Settings → CORS, permita PUT do domínio da app (ex.: https://moments-forever-web.vercel.app).",
+    );
+  }
   if (!response.ok) {
-    throw new Error("Falha ao enviar a foto para o armazenamento permanente.");
+    throw new Error(
+      `Falha ao enviar a foto ao armazenamento permanente (${response.status}).`,
+    );
   }
 }
 
@@ -106,4 +115,62 @@ export async function uploadManyPhotoBlobsToR2(
     done += 1;
     onProgress?.(done, items.length);
   }
+}
+
+export type SyncLocalPhotosToR2Result = {
+  readonly uploaded: number;
+  readonly skipped: number;
+  readonly failed: number;
+  readonly lastError: string | null;
+};
+
+/**
+ * Re-uploads photos that still exist in IndexedDB but lack permanent R2 keys.
+ * Safe to call on album open for the owner — no-ops when local blobs are gone.
+ */
+export async function syncLocalPhotosToR2(
+  experienceId: string,
+  photoIds: readonly string[],
+  onProgress?: (done: number, total: number) => void,
+): Promise<SyncLocalPhotosToR2Result> {
+  const { getLocalPhotoBlobRecord } = await import(
+    "@/lib/local-photos/photo-blob-store"
+  );
+  const { forgetLocalPhotoObjectUrls } = await import(
+    "@/lib/local-photos/local-photo-object-url-cache"
+  );
+
+  let uploaded = 0;
+  let skipped = 0;
+  let failed = 0;
+  let lastError: string | null = null;
+  const uniqueIds = [...new Set(photoIds.filter(Boolean))];
+
+  for (const [index, photoId] of uniqueIds.entries()) {
+    try {
+      const record = await getLocalPhotoBlobRecord(photoId);
+      if (!record?.blob) {
+        skipped += 1;
+        onProgress?.(index + 1, uniqueIds.length);
+        continue;
+      }
+      await uploadPhotoBlobsToR2({
+        photoId,
+        experienceId,
+        full: record.blob,
+        thumbnail: record.thumbnail,
+      });
+      forgetLocalPhotoObjectUrls(photoId);
+      uploaded += 1;
+    } catch (error) {
+      failed += 1;
+      lastError =
+        error instanceof Error
+          ? error.message
+          : "Falha ao reenviar foto ao armazenamento.";
+    }
+    onProgress?.(index + 1, uniqueIds.length);
+  }
+
+  return { uploaded, skipped, failed, lastError };
 }

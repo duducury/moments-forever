@@ -14,7 +14,8 @@ import { useLocalPhotoObjectUrl } from "@/lib/local-photos/use-local-photo-urls"
 import { toneFromId, type TripPhoto } from "../../album-types";
 import styles from "../../trip.module.css";
 
-const SWIPE_THRESHOLD_PX = 45;
+const SWIPE_THRESHOLD_PX = 56;
+const DRAG_FACTOR = 0.72;
 const WIDE_STACK_MQ = "(min-width: 1100px)";
 const COMPACT_DOTS_MQ = "(max-width: 719px)";
 const COMPACT_DOT_WINDOW = 7;
@@ -159,7 +160,7 @@ function getStackedCardStyle(
   slot: CarouselSlot,
   offset: number,
 ): CSSProperties {
-  const drag = `${offset * 0.1}px`;
+  const drag = `${offset * DRAG_FACTOR}px`;
 
   if (slot === "hidden") {
     return {
@@ -172,6 +173,13 @@ function getStackedCardStyle(
     ["--carousel-drag" as string]: drag,
     opacity: 1,
   };
+}
+
+function isCarouselControlTarget(target: EventTarget | null): boolean {
+  return (
+    target instanceof Element &&
+    Boolean(target.closest("[data-carousel-control='true']"))
+  );
 }
 
 export function AlbumCarousel({
@@ -188,8 +196,12 @@ export function AlbumCarousel({
   readonly centerActionLabel?: string;
 }) {
   const pointerStartXRef = useRef(0);
+  const pointerStartYRef = useRef(0);
   const isDraggingRef = useRef(false);
+  const lockAxisRef = useRef<"x" | "y" | null>(null);
   const movedRef = useRef(false);
+  const suppressClickRef = useRef(false);
+  const settleFrameRef = useRef<number | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState(0);
@@ -198,6 +210,20 @@ export function AlbumCarousel({
   const maxDepth = useCarouselMaxDepth(count);
   const compactDots = useCompactDots();
   const dotIndexes = getDotIndexes(safeIndex, count, compactDots);
+
+  useEffect(() => {
+    setActiveIndex((current) =>
+      count === 0 ? 0 : Math.min(current, count - 1),
+    );
+  }, [count]);
+
+  useEffect(() => {
+    return () => {
+      if (settleFrameRef.current !== null) {
+        cancelAnimationFrame(settleFrameRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (count < 2) return;
@@ -243,12 +269,39 @@ export function AlbumCarousel({
     setActiveIndex((current) => wrapIndex(current + 1, count));
   }
 
+  /** Commit index without springing the drag back first (avoids the “zuado” snap). */
+  function commitIndex(nextIndex: number) {
+    if (settleFrameRef.current !== null) {
+      cancelAnimationFrame(settleFrameRef.current);
+      settleFrameRef.current = null;
+    }
+    // Keep transitions off while we swap slots + clear drag, then ease into place.
+    setIsDragging(true);
+    setDragOffset(0);
+    setActiveIndex(nextIndex);
+    settleFrameRef.current = requestAnimationFrame(() => {
+      settleFrameRef.current = requestAnimationFrame(() => {
+        settleFrameRef.current = null;
+        setIsDragging(false);
+      });
+    });
+  }
+
   function handlePointerDown(event: ReactPointerEvent<HTMLDivElement>) {
     if (count <= 1) return;
+    if (isCarouselControlTarget(event.target)) return;
+    if (settleFrameRef.current !== null) {
+      cancelAnimationFrame(settleFrameRef.current);
+      settleFrameRef.current = null;
+    }
     isDraggingRef.current = true;
+    lockAxisRef.current = null;
     movedRef.current = false;
+    suppressClickRef.current = false;
     pointerStartXRef.current = event.clientX;
-    setIsDragging(true);
+    pointerStartYRef.current = event.clientY;
+    // Don't lock touch-action until the gesture is clearly horizontal.
+    setIsDragging(false);
     setDragOffset(0);
     event.currentTarget.setPointerCapture(event.pointerId);
   }
@@ -256,29 +309,68 @@ export function AlbumCarousel({
   function handlePointerMove(event: ReactPointerEvent<HTMLDivElement>) {
     if (!isDraggingRef.current) return;
     const deltaX = event.clientX - pointerStartXRef.current;
-    if (Math.abs(deltaX) > 6) movedRef.current = true;
+    const deltaY = event.clientY - pointerStartYRef.current;
+
+    if (lockAxisRef.current === null) {
+      if (Math.abs(deltaX) < 8 && Math.abs(deltaY) < 8) return;
+      lockAxisRef.current =
+        Math.abs(deltaX) >= Math.abs(deltaY) ? "x" : "y";
+      if (lockAxisRef.current === "y") {
+        // Let the page scroll; abandon horizontal drag.
+        isDraggingRef.current = false;
+        setIsDragging(false);
+        setDragOffset(0);
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+          event.currentTarget.releasePointerCapture(event.pointerId);
+        }
+        return;
+      }
+      setIsDragging(true);
+    }
+
+    if (lockAxisRef.current !== "x") return;
+
+    event.preventDefault();
+    if (Math.abs(deltaX) > 6) {
+      movedRef.current = true;
+      suppressClickRef.current = true;
+    }
     setDragOffset(deltaX);
   }
 
   function handlePointerEnd(event: ReactPointerEvent<HTMLDivElement>) {
-    if (!isDraggingRef.current) return;
-    const deltaX = event.clientX - pointerStartXRef.current;
-    isDraggingRef.current = false;
-    setIsDragging(false);
-    setDragOffset(0);
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
-    if (deltaX <= -SWIPE_THRESHOLD_PX) {
-      goNext();
+
+    if (!isDraggingRef.current) {
+      lockAxisRef.current = null;
       return;
     }
-    if (deltaX >= SWIPE_THRESHOLD_PX) {
-      goPrevious();
+
+    const deltaX = event.clientX - pointerStartXRef.current;
+    const axis = lockAxisRef.current;
+    isDraggingRef.current = false;
+    lockAxisRef.current = null;
+
+    if (axis === "x" && deltaX <= -SWIPE_THRESHOLD_PX) {
+      suppressClickRef.current = true;
+      commitIndex(wrapIndex(safeIndex + 1, count));
+      return;
     }
+    if (axis === "x" && deltaX >= SWIPE_THRESHOLD_PX) {
+      suppressClickRef.current = true;
+      commitIndex(wrapIndex(safeIndex - 1, count));
+      return;
+    }
+
+    // Cancelled swipe — ease cards back to the active slot.
+    setIsDragging(false);
+    setDragOffset(0);
   }
 
   const nextIndex = wrapIndex(safeIndex + 1, count);
+  const prevIndex = wrapIndex(safeIndex - 1, count);
   const stackDepth = maxDepth >= 2 ? "5" : "3";
 
   return (
@@ -302,6 +394,7 @@ export function AlbumCarousel({
               <button
                 aria-label="Foto anterior"
                 className={`${styles.albumCarouselArrow} ${styles.albumCarouselArrowPrev}`}
+                data-carousel-control="true"
                 onClick={goPrevious}
                 type="button"
               >
@@ -310,6 +403,7 @@ export function AlbumCarousel({
               <button
                 aria-label="Próxima foto"
                 className={`${styles.albumCarouselArrow} ${styles.albumCarouselArrowNext}`}
+                data-carousel-control="true"
                 onClick={goNext}
                 type="button"
               >
@@ -346,7 +440,8 @@ export function AlbumCarousel({
                   }
                   className={styles.albumCarouselCardButton}
                   onClick={() => {
-                    if (movedRef.current) {
+                    if (suppressClickRef.current || movedRef.current) {
+                      suppressClickRef.current = false;
                       movedRef.current = false;
                       return;
                     }
@@ -354,16 +449,18 @@ export function AlbumCarousel({
                       onOpen(photo.id);
                       return;
                     }
-                    setActiveIndex(index);
+                    commitIndex(index);
                   }}
                   type="button"
                 >
                   {visible ? (
                     <CarouselPhoto
-                      eager={visible}
+                      eager={isCenter}
                       photo={photo}
-                      preferFull={visible}
-                      preloadFull={index === nextIndex}
+                      preferFull={isCenter}
+                      preloadFull={
+                        index === nextIndex || index === prevIndex
+                      }
                     />
                   ) : null}
                   {caption ? (
@@ -390,8 +487,9 @@ export function AlbumCarousel({
               aria-selected={index === safeIndex}
               className={styles.albumCarouselDot}
               data-active={index === safeIndex ? "true" : "false"}
+              data-carousel-control="true"
               key={photos[index]?.id ?? index}
-              onClick={() => setActiveIndex(index)}
+              onClick={() => commitIndex(index)}
               role="tab"
               type="button"
             />

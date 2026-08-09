@@ -497,7 +497,7 @@
   padding: 0;
   color: #f5f2ec;
   background: rgb(8 8 8 / 96%);
-  touch-action: pan-y;
+  touch-action: none;
   overscroll-behavior: contain;
 }
 
@@ -574,10 +574,18 @@
   min-height: 0;
   overflow: hidden;
   background: #0a0a0a;
+  touch-action: none;
 }
 
 .lightboxStage[data-has-image="true"] {
   background: #0a0a0a;
+}
+
+.lightboxZoomLayer {
+  position: absolute;
+  inset: 0;
+  transform-origin: center center;
+  will-change: transform;
 }
 
 .lightboxImage {
@@ -589,6 +597,7 @@
   image-orientation: from-image;
   user-select: none;
   -webkit-user-drag: none;
+  pointer-events: none;
 }
 
 .lightboxImageFull {
@@ -1466,11 +1475,18 @@
   height: calc(min(52vw, 280px) * 1.25 + 28px);
   margin-bottom: 4px;
   overflow: visible;
+  /* Allow page scroll until a horizontal swipe locks in JS. */
   touch-action: pan-y;
   user-select: none;
+  -webkit-user-select: none;
   background: transparent;
   perspective: 1400px;
   perspective-origin: 50% 45%;
+}
+
+.albumCarouselStage[data-dragging="true"] {
+  touch-action: none;
+  cursor: grabbing;
 }
 
 .albumCarouselCard {
@@ -1533,7 +1549,7 @@
 }
 
 .albumCarouselStage[data-dragging="true"] .albumCarouselCard {
-  transition: none;
+  transition: none !important;
 }
 
 .albumCarouselCard[data-active="true"] {
@@ -1782,7 +1798,8 @@
 
 .squareGrid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  /* Mobile: 2 columns so each photo is larger; scroll reveals the rest. */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 2px;
 }
 
@@ -1790,36 +1807,7 @@
   gap: 1px;
 }
 
-/* Mobile Instagram preview: only the first 3×3 cells stay visible. */
 @media (max-width: 719px) {
-  .squareGridInstagram[data-compact-preview="true"] > *:nth-child(n + 10) {
-    display: none;
-  }
-}
-
-.galleryExpand {
-  display: none;
-  width: calc(100% - 8px);
-  min-height: 44px;
-  margin: 12px 4px 0;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 0 16px;
-  color: var(--text);
-  background: color-mix(in srgb, var(--surface) 88%, transparent);
-  cursor: pointer;
-  font: inherit;
-  font-size: 0.92rem;
-  font-weight: 600;
-}
-
-@media (max-width: 719px) {
-  .galleryExpand {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-  }
-
   .albumStory {
     gap: 12px;
   }
@@ -2080,6 +2068,7 @@
   }
 
   .squareGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 3px;
   }
 

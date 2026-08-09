@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 
 import { AuthProvider } from "@/components/auth-provider";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -9,6 +9,15 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Moments Forever",
   description: "Colecione momentos, não coisas.",
+};
+
+/** App chrome stays fixed like Instagram; photo zoom is handled in the lightbox. */
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
 };
 
 const themeBootScript = `

@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import {
   useEffect,
   useMemo,
-  useRef,
   useState,
   type FormEvent,
   type ReactNode,
@@ -24,6 +23,7 @@ import {
   type TripAlbum,
   type TripPhoto,
 } from "./album-types";
+import { LightboxZoomStage } from "./lightbox-zoom-stage";
 import styles from "./trip.module.css";
 
 function formatLightboxCapturedAt(value: string | null): string | null {
@@ -138,7 +138,6 @@ export function PhotoLightbox({
   const photo = index >= 0 ? photos[index] : null;
   const thumbSrc = useLocalPhotoObjectUrl(photo?.id, "thumbnail");
   const fullSrc = useLocalPhotoObjectUrl(photo?.id, "full");
-  const touchStartX = useRef<number | null>(null);
   const [removingLocation, setRemovingLocation] = useState(false);
 
   useEffect(() => {
@@ -210,17 +209,6 @@ export function PhotoLightbox({
       onClick={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
-      onTouchEnd={(event) => {
-        if (touchStartX.current === null || photos.length < 2) return;
-        const delta = event.changedTouches[0]?.clientX ?? touchStartX.current;
-        const distance = delta - touchStartX.current;
-        touchStartX.current = null;
-        if (distance <= -48) go(1);
-        else if (distance >= 48) go(-1);
-      }}
-      onTouchStart={(event) => {
-        touchStartX.current = event.touches[0]?.clientX ?? null;
-      }}
       role="dialog"
     >
       <button
@@ -244,13 +232,17 @@ export function PhotoLightbox({
       ) : null}
 
       <div className={styles.lightboxStageWrap}>
-        <div
-          className={styles.lightboxStage}
-          data-has-image={thumbSrc || fullSrc ? "true" : "false"}
-          data-tone={toneFromId(photo.id)}
-          onClick={(event) => {
-            if (event.target === event.currentTarget) onClose();
-          }}
+        <LightboxZoomStage
+          hasImage={Boolean(thumbSrc || fullSrc)}
+          onSwipe={
+            photos.length > 1
+              ? (delta) => {
+                  go(delta);
+                }
+              : undefined
+          }
+          photoId={currentPhoto.id}
+          tone={toneFromId(currentPhoto.id)}
         >
           {thumbSrc ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -272,7 +264,7 @@ export function PhotoLightbox({
               src={fullSrc}
             />
           ) : null}
-        </div>
+        </LightboxZoomStage>
       </div>
 
       <div className={styles.lightboxMeta}>
@@ -801,26 +793,19 @@ function SquarePhotoTile({
   );
 }
 
-/** Instagram-style preview: 3 columns × 3 rows on small screens. */
-const COMPACT_GALLERY_PREVIEW = 9;
-
 export function PhotoGallery({
   photos,
   emptyLabel,
   layout = "square",
   onOpenPhoto,
-  compactPreview = false,
 }: {
   readonly photos: readonly TripPhoto[];
   readonly emptyLabel: string;
   readonly layout?: "natural" | "square";
   /** When set, parent owns the lightbox. */
   readonly onOpenPhoto?: (photoId: string) => void;
-  /** On mobile, show 3×3 first with a control to reveal the rest. */
-  readonly compactPreview?: boolean;
 }) {
   const [lightboxId, setLightboxId] = useState<string | null>(null);
-  const [expanded, setExpanded] = useState(false);
   const ordered = useMemo(
     () =>
       photos.slice().sort(
@@ -830,11 +815,6 @@ export function PhotoGallery({
       ),
     [photos],
   );
-
-  const canCollapse =
-    compactPreview &&
-    layout === "square" &&
-    ordered.length > COMPACT_GALLERY_PREVIEW;
 
   function openPhoto(photoId: string) {
     if (onOpenPhoto) {
@@ -856,7 +836,6 @@ export function PhotoGallery({
             ? `${styles.squareGrid} ${styles.squareGridInstagram}`
             : styles.grid
         }
-        data-compact-preview={canCollapse && !expanded ? "true" : "false"}
       >
         {ordered.map((photo) =>
           layout === "square" ? (
@@ -874,15 +853,6 @@ export function PhotoGallery({
           ),
         )}
       </div>
-      {canCollapse && !expanded ? (
-        <button
-          className={styles.galleryExpand}
-          onClick={() => setExpanded(true)}
-          type="button"
-        >
-          Ver todas as {ordered.length} fotos
-        </button>
-      ) : null}
       {!onOpenPhoto && lightboxId ? (
         <PhotoLightbox
           onClose={() => setLightboxId(null)}

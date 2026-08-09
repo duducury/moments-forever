@@ -46,6 +46,9 @@ html,
 body {
   max-width: 100vw;
   overflow-x: hidden;
+  /* Prefer tap over double-tap page zoom (Instagram-like app chrome). */
+  touch-action: manipulation;
+  overscroll-behavior-x: none;
 }
 
 body {

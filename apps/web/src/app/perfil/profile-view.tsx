@@ -1,3 +1,5 @@
+import { countryCodeFromPlaceLabel } from "@moments-forever/shared";
+
 import { AppWordmark } from "@/components/app-wordmark";
 import { AuthStatus } from "@/components/auth-status";
 import { NewTripButton } from "@/components/new-trip-button";
@@ -33,11 +35,21 @@ export function ProfileView({
   readonly loadError: string | null;
 }) {
   const totalPhotos = places.reduce((sum, item) => sum + item.photoCount, 0);
-  const countryCount = new Set(
-    places
-      .map((place) => place.countryCode)
-      .filter((code): code is string => Boolean(code)),
-  ).size;
+  const visitedCountryCodes = (() => {
+    const seen = new Set<string>();
+    const codes: string[] = [];
+    for (const place of places) {
+      const code = (
+        place.countryCode ?? countryCodeFromPlaceLabel(place.title)
+      )
+        ?.trim()
+        .toUpperCase();
+      if (!code || seen.has(code)) continue;
+      seen.add(code);
+      codes.push(code);
+    }
+    return codes;
+  })();
 
   return (
     <main className="page-shell">
@@ -57,7 +69,7 @@ export function ProfileView({
         <ProfileHeader
           avatarPhotoId={avatarPhotoId}
           bio={bio}
-          countryCount={countryCount}
+          countryCodes={visitedCountryCodes}
           displayName={displayName}
           isOwner={isOwner}
           ownerId={ownerId}

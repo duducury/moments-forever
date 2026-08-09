@@ -59,7 +59,7 @@ export function ProfileHeader({
   isOwner,
   tripCount,
   photoCount,
-  countryCount,
+  countryCodes,
 }: {
   readonly ownerId: string;
   readonly displayName: string;
@@ -68,11 +68,12 @@ export function ProfileHeader({
   readonly isOwner: boolean;
   readonly tripCount: number;
   readonly photoCount: number;
-  readonly countryCount: number;
+  readonly countryCodes: readonly string[];
 }) {
   const [editOpen, setEditOpen] = useState(false);
   const savedBio = bio?.trim() || "";
   const bioText = savedBio || DEFAULT_BIO;
+  const countryCount = countryCodes.length;
 
   return (
     <>
@@ -96,6 +97,28 @@ export function ProfileHeader({
 
         <div className={styles.profileHeaderCopy}>
           <h1 className={styles.profileDisplayName}>{displayName}</h1>
+          {countryCodes.length > 0 ? (
+            <ul
+              aria-label="Países visitados"
+              className={styles.profileCountryFlags}
+            >
+              {countryCodes.map((code) => (
+                <li key={code}>
+                  {/* eslint-disable-next-line @next/next/no-img-element -- small flag CDN asset */}
+                  <img
+                    alt={code}
+                    className={styles.profileCountryFlag}
+                    decoding="async"
+                    height={14}
+                    loading="lazy"
+                    src={`https://flagcdn.com/w40/${code.toLowerCase()}.png`}
+                    title={code}
+                    width={20}
+                  />
+                </li>
+              ))}
+            </ul>
+          ) : null}
           <p className={styles.profileBio}>{bioText}</p>
           <ul className={styles.profileStats}>
             <li>

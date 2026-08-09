@@ -619,6 +619,7 @@ export function AlbumFolderView({
             </div>
           ) : (
             <PhotoGallery
+              compactPreview
               emptyLabel="Este lugar ainda não tem fotos."
               layout="square"
               onOpenPhoto={setLightboxId}

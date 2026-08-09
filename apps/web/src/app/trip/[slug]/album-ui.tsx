@@ -761,19 +761,26 @@ function SquarePhotoTile({
   );
 }
 
+/** Instagram-style preview: 3 columns × 3 rows on small screens. */
+const COMPACT_GALLERY_PREVIEW = 9;
+
 export function PhotoGallery({
   photos,
   emptyLabel,
   layout = "square",
   onOpenPhoto,
+  compactPreview = false,
 }: {
   readonly photos: readonly TripPhoto[];
   readonly emptyLabel: string;
   readonly layout?: "natural" | "square";
   /** When set, parent owns the lightbox. */
   readonly onOpenPhoto?: (photoId: string) => void;
+  /** On mobile, show 3×3 first with a control to reveal the rest. */
+  readonly compactPreview?: boolean;
 }) {
   const [lightboxId, setLightboxId] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState(false);
   const ordered = useMemo(
     () =>
       photos.slice().sort(
@@ -783,6 +790,11 @@ export function PhotoGallery({
       ),
     [photos],
   );
+
+  const canCollapse =
+    compactPreview &&
+    layout === "square" &&
+    ordered.length > COMPACT_GALLERY_PREVIEW;
 
   function openPhoto(photoId: string) {
     if (onOpenPhoto) {
@@ -798,7 +810,14 @@ export function PhotoGallery({
 
   return (
     <>
-      <div className={layout === "square" ? styles.squareGrid : styles.grid}>
+      <div
+        className={
+          layout === "square"
+            ? `${styles.squareGrid} ${styles.squareGridInstagram}`
+            : styles.grid
+        }
+        data-compact-preview={canCollapse && !expanded ? "true" : "false"}
+      >
         {ordered.map((photo) =>
           layout === "square" ? (
             <SquarePhotoTile
@@ -815,6 +834,15 @@ export function PhotoGallery({
           ),
         )}
       </div>
+      {canCollapse && !expanded ? (
+        <button
+          className={styles.galleryExpand}
+          onClick={() => setExpanded(true)}
+          type="button"
+        >
+          Ver todas as {ordered.length} fotos
+        </button>
+      ) : null}
       {!onOpenPhoto && lightboxId ? (
         <PhotoLightbox
           onClose={() => setLightboxId(null)}

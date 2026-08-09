@@ -5,6 +5,39 @@ import { HomePrimaryCta } from "./home-cta";
 import { HomeHeader } from "./home-header";
 import styles from "./home.module.css";
 
+const MEMORY_PHOTOS = [
+  {
+    src: "/home/santorini.jpg",
+    alt: "Casas brancas e cúpulas azuis em Santorini",
+    label: "Santorini",
+    className: "memoryTall",
+  },
+  {
+    src: "/home/paris.jpg",
+    alt: "Torre Eiffel em Paris ao entardecer",
+    label: "Paris",
+    className: "memoryWide",
+  },
+  {
+    src: "/home/tokyo.jpg",
+    alt: "Cruzamento iluminado em Tóquio à noite",
+    label: "Tóquio",
+    className: "memorySquare",
+  },
+  {
+    src: "/home/machu.jpg",
+    alt: "Machu Picchu nas montanhas",
+    label: "Machu Picchu",
+    className: "memorySquareAlt",
+  },
+  {
+    src: "/home/amalfi.jpg",
+    alt: "Costa Amalfitana vista do mar",
+    label: "Amalfi",
+    className: "memoryFeature",
+  },
+] as const;
+
 export default function Home() {
   return (
     <main className={styles.home}>
@@ -13,13 +46,24 @@ export default function Home() {
       <div className={styles.main}>
         <section aria-labelledby="home-hero-title" className={styles.hero}>
           <div className={styles.heroVisual}>
+            <div className={styles.heroPhoto}>
+              <Image
+                alt="Costa Amalfitana ao entardecer"
+                className={styles.heroPhotoImage}
+                height={900}
+                priority
+                sizes="(max-width: 720px) 92vw, 46vw"
+                src="/home/capri.jpg"
+                width={1200}
+              />
+            </div>
             <div className={styles.heroMark}>
               <Image
                 alt="Moments Forever"
-                className={styles.heroImage}
+                className={styles.heroLogo}
                 height={1254}
                 priority
-                sizes="(max-width: 720px) min(300px, 78vw), (max-width: 1024px) 340px, 400px"
+                sizes="120px"
                 src="/brand/logo.png"
                 width={1254}
               />
@@ -43,59 +87,61 @@ export default function Home() {
           aria-labelledby="home-memories-title"
           className={styles.memories}
         >
-          <p className={styles.memoriesEyebrow}>Memórias que ficam</p>
-          <h2 className={styles.memoriesTitle} id="home-memories-title">
-            A fotografia no centro.
-          </h2>
-          <div className={styles.memoryMosaic} aria-hidden="true">
-            <figure className={`${styles.memoryCell} ${styles.memoryTall}`}>
+          <div className={styles.memoriesHead}>
+            <p className={styles.memoriesEyebrow}>Memórias que ficam</p>
+            <h2 className={styles.memoriesTitle} id="home-memories-title">
+              Lugares que merecem ser revisitados.
+            </h2>
+          </div>
+          <div className={styles.memoryMosaic}>
+            {MEMORY_PHOTOS.map((photo) => (
+              <figure
+                className={`${styles.memoryCell} ${styles[photo.className]}`}
+                key={photo.src}
+              >
+                <Image
+                  alt={photo.alt}
+                  className={styles.memoryImage}
+                  height={900}
+                  sizes="(max-width: 720px) 50vw, 33vw"
+                  src={photo.src}
+                  width={1200}
+                />
+                <figcaption className={styles.memoryCaption}>
+                  {photo.label}
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+          <div className={styles.memoryStrip} aria-hidden="true">
+            <figure className={styles.memoryStripCell}>
               <Image
                 alt=""
                 className={styles.memoryImage}
-                height={1254}
-                sizes="(max-width: 720px) 50vw, 280px"
-                src="/brand/logo.png"
-                width={1254}
+                height={700}
+                sizes="33vw"
+                src="/home/dubai.jpg"
+                width={1000}
               />
             </figure>
-            <figure className={`${styles.memoryCell} ${styles.memoryWide}`}>
+            <figure className={styles.memoryStripCell}>
               <Image
                 alt=""
                 className={styles.memoryImage}
-                height={512}
-                sizes="(max-width: 720px) 50vw, 320px"
-                src="/brand/navlogo.png"
-                width={768}
+                height={700}
+                sizes="33vw"
+                src="/home/venice.jpg"
+                width={1000}
               />
             </figure>
-            <figure className={`${styles.memoryCell} ${styles.memorySquare}`}>
+            <figure className={styles.memoryStripCell}>
               <Image
                 alt=""
                 className={styles.memoryImage}
-                height={512}
-                sizes="(max-width: 720px) 50vw, 200px"
-                src="/brand/navlogo2.png"
-                width={768}
-              />
-            </figure>
-            <figure className={`${styles.memoryCell} ${styles.memorySquareAlt}`}>
-              <Image
-                alt=""
-                className={styles.memoryImage}
-                height={1254}
-                sizes="(max-width: 720px) 50vw, 220px"
-                src="/brand/logo.png"
-                width={1254}
-              />
-            </figure>
-            <figure className={`${styles.memoryCell} ${styles.memoryFeature}`}>
-              <Image
-                alt=""
-                className={styles.memoryImage}
-                height={1254}
-                sizes="(max-width: 720px) 100vw, 420px"
-                src="/brand/logo.png"
-                width={1254}
+                height={700}
+                sizes="33vw"
+                src="/home/paris.jpg"
+                width={1000}
               />
             </figure>
           </div>
@@ -149,6 +195,16 @@ export default function Home() {
         </section>
 
         <section aria-labelledby="home-finale-title" className={styles.finale}>
+          <div className={styles.finaleBackdrop} aria-hidden="true">
+            <Image
+              alt=""
+              className={styles.finaleBackdropImage}
+              height={800}
+              sizes="100vw"
+              src="/home/dubai.jpg"
+              width={1400}
+            />
+          </div>
           <div className={styles.finaleInner}>
             <h2 id="home-finale-title">Comece a guardar suas viagens.</h2>
             <p>Crie sua coleção e organize o que importa.</p>

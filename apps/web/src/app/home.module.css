@@ -1,7 +1,7 @@
-/* Home — premium memory product, mobile first. */
+/* Home — photographic premium landing, mobile first. */
 
 .home {
-  --home-max: 1080px;
+  --home-max: 1120px;
   --home-radius: 14px;
   position: relative;
   min-height: 100vh;
@@ -187,7 +187,7 @@
   gap: 40px;
   max-width: var(--home-max);
   margin: 0 auto;
-  padding-top: 20px;
+  padding-top: 18px;
 }
 
 /* —— Hero —— */
@@ -200,32 +200,53 @@
 }
 
 .heroVisual {
-  width: min(300px, 78vw);
+  position: relative;
+  width: min(100%, 420px);
   animation: homeRise 0.9s ease both;
 }
 
-.heroMark {
-  position: relative;
+.heroPhoto {
   overflow: hidden;
-  border-radius: 26px;
-  background: color-mix(in srgb, var(--surface) 88%, #1a1512);
+  border-radius: 22px;
+  aspect-ratio: 4 / 5;
   box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--border) 55%, transparent),
-    0 28px 56px color-mix(in srgb, #000 42%, transparent),
-    0 0 48px color-mix(in srgb, var(--accent) 14%, transparent);
+    0 0 0 1px color-mix(in srgb, var(--border) 40%, transparent),
+    0 28px 56px color-mix(in srgb, #000 40%, transparent);
 }
 
-.heroImage {
+.heroPhotoImage {
   display: block;
   width: 100%;
-  height: auto;
-  transition: transform 420ms ease;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 40%;
+  transition: transform 700ms ease;
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .heroMark:hover .heroImage {
-    transform: scale(1.03);
+  .heroPhoto:hover .heroPhotoImage {
+    transform: scale(1.035);
   }
+}
+
+.heroMark {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  width: 72px;
+  overflow: hidden;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--border) 55%, transparent),
+    0 12px 28px color-mix(in srgb, #000 35%, transparent),
+    0 0 28px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.heroLogo {
+  display: block;
+  width: 100%;
+  height: auto;
 }
 
 .heroCopy {
@@ -295,8 +316,15 @@
 
 .memories {
   display: grid;
-  gap: 16px;
+  gap: 14px;
   animation: homeRise 0.8s ease both;
+}
+
+.memoriesHead {
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+  text-align: center;
 }
 
 .memoriesEyebrow {
@@ -305,18 +333,17 @@
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.14em;
-  text-align: center;
   text-transform: uppercase;
 }
 
 .memoriesTitle {
   margin: 0;
+  max-width: 18ch;
   font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(1.45rem, 4.8vw, 1.9rem);
+  font-size: clamp(1.55rem, 5vw, 2.15rem);
   font-weight: 500;
   letter-spacing: -0.03em;
   line-height: 1.15;
-  text-align: center;
   text-wrap: balance;
 }
 
@@ -324,16 +351,16 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
-  margin-top: 4px;
+  margin-top: 2px;
 }
 
 .memoryCell {
   position: relative;
   margin: 0;
   overflow: hidden;
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--surface-secondary) 70%, #1a1512);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--border) 45%, transparent);
+  border-radius: 12px;
+  background: #1a1512;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--border) 35%, transparent);
 }
 
 .memoryImage {
@@ -342,47 +369,68 @@
   height: 100%;
   object-fit: cover;
   object-position: center;
-  transition: transform 480ms ease;
+  transition: transform 520ms ease;
+}
+
+.memoryCaption {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  margin: 0;
+  padding: 28px 12px 10px;
+  color: #f7f2ea;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-shadow: 0 1px 10px rgb(0 0 0 / 55%);
+  background: linear-gradient(180deg, transparent, rgb(0 0 0 / 58%));
+  pointer-events: none;
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .memoryCell:hover .memoryImage {
-    transform: scale(1.04);
+  .memoryCell:hover .memoryImage,
+  .memoryStripCell:hover .memoryImage {
+    transform: scale(1.045);
   }
 }
 
 .memoryTall {
   grid-row: span 2;
-  min-height: 220px;
+  min-height: 240px;
   aspect-ratio: 3 / 4;
 }
 
 .memoryWide {
-  min-height: 104px;
+  min-height: 112px;
   aspect-ratio: 16 / 10;
 }
 
 .memorySquare,
 .memorySquareAlt {
-  min-height: 104px;
+  min-height: 112px;
   aspect-ratio: 1;
 }
 
 .memoryFeature {
   grid-column: 1 / -1;
-  min-height: 160px;
+  min-height: 170px;
   aspect-ratio: 16 / 9;
 }
 
-.memorySquare .memoryImage,
-.memoryWide .memoryImage,
-.memoryFeature .memoryImage {
-  object-position: 35% 42%;
+.memoryStrip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
 }
 
-.memorySquareAlt .memoryImage {
-  object-position: 62% 48%;
-  transform: scale(1.08);
+.memoryStripCell {
+  position: relative;
+  margin: 0;
+  overflow: hidden;
+  border-radius: 12px;
+  aspect-ratio: 4 / 5;
+  background: #1a1512;
 }
 
 /* —— Concepts —— */
@@ -460,7 +508,6 @@
   font-size: 1.22rem;
   font-weight: 500;
   letter-spacing: -0.02em;
-  text-transform: none;
 }
 
 .conceptCopy p {
@@ -474,37 +521,43 @@
 /* —— Final CTA —— */
 
 .finale {
+  position: relative;
   display: grid;
-  justify-items: stretch;
-  padding: 2px;
-  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
   border-radius: 18px;
-  background:
-    linear-gradient(
-      160deg,
-      color-mix(in srgb, #2a1f18 70%, var(--surface)),
-      color-mix(in srgb, #14110f 88%, var(--background))
-    );
   animation: homeRise 0.8s ease both;
-  box-shadow: 0 18px 40px color-mix(in srgb, #000 22%, transparent);
+  box-shadow: 0 18px 40px color-mix(in srgb, #000 28%, transparent);
 }
 
-html[data-resolved-theme="light"] .finale {
-  background:
-    linear-gradient(
-      160deg,
-      color-mix(in srgb, var(--accent) 10%, var(--surface)),
-      color-mix(in srgb, var(--surface-secondary) 55%, var(--surface))
-    );
-  box-shadow: 0 16px 36px var(--shadow);
+.finaleBackdrop {
+  position: absolute;
+  inset: 0;
+}
+
+.finaleBackdropImage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 35%;
+  filter: saturate(0.92) brightness(0.55);
 }
 
 .finaleInner {
+  position: relative;
+  z-index: 1;
   display: grid;
   gap: 10px;
   justify-items: center;
-  padding: 28px 20px;
+  padding: 36px 20px;
   text-align: center;
+  color: #f7f2ea;
+  background: linear-gradient(
+    180deg,
+    rgb(12 10 8 / 35%),
+    rgb(12 10 8 / 72%)
+  );
 }
 
 .finale h2 {
@@ -519,7 +572,7 @@ html[data-resolved-theme="light"] .finale {
 
 .finale p {
   max-width: 32ch;
-  color: var(--text-secondary);
+  color: rgb(247 242 234 / 78%);
   font-size: 0.98rem;
   line-height: 1.5;
 }
@@ -527,6 +580,12 @@ html[data-resolved-theme="light"] .finale {
 .finale .ctaRow {
   margin-inline: auto;
   margin-top: 6px;
+}
+
+.finale .ctaRow :global(.button.secondary) {
+  color: #f7f2ea;
+  border-color: rgb(247 242 234 / 35%);
+  background: rgb(12 10 8 / 28%);
 }
 
 /* —— Footer —— */
@@ -585,7 +644,7 @@ html[data-resolved-theme="light"] .finale {
   .memories,
   .section,
   .finale,
-  .heroImage,
+  .heroPhotoImage,
   .memoryImage,
   .ctaRow :global(.button) {
     animation: none !important;
@@ -616,30 +675,37 @@ html[data-resolved-theme="light"] .finale {
     align-items: center;
   }
 
-  .headerMenuButton {
-    display: none;
-  }
-
+  .headerMenuButton,
   .headerMenu {
     display: none;
   }
 
   .main {
-    gap: 52px;
+    gap: 56px;
     padding-top: 28px;
   }
 
   .hero {
-    grid-template-columns: minmax(280px, 38%) minmax(0, 1fr);
-    gap: 36px;
+    grid-template-columns: minmax(300px, 46%) minmax(0, 1fr);
+    gap: 40px;
     align-items: center;
     justify-items: start;
     text-align: left;
-    min-height: min(52vh, 460px);
+    min-height: min(54vh, 520px);
   }
 
   .heroVisual {
-    width: min(340px, 100%);
+    width: 100%;
+  }
+
+  .heroPhoto {
+    aspect-ratio: 4 / 5;
+    border-radius: 26px;
+  }
+
+  .heroMark {
+    width: 88px;
+    border-radius: 18px;
   }
 
   .heroCopy {
@@ -664,14 +730,14 @@ html[data-resolved-theme="light"] .finale {
     min-width: 168px;
   }
 
-  .memoriesEyebrow,
-  .memoriesTitle {
+  .memoriesHead {
+    justify-items: start;
     text-align: left;
   }
 
   .memoryMosaic {
-    grid-template-columns: 1.1fr 0.9fr 1fr;
-    grid-template-rows: 160px 180px;
+    grid-template-columns: 1.15fr 0.95fr 1fr;
+    grid-template-rows: 180px 200px;
     gap: 10px;
   }
 
@@ -708,6 +774,15 @@ html[data-resolved-theme="light"] .finale {
     display: none;
   }
 
+  .memoryStrip {
+    gap: 10px;
+  }
+
+  .memoryStripCell {
+    aspect-ratio: 5 / 4;
+    border-radius: 14px;
+  }
+
   .sectionHead {
     text-align: left;
     justify-items: start;
@@ -721,11 +796,10 @@ html[data-resolved-theme="light"] .finale {
 
   .conceptCopy h3 {
     font-size: 1.4rem;
-    letter-spacing: 0.01em;
   }
 
   .finaleInner {
-    padding: 36px 40px;
+    padding: 48px 44px;
   }
 }
 
@@ -735,21 +809,17 @@ html[data-resolved-theme="light"] .finale {
   }
 
   .main {
-    gap: 64px;
+    gap: 68px;
     padding-top: 36px;
   }
 
   .hero {
-    gap: 48px;
-    min-height: min(56vh, 500px);
-  }
-
-  .heroVisual {
-    width: min(400px, 100%);
+    gap: 52px;
+    min-height: min(58vh, 560px);
   }
 
   .heroMark {
-    border-radius: 30px;
+    width: 96px;
   }
 
   .lead {
@@ -757,9 +827,13 @@ html[data-resolved-theme="light"] .finale {
   }
 
   .memoryMosaic {
-    grid-template-columns: 1.15fr 0.95fr 1.05fr;
-    grid-template-rows: 190px 210px;
+    grid-template-columns: 1.2fr 1fr 1.05fr;
+    grid-template-rows: 210px 230px;
     gap: 12px;
+  }
+
+  .memoryStripCell {
+    aspect-ratio: 16 / 11;
   }
 
   .conceptList {
@@ -767,6 +841,6 @@ html[data-resolved-theme="light"] .finale {
   }
 
   .finaleInner {
-    padding: 40px 48px;
+    padding: 56px 56px;
   }
 }

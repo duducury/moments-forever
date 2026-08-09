@@ -54,6 +54,24 @@ export type PublicProfile = {
   readonly hasPermanentAvatar: boolean;
 };
 
+function mapPublicProfile(row: {
+  readonly id: string;
+  readonly profile_slug: string;
+  readonly display_name: string | null;
+  readonly bio: string | null;
+  readonly avatar_photo_id: string | null;
+  readonly avatar_storage_key?: string | null;
+}): PublicProfile {
+  return {
+    id: row.id,
+    profileSlug: row.profile_slug,
+    displayName: row.display_name,
+    bio: row.bio,
+    avatarPhotoId: row.avatar_photo_id,
+    hasPermanentAvatar: Boolean(row.avatar_storage_key?.trim()),
+  };
+}
+
 export async function lookupPublicProfile(
   supabase: ServerSupabase,
   profileSlug: string,
@@ -61,7 +79,10 @@ export async function lookupPublicProfile(
   const slug = profileSlug.trim().toLowerCase();
   if (!slug || isReservedProfileSlug(slug)) return null;
 
-  const result = await supabase
+  // Prefer avatar_storage_key for OG previews. If the migration is not applied
+  // yet, PostgREST errors on the unknown column — fall back so the profile
+  // page still loads (instead of a hard 404).
+  const withAvatarKey = await supabase
     .from("users")
     .select(
       "id, profile_slug, display_name, bio, avatar_photo_id, avatar_storage_key",
@@ -69,18 +90,35 @@ export async function lookupPublicProfile(
     .eq("profile_slug", slug)
     .maybeSingle();
 
-  if (result.error || !result.data?.profile_slug) return null;
+  if (!withAvatarKey.error && withAvatarKey.data?.profile_slug) {
+    return mapPublicProfile({
+      id: withAvatarKey.data.id as string,
+      profile_slug: withAvatarKey.data.profile_slug as string,
+      display_name: (withAvatarKey.data.display_name as string | null) ?? null,
+      bio: (withAvatarKey.data.bio as string | null) ?? null,
+      avatar_photo_id:
+        (withAvatarKey.data.avatar_photo_id as string | null) ?? null,
+      avatar_storage_key:
+        (withAvatarKey.data.avatar_storage_key as string | null) ?? null,
+    });
+  }
 
-  return {
-    id: result.data.id as string,
-    profileSlug: result.data.profile_slug as string,
-    displayName: (result.data.display_name as string | null) ?? null,
-    bio: (result.data.bio as string | null) ?? null,
-    avatarPhotoId: (result.data.avatar_photo_id as string | null) ?? null,
-    hasPermanentAvatar: Boolean(
-      (result.data.avatar_storage_key as string | null)?.trim(),
-    ),
-  };
+  const fallback = await supabase
+    .from("users")
+    .select("id, profile_slug, display_name, bio, avatar_photo_id")
+    .eq("profile_slug", slug)
+    .maybeSingle();
+
+  if (fallback.error || !fallback.data?.profile_slug) return null;
+
+  return mapPublicProfile({
+    id: fallback.data.id as string,
+    profile_slug: fallback.data.profile_slug as string,
+    display_name: (fallback.data.display_name as string | null) ?? null,
+    bio: (fallback.data.bio as string | null) ?? null,
+    avatar_photo_id: (fallback.data.avatar_photo_id as string | null) ?? null,
+    avatar_storage_key: null,
+  });
 }
 
 export async function getOwnerProfileSlug(

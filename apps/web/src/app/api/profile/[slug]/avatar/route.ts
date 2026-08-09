@@ -41,6 +41,11 @@ export async function GET(
     .eq("profile_slug", slug)
     .maybeSingle();
 
+  // Missing column (migration not applied) or no avatar → brand icon.
+  if (result.error) {
+    return brandIconRedirect();
+  }
+
   const key =
     (result.data?.avatar_storage_key as string | null)?.trim() || null;
   if (!key) {

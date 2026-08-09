@@ -211,9 +211,11 @@
   width: 100%;
   border: 0;
   padding: 0;
+  margin: 0;
   background: transparent;
   cursor: pointer;
   text-align: left;
+  min-width: 0;
 }
 
 .tile {
@@ -1800,10 +1802,11 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 2px;
+  width: 100%;
 }
 
 .squareGridInstagram {
-  gap: 1px;
+  gap: 2px;
 }
 
 @media (max-width: 719px) {
@@ -1861,7 +1864,13 @@
   }
 
   .albumPage .squareGrid {
-    gap: 1px;
+    gap: 2px;
+  }
+
+  /* Instagram-style portrait tiles on phone. */
+  .albumPage .squareGrid .squareTile,
+  .albumPage .squareGridInstagram .squareTile {
+    aspect-ratio: 3 / 4;
   }
 }
 
@@ -1869,7 +1878,8 @@
   position: relative;
   display: block;
   width: 100%;
-  aspect-ratio: 1;
+  /* Portrait 3:4 — taller tiles, denser Instagram feed feel. */
+  aspect-ratio: 3 / 4;
   overflow: hidden;
   border-radius: 2px;
   background:

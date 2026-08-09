@@ -16,7 +16,7 @@ const themeBootScript = `
   try {
     const key = ${JSON.stringify(THEME_STORAGE_KEY)};
     const stored = localStorage.getItem(key);
-    const preference = stored === "dark" ? "dark" : "light";
+    const preference = stored === "light" ? "light" : "dark";
     document.documentElement.dataset.theme = preference;
     document.documentElement.dataset.resolvedTheme = preference;
   } catch (_) {}
@@ -25,7 +25,7 @@ const themeBootScript = `
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="pt-BR" suppressHydrationWarning>
+    <html lang="pt-BR" data-theme="dark" data-resolved-theme="dark" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
       </head>

@@ -3,7 +3,7 @@ export type ResolvedTheme = ThemePreference;
 
 export const THEME_STORAGE_KEY = "mf-theme";
 export const THEME_CHANGE_EVENT = "mf-theme-change";
-export const DEFAULT_THEME: ThemePreference = "light";
+export const DEFAULT_THEME: ThemePreference = "dark";
 
 export function isThemePreference(
   value: string | null | undefined,

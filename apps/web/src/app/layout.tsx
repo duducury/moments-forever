@@ -9,6 +9,31 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Moments Forever",
   description: "Colecione momentos, não coisas.",
+  applicationName: "Moments Forever",
+  appleWebApp: {
+    capable: true,
+    title: "Moments Forever",
+    statusBarStyle: "black-translucent",
+  },
+  icons: {
+    icon: [
+      { url: "/brand/favicon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/brand/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/brand/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [
+      {
+        url: "/brand/apple-touch-icon.png",
+        sizes: "180x180",
+        type: "image/png",
+      },
+    ],
+  },
+  // iOS still honors this for standalone “Add to Home Screen” (no Safari chrome).
+  other: {
+    "apple-mobile-web-app-capable": "yes",
+    "mobile-web-app-capable": "yes",
+  },
 };
 
 /** App chrome stays fixed like Instagram; photo zoom is handled in the lightbox. */
@@ -18,6 +43,7 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: "cover",
+  themeColor: "#121110",
 };
 
 const themeBootScript = `

@@ -7,6 +7,7 @@ import { useMemo, useState } from "react";
 import {
   countryCodeFromName,
   countryCodeFromPlaceLabel,
+  usStateCodeFromPlaceLabel,
 } from "@moments-forever/shared";
 
 import {
@@ -177,15 +178,22 @@ export function AlbumFolderView({
   const metaLine = [period, photoCountLabel].filter(Boolean).join(" · ");
 
   const countryCode = useMemo(() => {
-    const fromCountry = countryCodeFromName(experience.primaryCountry ?? "");
-    if (fromCountry) return fromCountry;
+    // Prefer the place title ("Cleveland, OH") so US states get the USA flag
+    // even when the trip country field is empty or generic.
     const fromPlace = countryCodeFromPlaceLabel(album?.displayName ?? "");
     if (fromPlace) return fromPlace;
+    const fromCountry = countryCodeFromName(experience.primaryCountry ?? "");
+    if (fromCountry) return fromCountry;
     const combined = [experience.primaryCountry, album?.displayName]
       .filter(Boolean)
       .join(", ");
     return countryCodeFromPlaceLabel(combined);
   }, [album?.displayName, experience.primaryCountry]);
+
+  const placeUsState = useMemo(
+    () => usStateCodeFromPlaceLabel(album?.displayName ?? ""),
+    [album?.displayName],
+  );
 
   function toggleSelected(photoId: string) {
     setSelectedIds((current) => {
@@ -456,7 +464,9 @@ export function AlbumFolderView({
               ) : null}
               <h1 className={styles.albumHeroTitle}>{album.displayName}</h1>
             </div>
-            {experience.primaryCountry ? (
+            {placeUsState ? (
+              <p className={styles.albumHeroCountry}>{placeUsState}</p>
+            ) : experience.primaryCountry ? (
               <p className={styles.albumHeroCountry}>
                 {experience.primaryCountry}
               </p>

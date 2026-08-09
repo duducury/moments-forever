@@ -49,6 +49,7 @@ export {
   countryNameFromPlaceLabel,
   flagEmojiFromCountryCode,
   shortPlaceCaption,
+  usStateCodeFromPlaceLabel,
   type ShortPlaceCaption,
 } from "./country-flag";
 

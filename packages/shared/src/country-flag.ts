@@ -5,6 +5,120 @@
 
 import { cleanLocationLabel } from "./location-name";
 
+/**
+ * USPS state / DC codes. Used for labels like "Cleveland, OH" or "Boston, MA".
+ * Comma + code wins over ISO country collisions (MA→Morocco, CA→Canada).
+ */
+const US_STATE_CODES: ReadonlySet<string> = new Set([
+  "AL",
+  "AK",
+  "AZ",
+  "AR",
+  "CA",
+  "CO",
+  "CT",
+  "DE",
+  "DC",
+  "FL",
+  "GA",
+  "HI",
+  "ID",
+  "IL",
+  "IN",
+  "IA",
+  "KS",
+  "KY",
+  "LA",
+  "ME",
+  "MD",
+  "MA",
+  "MI",
+  "MN",
+  "MS",
+  "MO",
+  "MT",
+  "NE",
+  "NV",
+  "NH",
+  "NJ",
+  "NM",
+  "NY",
+  "NC",
+  "ND",
+  "OH",
+  "OK",
+  "OR",
+  "PA",
+  "RI",
+  "SC",
+  "SD",
+  "TN",
+  "TX",
+  "UT",
+  "VT",
+  "VA",
+  "WA",
+  "WV",
+  "WI",
+  "WY",
+]);
+
+/** Full US state / territory names (accent-folded keys) → USPS code. */
+const US_STATE_CODE_BY_NAME: Readonly<Record<string, string>> = {
+  alabama: "AL",
+  alaska: "AK",
+  arizona: "AZ",
+  arkansas: "AR",
+  california: "CA",
+  colorado: "CO",
+  connecticut: "CT",
+  delaware: "DE",
+  "district of columbia": "DC",
+  florida: "FL",
+  georgia: "GA",
+  hawaii: "HI",
+  havai: "HI",
+  idaho: "ID",
+  illinois: "IL",
+  indiana: "IN",
+  iowa: "IA",
+  kansas: "KS",
+  kentucky: "KY",
+  louisiana: "LA",
+  maine: "ME",
+  maryland: "MD",
+  massachusetts: "MA",
+  michigan: "MI",
+  minnesota: "MN",
+  mississippi: "MS",
+  missouri: "MO",
+  montana: "MT",
+  nebraska: "NE",
+  nevada: "NV",
+  "new hampshire": "NH",
+  "new jersey": "NJ",
+  "new mexico": "NM",
+  "new york": "NY",
+  "north carolina": "NC",
+  "north dakota": "ND",
+  ohio: "OH",
+  oklahoma: "OK",
+  oregon: "OR",
+  pennsylvania: "PA",
+  "rhode island": "RI",
+  "south carolina": "SC",
+  "south dakota": "SD",
+  tennessee: "TN",
+  texas: "TX",
+  utah: "UT",
+  vermont: "VT",
+  virginia: "VA",
+  washington: "WA",
+  "west virginia": "WV",
+  wisconsin: "WI",
+  wyoming: "WY",
+};
+
 /** Normalized country name (EN/PT variants, accents folded) → ISO 3166-1 alpha-2. */
 const COUNTRY_ISO_BY_NAME: Readonly<Record<string, string>> = {
   indonesia: "ID",
@@ -191,9 +305,48 @@ function normalizeCountryKey(value: string): string {
     .toLowerCase();
 }
 
+function usStateCodeFromToken(token: string): string | null {
+  const key = normalizeCountryKey(token);
+  if (!key) return null;
+  if (/^[a-z]{2}$/u.test(key)) {
+    const code = key.toUpperCase();
+    return US_STATE_CODES.has(code) ? code : null;
+  }
+  return US_STATE_CODE_BY_NAME[key] ?? null;
+}
+
+/**
+ * US state from labels like "Cleveland, OH", "Boston, MA", or bare "Ohio".
+ * Bare 2-letter codes are accepted only when they are not also used as a
+ * country lookup key (avoids turning a lone "GA" into a false positive later).
+ */
+export function usStateCodeFromPlaceLabel(
+  label: string | null | undefined,
+): string | null {
+  const cleaned = cleanLocationLabel(label ?? "");
+  if (!cleaned) return null;
+
+  const parts = cleaned
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  if (parts.length >= 2) {
+    const last = parts[parts.length - 1];
+    if (last) {
+      const fromLast = usStateCodeFromToken(last);
+      if (fromLast) return fromLast;
+    }
+  }
+
+  // Bare full state name only (not "MA"/"CA" alone — those collide with ISO use).
+  return US_STATE_CODE_BY_NAME[normalizeCountryKey(cleaned)] ?? null;
+}
+
 export function countryCodeFromName(countryName: string): string | null {
   const key = normalizeCountryKey(countryName);
   if (!key) return null;
+  if (US_STATE_CODE_BY_NAME[key]) return "US";
   return COUNTRY_ISO_BY_NAME[key] ?? null;
 }
 
@@ -224,6 +377,9 @@ export function countryCodeFromPlaceLabel(
 ): string | null {
   const cleaned = cleanLocationLabel(label ?? "");
   if (!cleaned) return null;
+
+  // "Cleveland, OH" / "Hartford, CT" — state abbreviation implies USA.
+  if (usStateCodeFromPlaceLabel(cleaned)) return "US";
 
   // Short folder names ("dubai", "usa") match the whole label.
   const fromFull = countryCodeFromName(cleaned);
@@ -358,6 +514,15 @@ export function shortPlaceCaption(
     return {
       countryCode,
       shortLabel: SHORT_PLACE_LABELS[fullKey],
+    };
+  }
+
+  // US trips: prefer state code (MA, CT, OH) over a single "USA" for every place.
+  const usState = usStateCodeFromPlaceLabel(cleaned);
+  if (usState) {
+    return {
+      countryCode: "US",
+      shortLabel: usState,
     };
   }
 

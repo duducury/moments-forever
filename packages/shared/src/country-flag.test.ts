@@ -7,6 +7,7 @@ import {
   countryFlagFromPlaceLabel,
   flagEmojiFromCountryCode,
   shortPlaceCaption,
+  usStateCodeFromPlaceLabel,
 } from "./country-flag";
 
 test("countryCodeFromName maps EN and PT labels with accents", () => {
@@ -73,4 +74,30 @@ test("shortPlaceCaption abbreviates with country flag code", () => {
     countryCode: "AE",
     shortLabel: "Dubai",
   });
+});
+
+test("US city, state labels resolve to USA flag and state short label", () => {
+  assert.equal(usStateCodeFromPlaceLabel("Cleveland, OH"), "OH");
+  assert.equal(usStateCodeFromPlaceLabel("Boston, MA"), "MA");
+  assert.equal(usStateCodeFromPlaceLabel("Hartford, CT"), "CT");
+  assert.equal(usStateCodeFromPlaceLabel("Los Angeles, CA"), "CA");
+  assert.equal(usStateCodeFromPlaceLabel("Ohio"), "OH");
+  assert.equal(countryCodeFromPlaceLabel("Cleveland, OH"), "US");
+  assert.equal(countryCodeFromPlaceLabel("Boston, MA"), "US");
+  assert.equal(countryCodeFromPlaceLabel("Los Angeles, CA"), "US");
+  assert.deepEqual(shortPlaceCaption("Cleveland, OH"), {
+    countryCode: "US",
+    shortLabel: "OH",
+  });
+  assert.deepEqual(shortPlaceCaption("Boston, MA"), {
+    countryCode: "US",
+    shortLabel: "MA",
+  });
+  assert.deepEqual(shortPlaceCaption("Hartford, CT"), {
+    countryCode: "US",
+    shortLabel: "CT",
+  });
+  // Country name still wins over a bare colliding token elsewhere.
+  assert.equal(countryCodeFromPlaceLabel("Marrocos"), "MA");
+  assert.equal(countryCodeFromPlaceLabel("Canada"), "CA");
 });

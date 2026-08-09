@@ -1341,6 +1341,8 @@
 }
 
 .albumToolbar {
+  position: relative;
+  z-index: var(--z-sticky);
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -1798,8 +1800,7 @@
 
 .squareGrid {
   display: grid;
-  /* Mobile: 2 columns so each photo is larger; scroll reveals the rest. */
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 2px;
 }
 
@@ -1819,11 +1820,22 @@
 
   .albumToolbar {
     order: 1;
+    flex-wrap: nowrap;
     gap: 8px;
-    padding: 4px 0 2px;
+    margin: 0 -4px;
+    padding: 6px 4px 8px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .albumToolbar::-webkit-scrollbar {
+    display: none;
   }
 
   .albumToolButton {
+    flex: 0 0 auto;
     min-height: 42px;
     padding: 0 13px;
     font-size: 0.86rem;
@@ -2068,7 +2080,6 @@
   }
 
   .squareGrid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 3px;
   }
 

@@ -9,6 +9,8 @@ interface PatchAlbumBody {
   readonly parent_album_id?: string | null;
   readonly cover_photo_id?: string | null;
   readonly reorder?: "up" | "down";
+  /** Full ordered photo ids for this album (drag-and-drop reorder). */
+  readonly photo_order?: readonly string[];
 }
 
 async function loadOwnedAlbum(
@@ -134,6 +136,84 @@ export async function PATCH(
     }
 
     return NextResponse.json({ album: step3.data });
+  }
+
+  if (Array.isArray(body.photo_order)) {
+    const orderedIds = body.photo_order.filter(
+      (item): item is string => typeof item === "string" && item.length > 0,
+    );
+    if (orderedIds.length === 0) {
+      return NextResponse.json(
+        { error: "Ordem de fotos inválida." },
+        { status: 400 },
+      );
+    }
+    if (new Set(orderedIds).size !== orderedIds.length) {
+      return NextResponse.json(
+        { error: "Ordem de fotos com ids duplicados." },
+        { status: 400 },
+      );
+    }
+
+    const siblings = await supabase
+      .from("photos")
+      .select("id, position_in_album")
+      .eq("album_id", album.id)
+      .order("position_in_album", { ascending: true });
+
+    if (siblings.error) {
+      return NextResponse.json({ error: siblings.error.message }, { status: 400 });
+    }
+
+    const current = siblings.data ?? [];
+    const currentIds = new Set(current.map((row) => row.id as string));
+    if (
+      orderedIds.length !== currentIds.size ||
+      orderedIds.some((photoId) => !currentIds.has(photoId))
+    ) {
+      return NextResponse.json(
+        { error: "A ordem deve incluir todas as fotos deste lugar." },
+        { status: 400 },
+      );
+    }
+
+    const maxPos = Math.max(
+      0,
+      ...current.map((row) =>
+        typeof row.position_in_album === "number" ? row.position_in_album : 0,
+      ),
+    );
+
+    // Two-phase update avoids unique (album_id, position_in_album) collisions.
+    const tempUpdates = await Promise.all(
+      orderedIds.map((photoId, index) =>
+        supabase
+          .from("photos")
+          .update({ position_in_album: maxPos + 1 + index })
+          .eq("id", photoId)
+          .eq("album_id", album.id),
+      ),
+    );
+    const tempError = tempUpdates.find((result) => result.error)?.error;
+    if (tempError) {
+      return NextResponse.json({ error: tempError.message }, { status: 400 });
+    }
+
+    const finalUpdates = await Promise.all(
+      orderedIds.map((photoId, index) =>
+        supabase
+          .from("photos")
+          .update({ position_in_album: index + 1 })
+          .eq("id", photoId)
+          .eq("album_id", album.id),
+      ),
+    );
+    const finalError = finalUpdates.find((result) => result.error)?.error;
+    if (finalError) {
+      return NextResponse.json({ error: finalError.message }, { status: 400 });
+    }
+
+    return NextResponse.json({ ok: true, photo_order: orderedIds });
   }
 
   const patch: Record<string, string | number | null> = {};

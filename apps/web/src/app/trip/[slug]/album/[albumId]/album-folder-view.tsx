@@ -13,7 +13,6 @@ import {
   deleteLocalPhotoBlob,
   deleteLocalPhotoBlobs,
 } from "@/lib/local-photos/photo-blob-store";
-import { useProgressiveLocalPhoto } from "@/lib/local-photos/use-progressive-local-photo";
 import { boundsFromGeoPoints } from "@/lib/map/cluster-photos";
 import {
   confirmRemovePhotoLocation,
@@ -37,13 +36,13 @@ import {
   gpsCenter,
   photosWithGps,
   sortAlbumPhotos,
-  toneFromId,
   type TripAlbum,
   type TripExperience,
   type TripPhoto,
 } from "../../album-types";
 import styles from "../../trip.module.css";
 import { TripMap } from "../../trip-map";
+import { PhotoOrganizeGrid } from "./photo-organize-grid";
 
 interface Props {
   readonly experience: TripExperience;
@@ -424,27 +423,6 @@ export function AlbumFolderView({
     }
   }
 
-  async function reorderPhoto(photoId: string, direction: "up" | "down") {
-    setBusy(true);
-    setError(null);
-    try {
-      const response = await fetch(`/api/photos/${photoId}`, {
-        method: "PATCH",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ reorder: direction }),
-      });
-      const payload = (await response.json()) as { readonly error?: string };
-      if (!response.ok) {
-        throw new Error(payload.error ?? "Não foi possível reordenar.");
-      }
-      router.refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Falha ao reordenar.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
   if (!album) {
     return (
       <div className={styles.page}>
@@ -676,6 +654,7 @@ export function AlbumFolderView({
               <p className={styles.sectionHint}>
                 {selectedIds.size} selecionada
                 {selectedIds.size === 1 ? "" : "s"}
+                {" · Arraste para reordenar · toque para selecionar"}
                 {privacyPickMode
                   ? ` · ${
                       carouselPhotos.filter(
@@ -742,42 +721,28 @@ export function AlbumFolderView({
           ) : null}
 
           {organizePhotos ? (
-            <div className={styles.squareGrid}>
-              {carouselPhotos.map((photo, index) => {
-                const selected = selectedIds.has(photo.id);
-                return (
-                  <div className={styles.photoOrganizeTile} key={photo.id}>
-                    <button
-                      aria-pressed={selected}
-                      className={styles.tileButton}
-                      data-selected={selected ? "true" : "false"}
-                      onClick={() => toggleSelected(photo.id)}
-                      type="button"
-                    >
-                      <OrganizeThumb photo={photo} />
-                    </button>
-                    <div className={styles.photoOrganizeControls}>
-                      <button
-                        className="button secondary"
-                        disabled={busy || index === 0}
-                        onClick={() => void reorderPhoto(photo.id, "up")}
-                        type="button"
-                      >
-                        ↑
-                      </button>
-                      <button
-                        className="button secondary"
-                        disabled={busy || index === carouselPhotos.length - 1}
-                        onClick={() => void reorderPhoto(photo.id, "down")}
-                        type="button"
-                      >
-                        ↓
-                      </button>
-                    </div>
-                  </div>
+            <PhotoOrganizeGrid
+              albumId={albumId}
+              busy={busy}
+              onBusyChange={setBusy}
+              onError={setError}
+              onOrderChange={(ordered) => {
+                const positions = new Map(
+                  ordered.map((photo, index) => [photo.id, index + 1]),
                 );
-              })}
-            </div>
+                setPhotos((current) =>
+                  current.map((photo) => {
+                    const nextPos = positions.get(photo.id);
+                    if (nextPos === undefined) return photo;
+                    return { ...photo, positionInAlbum: nextPos };
+                  }),
+                );
+                router.refresh();
+              }}
+              onToggleSelected={toggleSelected}
+              photos={albumPhotos}
+              selectedIds={selectedIds}
+            />
           ) : (
             <PhotoGallery
               emptyLabel="Este lugar ainda não tem fotos."
@@ -827,38 +792,5 @@ export function AlbumFolderView({
         />
       ) : null}
     </LibraryShell>
-  );
-}
-
-function OrganizeThumb({ photo }: { readonly photo: TripPhoto }) {
-  const { nodeRef, thumbSrc, fullSrc } = useProgressiveLocalPhoto(photo.id);
-  const hasImage = Boolean(thumbSrc || fullSrc);
-  return (
-    <span
-      className={styles.squareTile}
-      data-has-image={hasImage ? "true" : "false"}
-      data-tone={toneFromId(photo.id)}
-      ref={nodeRef}
-    >
-      {thumbSrc ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          alt=""
-          className={styles.tileImage}
-          decoding="async"
-          loading="lazy"
-          src={thumbSrc}
-        />
-      ) : null}
-      {fullSrc ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          alt=""
-          className={`${styles.tileImage} ${styles.tileImageFull}`}
-          decoding="async"
-          src={fullSrc}
-        />
-      ) : null}
-    </span>
   );
 }

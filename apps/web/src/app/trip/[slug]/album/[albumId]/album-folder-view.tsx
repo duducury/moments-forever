@@ -56,6 +56,8 @@ interface Props {
   readonly profileHomeHref?: string | null;
   /** Open this photo in the lightbox on mount (e.g. from Destaques). */
   readonly initialPhotoId?: string | null;
+  /** Start in selection mode to remove GPS (from /privacidade). */
+  readonly initialPrivacyMode?: boolean;
 }
 
 export function AlbumFolderView({
@@ -67,12 +69,18 @@ export function AlbumFolderView({
   relatedPlaces = [],
   profileHomeHref = null,
   initialPhotoId = null,
+  initialPrivacyMode = false,
 }: Props) {
   const router = useRouter();
   const [albums, setAlbums] = useState(initialAlbums);
   const [photos, setPhotos] = useState(initialPhotos);
   const [foldersOpen, setFoldersOpen] = useState(false);
-  const [organizePhotos, setOrganizePhotos] = useState(false);
+  const [organizePhotos, setOrganizePhotos] = useState(
+    () => Boolean(initialPrivacyMode && isOwner),
+  );
+  const [privacyPickMode, setPrivacyPickMode] = useState(
+    () => Boolean(initialPrivacyMode && isOwner),
+  );
   const [renameOpen, setRenameOpen] = useState(false);
   const [addPhotosOpen, setAddPhotosOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(
@@ -368,11 +376,44 @@ export function AlbumFolderView({
       setPhotos((current) =>
         current.map((photo) =>
           cleared.has(photo.id)
-            ? { ...photo, exactLatitude: null, exactLongitude: null }
+            ? {
+                ...photo,
+                exactLatitude: null,
+                exactLongitude: null,
+                locationLabel: null,
+              }
             : photo,
         ),
       );
       setSelectedIds(new Set());
+      router.refresh();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Falha ao remover localização.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function removeLocationFromPhoto(photoId: string) {
+    if (!confirmRemovePhotoLocation(1)) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await removeLocationFromPhotos([photoId]);
+      setPhotos((current) =>
+        current.map((photo) =>
+          photo.id === photoId
+            ? {
+                ...photo,
+                exactLatitude: null,
+                exactLongitude: null,
+                locationLabel: null,
+              }
+            : photo,
+        ),
+      );
       router.refresh();
     } catch (err) {
       setError(
@@ -502,12 +543,26 @@ export function AlbumFolderView({
               data-active={organizePhotos ? "true" : "false"}
               onClick={() => {
                 setOrganizePhotos((value) => !value);
+                setPrivacyPickMode(false);
                 setSelectedIds(new Set());
                 setError(null);
               }}
               type="button"
             >
               {organizePhotos ? "Concluir fotos" : "Organizar"}
+            </button>
+            <button
+              className={styles.albumToolButton}
+              data-active={privacyPickMode ? "true" : "false"}
+              onClick={() => {
+                setPrivacyPickMode(true);
+                setOrganizePhotos(true);
+                setSelectedIds(new Set());
+                setError(null);
+              }}
+              type="button"
+            >
+              Privacidade
             </button>
             <button
               aria-expanded={foldersOpen}
@@ -596,11 +651,40 @@ export function AlbumFolderView({
             <h2 className={styles.sectionTitle}>Fotos</h2>
           </div>
 
+          {privacyPickMode ? (
+            <div className={styles.privacyPickBanner} role="status">
+              <p>
+                Selecione as fotos com localização que deseja limpar, depois
+                toque em <strong>Remover localização</strong>.
+              </p>
+              <button
+                className={styles.quietAction}
+                onClick={() => {
+                  setPrivacyPickMode(false);
+                  setOrganizePhotos(false);
+                  setSelectedIds(new Set());
+                }}
+                type="button"
+              >
+                Sair da seleção
+              </button>
+            </div>
+          ) : null}
+
           {organizePhotos ? (
             <div className={styles.photoOrganizeBar}>
               <p className={styles.sectionHint}>
                 {selectedIds.size} selecionada
                 {selectedIds.size === 1 ? "" : "s"}
+                {privacyPickMode
+                  ? ` · ${
+                      carouselPhotos.filter(
+                        (photo) =>
+                          photo.exactLatitude !== null &&
+                          photo.exactLongitude !== null,
+                      ).length
+                    } com GPS neste lugar`
+                  : ""}
               </p>
               <div className={styles.actions}>
                 <select
@@ -644,7 +728,9 @@ export function AlbumFolderView({
                   Excluir
                 </button>
                 <button
-                  className="button secondary"
+                  className={
+                    privacyPickMode ? "button primary" : "button secondary"
+                  }
                   disabled={busy || selectedIds.size === 0}
                   onClick={() => void removeLocationSelected()}
                   type="button"
@@ -709,8 +795,12 @@ export function AlbumFolderView({
       {lightboxId ? (
         <PhotoLightbox
           albumLabel={album.displayName}
+          canRemoveLocation={isOwner}
           experienceTitle={experience.title}
           onClose={() => setLightboxId(null)}
+          onRemoveLocation={
+            isOwner ? (photoId) => removeLocationFromPhoto(photoId) : undefined
+          }
           onSelect={setLightboxId}
           photoId={lightboxId}
           photos={carouselPhotos}

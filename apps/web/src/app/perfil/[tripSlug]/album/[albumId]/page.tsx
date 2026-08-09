@@ -22,12 +22,17 @@ export default async function ProfileTripAlbumPage({
     readonly tripSlug: string;
     readonly albumId: string;
   }>;
-  readonly searchParams: Promise<{ readonly photo?: string }>;
+  readonly searchParams: Promise<{
+    readonly photo?: string;
+    readonly privacy?: string;
+  }>;
 }) {
   const { tripSlug: rawSlug, albumId } = await params;
-  const { photo: photoParam } = await searchParams;
+  const { photo: photoParam, privacy: privacyParam } = await searchParams;
   const slug = decodeURIComponent(rawSlug);
   const initialPhotoId = photoParam?.trim() || null;
+  const initialPrivacyMode =
+    privacyParam === "1" || privacyParam?.toLowerCase() === "true";
   const supabase = await createSupabaseServerClient();
 
   if (!supabase) {
@@ -106,6 +111,7 @@ export default async function ProfileTripAlbumPage({
         albums={data.albums}
         experience={data.experience}
         initialPhotoId={initialPhotoId}
+        initialPrivacyMode={initialPrivacyMode}
         isOwner={isOwner}
         photos={data.photos}
         profileHomeHref={profileHomeHref}

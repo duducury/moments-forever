@@ -630,6 +630,52 @@
   font-weight: 550;
 }
 
+.lightboxPrivacyButton {
+  justify-self: start;
+  min-height: 40px;
+  margin-top: 8px;
+  border: 1px solid rgb(245 242 236 / 28%);
+  border-radius: 999px;
+  padding: 0 14px;
+  color: #f7f2ea;
+  background: rgb(0 0 0 / 42%);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 650;
+  pointer-events: auto;
+}
+
+.lightboxPrivacyButton:hover {
+  background: rgb(0 0 0 / 58%);
+}
+
+.lightboxPrivacyButton:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.privacyPickBanner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border));
+  border-radius: 14px;
+  padding: 12px 14px;
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+}
+
+.privacyPickBanner p {
+  margin: 0;
+  flex: 1 1 14rem;
+  color: var(--text);
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
 .panelActions {
   display: flex;
   flex-wrap: wrap;

@@ -122,6 +122,8 @@ export function PhotoLightbox({
   onSelect,
   experienceTitle = null,
   albumLabel = null,
+  canRemoveLocation = false,
+  onRemoveLocation,
 }: {
   readonly photos: readonly TripPhoto[];
   readonly photoId: string;
@@ -129,12 +131,15 @@ export function PhotoLightbox({
   readonly onSelect: (photoId: string) => void;
   readonly experienceTitle?: string | null;
   readonly albumLabel?: string | null;
+  readonly canRemoveLocation?: boolean;
+  readonly onRemoveLocation?: (photoId: string) => void | Promise<void>;
 }) {
   const index = photos.findIndex((photo) => photo.id === photoId);
   const photo = index >= 0 ? photos[index] : null;
   const thumbSrc = useLocalPhotoObjectUrl(photo?.id, "thumbnail");
   const fullSrc = useLocalPhotoObjectUrl(photo?.id, "full");
   const touchStartX = useRef<number | null>(null);
+  const [removingLocation, setRemovingLocation] = useState(false);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -164,19 +169,38 @@ export function PhotoLightbox({
   if (!photo) return null;
   if (typeof document === "undefined") return null;
 
+  const currentPhoto = photo;
+
   function go(delta: number) {
     if (photos.length < 2) return;
     const next = photos[(index + delta + photos.length) % photos.length];
     if (next) onSelect(next.id);
   }
 
-  const capturedLabel = formatLightboxCapturedAt(photo.capturedAt);
-  const placeLabel = photo.locationLabel?.trim() || null;
+  const capturedLabel = formatLightboxCapturedAt(currentPhoto.capturedAt);
+  const placeLabel = currentPhoto.locationLabel?.trim() || null;
   const tripLabel = experienceTitle?.trim() || null;
   const folderLabel = albumLabel?.trim() || null;
   const secondaryParts = [capturedLabel, tripLabel, folderLabel].filter(
     (part): part is string => Boolean(part),
   );
+  const hasGps =
+    currentPhoto.exactLatitude !== null &&
+    currentPhoto.exactLongitude !== null &&
+    Number.isFinite(currentPhoto.exactLatitude) &&
+    Number.isFinite(currentPhoto.exactLongitude);
+  const showRemoveLocation =
+    canRemoveLocation && Boolean(onRemoveLocation) && hasGps;
+
+  async function handleRemoveLocation() {
+    if (!onRemoveLocation || removingLocation) return;
+    setRemovingLocation(true);
+    try {
+      await onRemoveLocation(currentPhoto.id);
+    } finally {
+      setRemovingLocation(false);
+    }
+  }
 
   const dialog = (
     <div
@@ -262,7 +286,18 @@ export function PhotoLightbox({
         ) : null}
         <p className={styles.lightboxMetaCount}>
           {index + 1} / {photos.length}
+          {hasGps ? " · com localização" : ""}
         </p>
+        {showRemoveLocation ? (
+          <button
+            className={styles.lightboxPrivacyButton}
+            disabled={removingLocation}
+            onClick={() => void handleRemoveLocation()}
+            type="button"
+          >
+            {removingLocation ? "Removendo…" : "Remover localização"}
+          </button>
+        ) : null}
       </div>
 
       {photos.length > 1 ? (

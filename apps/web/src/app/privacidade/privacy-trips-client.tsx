@@ -9,12 +9,22 @@ import {
   removeLocationFromExperience,
 } from "@/lib/privacy/remove-location";
 
+import styles from "./privacy.module.css";
+
+interface PrivacyAlbum {
+  readonly id: string;
+  readonly name: string;
+  readonly photoCount: number;
+  readonly locatedCount: number;
+}
+
 interface PrivacyTrip {
   readonly id: string;
   readonly slug: string;
   readonly title: string;
   readonly locatedCount: number;
   readonly photoCount: number;
+  readonly albums: readonly PrivacyAlbum[];
 }
 
 export function PrivacyTripsClient({
@@ -36,7 +46,16 @@ export function PrivacyTripsClient({
       await removeLocationFromExperience(trip.id);
       setTrips((current) =>
         current.map((item) =>
-          item.id === trip.id ? { ...item, locatedCount: 0 } : item,
+          item.id === trip.id
+            ? {
+                ...item,
+                locatedCount: 0,
+                albums: item.albums.map((album) => ({
+                  ...album,
+                  locatedCount: 0,
+                })),
+              }
+            : item,
         ),
       );
       router.refresh();
@@ -50,38 +69,22 @@ export function PrivacyTripsClient({
   }
 
   if (trips.length === 0) {
-    return (
-      <p style={{ marginTop: 18, color: "var(--muted)" }}>
-        Você ainda não tem viagens.
-      </p>
-    );
+    return <p className={styles.empty}>Você ainda não tem viagens.</p>;
   }
 
   return (
-    <div style={{ marginTop: 18, display: "grid", gap: 12 }}>
+    <div>
       {error ? (
         <p className="placeholder-note" role="alert">
           {error}
         </p>
       ) : null}
-      <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "grid", gap: 10 }}>
+      <ul className={styles.list}>
         {trips.map((trip) => (
-          <li
-            key={trip.id}
-            style={{
-              border: "1px solid var(--border)",
-              borderRadius: 16,
-              padding: "14px 16px",
-              background: "color-mix(in srgb, var(--surface) 92%, transparent)",
-              display: "grid",
-              gap: 10,
-            }}
-          >
+          <li className={styles.tripCard} key={trip.id}>
             <div>
-              <Link className="text-link" href={`/trip/${trip.slug}`}>
-                {trip.title}
-              </Link>
-              <p style={{ margin: "4px 0 0", color: "var(--muted)", fontSize: "0.92rem" }}>
+              <p className={styles.tripTitle}>{trip.title}</p>
+              <p className={styles.tripMeta}>
                 {trip.photoCount} foto{trip.photoCount === 1 ? "" : "s"}
                 {" · "}
                 {trip.locatedCount > 0
@@ -89,7 +92,36 @@ export function PrivacyTripsClient({
                   : "sem localização no mapa"}
               </p>
             </div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+
+            {trip.albums.length > 0 ? (
+              <ul className={styles.albumList} aria-label={`Lugares de ${trip.title}`}>
+                {trip.albums.map((album) => (
+                  <li className={styles.albumRow} key={album.id}>
+                    <div className={styles.albumCopy}>
+                      <p className={styles.albumName}>{album.name}</p>
+                      <p className={styles.albumMeta}>
+                        {album.photoCount} foto
+                        {album.photoCount === 1 ? "" : "s"}
+                        {" · "}
+                        {album.locatedCount > 0
+                          ? `${album.locatedCount} com localização`
+                          : "sem GPS"}
+                      </p>
+                    </div>
+                    <Link
+                      className="button primary"
+                      href={`/perfil/${encodeURIComponent(trip.slug)}/album/${album.id}?privacy=1`}
+                    >
+                      Escolher fotos
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className={styles.albumMeta}>Nenhum lugar nesta viagem ainda.</p>
+            )}
+
+            <div className={styles.tripActions}>
               <button
                 className="button secondary"
                 disabled={busyId !== null || trip.locatedCount === 0}
@@ -100,9 +132,6 @@ export function PrivacyTripsClient({
                   ? "Removendo…"
                   : "Remover localização de toda a viagem"}
               </button>
-              <Link className="button secondary" href={`/trip/${trip.slug}`}>
-                Abrir viagem
-              </Link>
             </div>
           </li>
         ))}

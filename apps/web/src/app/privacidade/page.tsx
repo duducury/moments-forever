@@ -6,8 +6,16 @@ import { AuthStatus } from "@/components/auth-status";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import { PrivacyTripsClient } from "./privacy-trips-client";
+import styles from "./privacy.module.css";
 
 export const dynamic = "force-dynamic";
+
+interface PrivacyAlbumRow {
+  readonly id: string;
+  readonly name: string;
+  readonly photoCount: number;
+  readonly locatedCount: number;
+}
 
 interface PrivacyTripRow {
   readonly id: string;
@@ -15,6 +23,7 @@ interface PrivacyTripRow {
   readonly title: string;
   readonly locatedCount: number;
   readonly photoCount: number;
+  readonly albums: readonly PrivacyAlbumRow[];
 }
 
 export default async function PrivacyPage() {
@@ -67,23 +76,46 @@ export default async function PrivacyPage() {
 
   const rows: PrivacyTripRow[] = [];
   for (const experience of experiences.data ?? []) {
-    const photos = await supabase
-      .from("photos")
-      .select("id, exact_latitude, exact_longitude")
-      .eq("experience_id", experience.id);
+    const [photosResult, albumsResult] = await Promise.all([
+      supabase
+        .from("photos")
+        .select("id, album_id, exact_latitude, exact_longitude")
+        .eq("experience_id", experience.id),
+      supabase
+        .from("albums")
+        .select("id, name, parent_album_id, position")
+        .eq("experience_id", experience.id)
+        .order("position", { ascending: true }),
+    ]);
 
-    const list = photos.data ?? [];
-    const locatedCount = list.filter(
+    const photos = photosResult.data ?? [];
+    const albums = albumsResult.data ?? [];
+    const locatedCount = photos.filter(
       (photo) =>
         photo.exact_latitude !== null && photo.exact_longitude !== null,
     ).length;
+
+    const albumRows: PrivacyAlbumRow[] = albums.map((album) => {
+      const albumPhotos = photos.filter((photo) => photo.album_id === album.id);
+      const albumLocated = albumPhotos.filter(
+        (photo) =>
+          photo.exact_latitude !== null && photo.exact_longitude !== null,
+      ).length;
+      return {
+        id: album.id,
+        name: album.name?.trim() || "Lugar",
+        photoCount: albumPhotos.length,
+        locatedCount: albumLocated,
+      };
+    });
 
     rows.push({
       id: experience.id,
       slug: experience.slug,
       title: experience.title,
       locatedCount,
-      photoCount: list.length,
+      photoCount: photos.length,
+      albums: albumRows,
     });
   }
 
@@ -96,22 +128,23 @@ export default async function PrivacyPage() {
       <section className="narrow">
         <p className="eyebrow">Conta</p>
         <h1>Privacidade</h1>
-        <p style={{ marginTop: 16, color: "var(--muted)", lineHeight: 1.55 }}>
-          Algumas fotos podem conter informações de localização. Você pode
-          remover a localização de fotos a qualquer momento.
+        <p className={styles.intro}>
+          Algumas fotos podem conter informações de localização. Escolha um
+          lugar (álbum), selecione as fotos e remova a localização — ou remova
+          de uma viagem inteira.
         </p>
 
-        <h2 style={{ marginTop: 32, fontSize: "1.15rem" }}>
-          Localização das fotos
-        </h2>
-        <p style={{ marginTop: 8, color: "var(--muted)", lineHeight: 1.5 }}>
-          Remova a localização de fotos selecionadas na organização do álbum, ou
-          de uma viagem inteira abaixo.
+        <h2 className={styles.sectionTitle}>Localização das fotos</h2>
+        <p className={styles.sectionLead}>
+          Toque em <strong>Escolher fotos</strong> no lugar desejado. No álbum,
+          selecione uma ou várias fotos e use{" "}
+          <strong>Remover localização</strong>. Também dá para fazer isso
+          direto ao abrir uma foto.
         </p>
 
         <PrivacyTripsClient trips={rows} />
 
-        <p style={{ marginTop: 28 }}>
+        <p className={styles.back}>
           <Link className="text-link" href="/perfil">
             Voltar ao perfil
           </Link>

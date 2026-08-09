@@ -623,10 +623,10 @@
 }
 
 .mapShell {
+  /* Hug the TripMap frame — do not force a taller empty box around it. */
   overflow: hidden;
-  border: 1px solid var(--border);
   border-radius: 20px;
-  min-height: 280px;
+  line-height: 0;
 }
 
 .cardRow {

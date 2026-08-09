@@ -1215,9 +1215,8 @@
 
 .mapCanvasFeatured {
   width: 100%;
-  aspect-ratio: 16 / 10;
-  max-height: min(42vw, 220px);
-  min-height: 160px;
+  height: clamp(200px, 52vw, 260px);
+  aspect-ratio: auto;
 }
 
 .mapEmptyFeatured {
@@ -1225,9 +1224,8 @@
   place-content: center;
   gap: 8px;
   width: 100%;
-  aspect-ratio: 16 / 10;
-  max-height: min(42vw, 220px);
-  min-height: 160px;
+  height: clamp(200px, 52vw, 260px);
+  aspect-ratio: auto;
   padding: 20px;
   border: 1px solid var(--border);
   border-radius: 16px;

@@ -9,7 +9,10 @@ import {
   countryCodeFromPlaceLabel,
 } from "@moments-forever/shared";
 
-import { deleteLocalPhotoBlob } from "@/lib/local-photos/photo-blob-store";
+import {
+  deleteLocalPhotoBlob,
+  deleteLocalPhotoBlobs,
+} from "@/lib/local-photos/photo-blob-store";
 import { useProgressiveLocalPhoto } from "@/lib/local-photos/use-progressive-local-photo";
 import { boundsFromGeoPoints } from "@/lib/map/cluster-photos";
 import {
@@ -223,6 +226,40 @@ export function AlbumFolderView({
     } catch (err) {
       setError(err instanceof Error ? err.message : "Falha ao renomear.");
     } finally {
+      setBusy(false);
+    }
+  }
+
+  async function deleteCurrentAlbum() {
+    if (!album) return;
+    const force = albumPhotos.length > 0 || childAlbums.length > 0;
+    const message = force
+      ? `Excluir “${album.displayName}” e todas as fotos/subálbuns? Não dá para desfazer.`
+      : `Excluir o lugar “${album.displayName}”?`;
+    if (!window.confirm(message)) return;
+
+    setBusy(true);
+    setError(null);
+    try {
+      const response = await fetch(
+        `/api/albums/${album.id}${force ? "?force=1" : ""}`,
+        { method: "DELETE" },
+      );
+      const payload = (await response.json()) as {
+        readonly error?: string;
+        readonly deleted_photo_ids?: readonly string[];
+      };
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Não foi possível excluir o lugar.");
+      }
+      const deletedIds = payload.deleted_photo_ids ?? [];
+      if (deletedIds.length > 0) {
+        await deleteLocalPhotoBlobs([...deletedIds]);
+      }
+      router.push(profileHref);
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Falha ao excluir lugar.");
       setBusy(false);
     }
   }
@@ -480,6 +517,14 @@ export function AlbumFolderView({
               type="button"
             >
               {foldersOpen ? "Ocultar pastas" : "Subálbuns"}
+            </button>
+            <button
+              className={`${styles.albumToolButton} ${styles.albumToolDanger}`}
+              disabled={busy}
+              onClick={() => void deleteCurrentAlbum()}
+              type="button"
+            >
+              Excluir lugar
             </button>
           </div>
         ) : null}

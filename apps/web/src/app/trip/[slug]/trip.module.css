@@ -1338,6 +1338,23 @@
   color: white;
 }
 
+.albumToolDanger {
+  border-color: color-mix(in srgb, #c44 40%, var(--border));
+  color: #e07070;
+  background: color-mix(in srgb, #c44 10%, var(--surface));
+}
+
+.albumToolDanger:hover {
+  border-color: color-mix(in srgb, #c44 55%, var(--border));
+  color: #ff8f8f;
+  background: color-mix(in srgb, #c44 16%, var(--surface));
+}
+
+.albumToolDanger:disabled {
+  opacity: 0.55;
+  transform: none;
+}
+
 .albumStory {
   display: grid;
   gap: 14px;

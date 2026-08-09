@@ -12,6 +12,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 
+import { deleteLocalPhotoBlobs } from "@/lib/local-photos/photo-blob-store";
 import { useProgressiveLocalPhoto } from "@/lib/local-photos/use-progressive-local-photo";
 import { useLocalPhotoObjectUrl } from "@/lib/local-photos/use-local-photo-urls";
 
@@ -566,23 +567,29 @@ export function AlbumGrid({
   }
 
   async function removeAlbum(album: AlbumCardModel) {
-    if (album.photoCount > 0 || album.childCount > 0) {
-      setError(
-        "Só é possível excluir lugares vazios. Mova ou exclua as fotos antes.",
-      );
-      return;
-    }
-    if (!window.confirm(`Excluir o lugar “${album.displayName}”?`)) return;
+    const force = album.photoCount > 0 || album.childCount > 0;
+    const message = force
+      ? `Excluir “${album.displayName}” e todas as fotos/subálbuns dentro? Não dá para desfazer.`
+      : `Excluir o lugar “${album.displayName}”?`;
+    if (!window.confirm(message)) return;
 
     setBusy(true);
     setError(null);
     try {
-      const response = await fetch(`/api/albums/${album.id}`, {
-        method: "DELETE",
-      });
-      const payload = (await response.json()) as { readonly error?: string };
+      const response = await fetch(
+        `/api/albums/${album.id}${force ? "?force=1" : ""}`,
+        { method: "DELETE" },
+      );
+      const payload = (await response.json()) as {
+        readonly error?: string;
+        readonly deleted_photo_ids?: readonly string[];
+      };
       if (!response.ok) {
         throw new Error(payload.error ?? "Não foi possível excluir.");
+      }
+      const deletedIds = payload.deleted_photo_ids ?? [];
+      if (deletedIds.length > 0) {
+        await deleteLocalPhotoBlobs([...deletedIds]);
       }
       onAlbumsChange(albums.filter((item) => item.id !== album.id));
       router.refresh();
@@ -699,9 +706,7 @@ export function AlbumGrid({
                 </button>
                 <button
                   className="button secondary"
-                  disabled={
-                    busy || album.photoCount > 0 || album.childCount > 0
-                  }
+                  disabled={busy}
                   onClick={() => void removeAlbum(album)}
                   type="button"
                 >

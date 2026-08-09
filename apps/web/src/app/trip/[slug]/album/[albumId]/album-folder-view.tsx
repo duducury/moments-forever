@@ -4,6 +4,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
+import {
+  countryCodeFromName,
+  countryCodeFromPlaceLabel,
+} from "@moments-forever/shared";
+
 import { deleteLocalPhotoBlob } from "@/lib/local-photos/photo-blob-store";
 import { useProgressiveLocalPhoto } from "@/lib/local-photos/use-progressive-local-photo";
 import { boundsFromGeoPoints } from "@/lib/map/cluster-photos";
@@ -159,6 +164,17 @@ export function AlbumFolderView({
   }`;
 
   const metaLine = [period, photoCountLabel].filter(Boolean).join(" · ");
+
+  const countryCode = useMemo(() => {
+    const fromCountry = countryCodeFromName(experience.primaryCountry ?? "");
+    if (fromCountry) return fromCountry;
+    const fromPlace = countryCodeFromPlaceLabel(album?.displayName ?? "");
+    if (fromPlace) return fromPlace;
+    const combined = [experience.primaryCountry, album?.displayName]
+      .filter(Boolean)
+      .join(", ");
+    return countryCodeFromPlaceLabel(combined);
+  }, [album?.displayName, experience.primaryCountry]);
 
   function toggleSelected(photoId: string) {
     setSelectedIds((current) => {
@@ -369,63 +385,34 @@ export function AlbumFolderView({
       header={
         <header className={styles.albumHeroHeader}>
           <div className={styles.albumHeroCopy}>
-            <h1 className={styles.albumHeroTitle}>{album.displayName}</h1>
+            <div className={styles.albumHeroTitleRow}>
+              {countryCode ? (
+                // eslint-disable-next-line @next/next/no-img-element -- small flag CDN asset
+                <img
+                  alt=""
+                  className={styles.albumHeroFlag}
+                  decoding="async"
+                  height={22}
+                  src={`https://flagcdn.com/w80/${countryCode.toLowerCase()}.png`}
+                  width={30}
+                />
+              ) : null}
+              <h1 className={styles.albumHeroTitle}>{album.displayName}</h1>
+            </div>
             {experience.primaryCountry ? (
               <p className={styles.albumHeroCountry}>
                 {experience.primaryCountry}
               </p>
             ) : null}
-            <p className={styles.albumHeroMeta}>{metaLine}</p>
+            {metaLine ? (
+              <p className={styles.albumHeroMeta}>{metaLine}</p>
+            ) : null}
             {error ? (
               <p className={styles.error} role="alert">
                 {error}
               </p>
             ) : null}
           </div>
-          {isOwner ? (
-            <div className={styles.albumHeroActions}>
-              <button
-                className={styles.quietAction}
-                onClick={() => {
-                  setError(null);
-                  setAddPhotosOpen(true);
-                }}
-                type="button"
-              >
-                + Adicionar fotos
-              </button>
-              <button
-                className={styles.quietAction}
-                onClick={() => {
-                  setError(null);
-                  setRenameOpen(true);
-                }}
-                type="button"
-              >
-                Renomear
-              </button>
-              <button
-                aria-expanded={organizePhotos}
-                className={styles.quietAction}
-                onClick={() => {
-                  setOrganizePhotos((value) => !value);
-                  setSelectedIds(new Set());
-                  setError(null);
-                }}
-                type="button"
-              >
-                {organizePhotos ? "Concluir fotos" : "Organizar fotos"}
-              </button>
-              <button
-                aria-expanded={foldersOpen}
-                className={styles.quietAction}
-                onClick={() => setFoldersOpen((value) => !value)}
-                type="button"
-              >
-                {foldersOpen ? "Ocultar pastas" : "Subálbuns"}
-              </button>
-            </div>
-          ) : null}
         </header>
       }
     >
@@ -450,26 +437,69 @@ export function AlbumFolderView({
           </section>
         ) : null}
 
-        <section
-          aria-label="Informações do local"
-          className={styles.albumInfoSection}
-        >
-          <h2 className={styles.albumInfoTitle}>{album.displayName}</h2>
-          {experience.primaryCountry ? (
-            <p className={styles.albumInfoCountry}>
-              {experience.primaryCountry}
-            </p>
-          ) : null}
-          <p className={styles.albumInfoLine}>{photoCountLabel}</p>
-          {period ? <p className={styles.albumInfoLine}>{period}</p> : null}
-          {experience.primaryCity &&
-          experience.primaryCity !== album.displayName ? (
-            <p className={styles.albumInfoLine}>{experience.primaryCity}</p>
-          ) : null}
-          {album.description ? (
-            <p className={styles.albumInfoDescription}>{album.description}</p>
-          ) : null}
-        </section>
+        {isOwner ? (
+          <div className={styles.albumToolbar} aria-label="Ações do lugar">
+            <button
+              className={`${styles.albumToolButton} ${styles.albumToolPrimary}`}
+              onClick={() => {
+                setError(null);
+                setAddPhotosOpen(true);
+              }}
+              type="button"
+            >
+              + Adicionar fotos
+            </button>
+            <button
+              className={styles.albumToolButton}
+              onClick={() => {
+                setError(null);
+                setRenameOpen(true);
+              }}
+              type="button"
+            >
+              Renomear
+            </button>
+            <button
+              aria-expanded={organizePhotos}
+              className={styles.albumToolButton}
+              data-active={organizePhotos ? "true" : "false"}
+              onClick={() => {
+                setOrganizePhotos((value) => !value);
+                setSelectedIds(new Set());
+                setError(null);
+              }}
+              type="button"
+            >
+              {organizePhotos ? "Concluir fotos" : "Organizar"}
+            </button>
+            <button
+              aria-expanded={foldersOpen}
+              className={styles.albumToolButton}
+              data-active={foldersOpen ? "true" : "false"}
+              onClick={() => setFoldersOpen((value) => !value)}
+              type="button"
+            >
+              {foldersOpen ? "Ocultar pastas" : "Subálbuns"}
+            </button>
+          </div>
+        ) : null}
+
+        {album.description ||
+        (experience.primaryCity &&
+          experience.primaryCity !== album.displayName) ? (
+          <section
+            aria-label="Sobre o lugar"
+            className={styles.albumInfoSection}
+          >
+            {experience.primaryCity &&
+            experience.primaryCity !== album.displayName ? (
+              <p className={styles.albumInfoLine}>{experience.primaryCity}</p>
+            ) : null}
+            {album.description ? (
+              <p className={styles.albumInfoDescription}>{album.description}</p>
+            ) : null}
+          </section>
+        ) : null}
 
         {foldersOpen || childAlbums.length > 0 ? (
           <div

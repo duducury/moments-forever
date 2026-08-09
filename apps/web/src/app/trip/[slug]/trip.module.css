@@ -1220,7 +1220,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 8px 12px;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
 .albumHeroCopy {
@@ -1228,39 +1228,43 @@
   flex: 1 1 12rem;
 }
 
+.albumHeroTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.albumHeroFlag {
+  flex: 0 0 auto;
+  width: 30px;
+  height: auto;
+  border-radius: 3px;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--border) 70%, transparent);
+  object-fit: cover;
+}
+
 .albumHeroTitle {
   margin: 0;
-  font-size: clamp(1.55rem, 6.5vw, 2.35rem);
+  min-width: 0;
+  font-size: clamp(1.7rem, 6.8vw, 2.45rem);
   line-height: 1.08;
   overflow-wrap: anywhere;
 }
 
 .albumHeroCountry {
-  margin: 4px 0 0;
+  margin: 6px 0 0;
   color: var(--muted);
-  font-size: 0.98rem;
+  font-size: 0.95rem;
   font-weight: 550;
   line-height: 1.3;
 }
 
 .albumHeroMeta {
-  margin: 6px 0 0;
+  margin: 4px 0 0;
   color: var(--muted);
-  font-size: 0.88rem;
+  font-size: 0.9rem;
   line-height: 1.35;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  overflow: hidden;
-}
-
-.albumHeroActions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 2px;
-  margin-top: 0;
-  max-width: 100%;
 }
 
 .quietAction {
@@ -1281,25 +1285,82 @@
   color: var(--ink);
 }
 
+.albumToolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 2px 0 2px;
+}
+
+.albumToolButton {
+  min-height: 40px;
+  border: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
+  border-radius: 999px;
+  padding: 0 14px;
+  color: var(--text);
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--shadow) 55%, transparent);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 650;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.albumToolButton:hover {
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+  background: color-mix(in srgb, var(--surface-secondary) 70%, var(--surface));
+  transform: translateY(-1px);
+}
+
+.albumToolButton[data-active="true"] {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+}
+
+.albumToolPrimary {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  color: white;
+  background: var(--accent);
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--accent) 28%, transparent);
+}
+
+.albumToolPrimary:hover {
+  border-color: color-mix(in srgb, var(--accent) 70%, transparent);
+  background: color-mix(in srgb, var(--accent) 88%, #000);
+  color: white;
+}
+
 .albumStory {
   display: grid;
-  gap: 16px;
+  gap: 14px;
 }
 
 .albumMapSection {
   order: 0;
 }
 
-.albumInfoSection {
+.albumToolbar {
   order: 1;
 }
 
-.albumPhotosSection {
+.albumInfoSection {
   order: 2;
 }
 
 .albumOrganize {
   order: 3;
+}
+
+.albumPhotosSection {
+  order: 4;
 }
 
 /* Outer clips page overflow; stage stays visible so laterals are not cut mid-card. */
@@ -1697,24 +1758,36 @@
   }
 
   .albumStory {
-    gap: 14px;
+    gap: 12px;
   }
 
-  /* Photos first on mobile — map comes after, like a profile grid. */
-  .albumPhotosSection {
-    order: 1;
-  }
-
-  .albumOrganize {
-    order: 2;
-  }
-
+  /* Map → actions → photos (toolbar stays next to the gallery). */
   .albumMapSection {
-    order: 3;
+    order: 0;
+  }
+
+  .albumToolbar {
+    order: 1;
+    gap: 8px;
+    padding: 4px 0 2px;
+  }
+
+  .albumToolButton {
+    min-height: 42px;
+    padding: 0 13px;
+    font-size: 0.86rem;
   }
 
   .albumInfoSection {
-    display: none;
+    order: 2;
+  }
+
+  .albumOrganize {
+    order: 3;
+  }
+
+  .albumPhotosSection {
+    order: 4;
   }
 
   .albumPhotosSection .albumSectionHeader {
@@ -1835,14 +1908,7 @@
   }
 
   .albumHeroHeader {
-    margin-bottom: 14px;
-    gap: 10px 20px;
-    flex-wrap: nowrap;
-  }
-
-  .albumHeroActions {
-    flex: 0 0 auto;
-    max-width: min(100%, 22rem);
+    margin-bottom: 16px;
   }
 
   .albumHeroTitle {
@@ -1855,7 +1921,10 @@
 
   .albumHeroMeta {
     font-size: 0.92rem;
-    -webkit-line-clamp: 1;
+  }
+
+  .albumToolbar {
+    gap: 10px;
   }
 
   .albumStory {

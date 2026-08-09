@@ -1,151 +1,395 @@
-/* Home — institutional landing, mobile first. */
+/* Home — premium memory product, mobile first. */
 
 .home {
-  --home-max: 960px;
-  --home-radius: 22px;
+  --home-max: 1080px;
+  --home-radius: 14px;
   position: relative;
   min-height: 100vh;
   overflow-x: clip;
-  padding: 16px 16px 40px;
+  padding: 12px 16px 36px;
   background:
     radial-gradient(
-      120% 80% at 10% -10%,
-      color-mix(in srgb, var(--accent) 12%, transparent),
-      transparent 55%
+      100% 70% at 8% -8%,
+      color-mix(in srgb, var(--accent) 10%, transparent),
+      transparent 52%
     ),
     radial-gradient(
-      90% 60% at 100% 0%,
-      color-mix(in srgb, var(--surface-secondary) 80%, transparent),
-      transparent 50%
+      70% 50% at 100% 0%,
+      color-mix(in srgb, var(--surface-secondary) 55%, transparent),
+      transparent 48%
     ),
     var(--background);
 }
 
+/* —— Header —— */
+
 .header {
+  position: relative;
   display: flex;
   max-width: var(--home-max);
-  min-height: 52px;
+  min-height: 48px;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 12px;
   margin: 0 auto;
 }
 
-.header :global(.wordmark) {
-  width: 156px;
-  height: 58px;
-  background-position: -35px -47px;
-  background-size: 226px 151px;
+.headerWordmark {
+  width: 132px !important;
+  height: 48px !important;
+  flex: 0 0 auto;
+  background-position: -30px -40px !important;
+  background-size: 192px 128px !important;
 }
 
-.header :global(.auth-actions) {
-  gap: 6px 8px;
+.headerNav {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px 8px;
+  min-width: 0;
 }
 
-.header :global(.text-link),
-.header :global(.link-button) {
+.headerUser {
+  max-width: 7.5rem;
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: 0.86rem;
+  font-weight: 550;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color 160ms ease;
+}
+
+.headerUser:hover {
+  color: var(--text);
+}
+
+.headerLink,
+.headerLinkDesktop {
   min-height: 40px;
-  font-size: 0.92rem;
+  border: 0;
+  padding: 0 8px;
+  color: color-mix(in srgb, var(--text-secondary) 92%, var(--accent));
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 160ms ease, opacity 160ms ease;
 }
 
-@media (max-width: 430px) {
-  .header :global(.home-nav-viagens),
-  .header :global(.home-nav-perfil) {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-    white-space: nowrap;
-  }
+.headerLink:hover,
+.headerLinkDesktop:hover {
+  color: var(--accent);
+}
+
+.headerMuted {
+  color: var(--text-secondary);
+  font-size: 0.86rem;
+}
+
+.headerTheme :global(.theme-toggle) {
+  width: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  border-color: color-mix(in srgb, var(--border) 80%, transparent);
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
+}
+
+.headerLinkDesktop {
+  display: none;
+}
+
+.headerMenuButton {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  border-radius: 999px;
+  padding: 0;
+  color: var(--text);
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
+  cursor: pointer;
+}
+
+.headerMenuIcon,
+.headerMenuIcon::before,
+.headerMenuIcon::after {
+  display: block;
+  width: 14px;
+  height: 1.5px;
+  border-radius: 2px;
+  background: currentColor;
+}
+
+.headerMenuIcon {
+  position: relative;
+}
+
+.headerMenuIcon::before,
+.headerMenuIcon::after {
+  position: absolute;
+  left: 0;
+  content: "";
+}
+
+.headerMenuIcon::before {
+  top: -5px;
+}
+
+.headerMenuIcon::after {
+  top: 5px;
+}
+
+.headerMenu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: var(--z-popover, 100);
+  display: grid;
+  min-width: 168px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface) 96%, transparent);
+  box-shadow: 0 16px 36px var(--shadow);
+  backdrop-filter: blur(10px);
+}
+
+.headerMenuItem {
+  display: block;
+  width: 100%;
+  min-height: 42px;
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: var(--text);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 550;
+  text-align: left;
+  text-decoration: none;
+  transition: background 140ms ease;
+}
+
+.headerMenuItem:hover {
+  background: color-mix(in srgb, var(--surface-secondary) 88%, transparent);
 }
 
 .main {
   display: grid;
-  gap: 48px;
+  gap: 40px;
   max-width: var(--home-max);
   margin: 0 auto;
-  padding-top: 28px;
+  padding-top: 20px;
 }
 
 /* —— Hero —— */
 
 .hero {
   display: grid;
-  gap: 24px;
+  gap: 22px;
   justify-items: center;
   text-align: center;
 }
 
 .heroVisual {
-  width: min(220px, 56vw);
+  width: min(300px, 78vw);
   animation: homeRise 0.9s ease both;
 }
 
 .heroMark {
+  position: relative;
   overflow: hidden;
-  border-radius: 28px;
-  background: var(--surface);
+  border-radius: 26px;
+  background: color-mix(in srgb, var(--surface) 88%, #1a1512);
   box-shadow:
-    0 18px 40px var(--shadow),
-    0 0 0 1px color-mix(in srgb, var(--border) 70%, transparent);
+    0 0 0 1px color-mix(in srgb, var(--border) 55%, transparent),
+    0 28px 56px color-mix(in srgb, #000 42%, transparent),
+    0 0 48px color-mix(in srgb, var(--accent) 14%, transparent);
 }
 
-.heroMark img {
+.heroImage {
   display: block;
   width: 100%;
   height: auto;
+  transition: transform 420ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .heroMark:hover .heroImage {
+    transform: scale(1.03);
+  }
 }
 
 .heroCopy {
   display: grid;
   gap: 12px;
   justify-items: center;
-  max-width: 36rem;
+  max-width: 34rem;
   animation: homeRise 0.85s ease 0.08s both;
 }
 
 .brand {
   color: var(--accent);
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.14em;
+  font-size: 0.7rem;
+  font-weight: 750;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
 }
 
 .title {
+  max-width: 14ch;
   font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(2.1rem, 8.2vw, 3.2rem);
+  font-size: clamp(2.15rem, 8.4vw, 3.35rem);
   font-weight: 500;
-  letter-spacing: -0.04em;
-  line-height: 1.08;
+  letter-spacing: -0.045em;
+  line-height: 1.05;
   text-wrap: balance;
 }
 
 .lead {
   max-width: 28ch;
   color: var(--text-secondary);
-  font-size: 1.05rem;
-  line-height: 1.55;
+  font-size: 1.02rem;
+  line-height: 1.5;
 }
 
 .ctaRow {
   display: grid;
   gap: 10px;
   width: 100%;
-  max-width: 360px;
-  margin-top: 8px;
+  max-width: 320px;
+  margin-top: 4px;
 }
 
 .ctaRow :global(.button) {
   width: 100%;
+  transition:
+    transform 160ms ease,
+    background 160ms ease,
+    border-color 160ms ease,
+    opacity 160ms ease;
 }
 
-/* —— Concepts (typography only) —— */
+.ctaRow :global(.button:hover) {
+  transform: translateY(-1px);
+}
+
+.heroAside {
+  margin: 2px 0 0;
+  color: color-mix(in srgb, var(--text-secondary) 88%, var(--accent));
+  font-size: 0.78rem;
+  font-weight: 550;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* —— Memories mosaic —— */
+
+.memories {
+  display: grid;
+  gap: 16px;
+  animation: homeRise 0.8s ease both;
+}
+
+.memoriesEyebrow {
+  margin: 0;
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.memoriesTitle {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.45rem, 4.8vw, 1.9rem);
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  text-align: center;
+  text-wrap: balance;
+}
+
+.memoryMosaic {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.memoryCell {
+  position: relative;
+  margin: 0;
+  overflow: hidden;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface-secondary) 70%, #1a1512);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--border) 45%, transparent);
+}
+
+.memoryImage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  transition: transform 480ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .memoryCell:hover .memoryImage {
+    transform: scale(1.04);
+  }
+}
+
+.memoryTall {
+  grid-row: span 2;
+  min-height: 220px;
+  aspect-ratio: 3 / 4;
+}
+
+.memoryWide {
+  min-height: 104px;
+  aspect-ratio: 16 / 10;
+}
+
+.memorySquare,
+.memorySquareAlt {
+  min-height: 104px;
+  aspect-ratio: 1;
+}
+
+.memoryFeature {
+  grid-column: 1 / -1;
+  min-height: 160px;
+  aspect-ratio: 16 / 9;
+}
+
+.memorySquare .memoryImage,
+.memoryWide .memoryImage,
+.memoryFeature .memoryImage {
+  object-position: 35% 42%;
+}
+
+.memorySquareAlt .memoryImage {
+  object-position: 62% 48%;
+  transform: scale(1.08);
+}
+
+/* —— Concepts —— */
 
 .section {
   display: grid;
-  gap: 22px;
+  gap: 20px;
   animation: homeRise 0.8s ease both;
 }
 
@@ -158,7 +402,7 @@
 
 .sectionTitle {
   font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(1.55rem, 5vw, 2.1rem);
+  font-size: clamp(1.5rem, 5vw, 2.05rem);
   font-weight: 500;
   letter-spacing: -0.03em;
   line-height: 1.15;
@@ -166,9 +410,9 @@
 }
 
 .sectionLead {
-  max-width: 40ch;
+  max-width: 38ch;
   color: var(--text-secondary);
-  font-size: 0.98rem;
+  font-size: 0.96rem;
   line-height: 1.55;
 }
 
@@ -176,65 +420,97 @@
   display: grid;
   gap: 0;
   list-style: none;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
 }
 
 .conceptItem {
   display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 16px;
+  grid-template-columns: 3.2rem 1fr;
+  gap: 14px 18px;
   align-items: start;
-  padding: 18px 0;
-  border-bottom: 1px solid var(--border);
+  padding: 22px 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
   text-align: left;
+  transition: opacity 180ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .conceptList:hover .conceptItem {
+    opacity: 0.55;
+  }
+
+  .conceptList:hover .conceptItem:hover {
+    opacity: 1;
+  }
 }
 
 .conceptIndex {
   color: var(--accent);
   font-family: Georgia, "Times New Roman", serif;
-  font-size: 0.95rem;
+  font-size: clamp(1.35rem, 4vw, 1.7rem);
   font-weight: 500;
-  letter-spacing: 0.06em;
-  line-height: 1.4;
+  letter-spacing: 0.04em;
+  line-height: 1.1;
   padding-top: 2px;
 }
 
-.conceptItem h3 {
+.conceptCopy h3 {
+  margin: 0 0 6px;
   font-family: Georgia, "Times New Roman", serif;
-  font-size: 1.3rem;
+  font-size: 1.22rem;
   font-weight: 500;
   letter-spacing: -0.02em;
-  margin-bottom: 4px;
+  text-transform: none;
 }
 
-.conceptItem p {
+.conceptCopy p {
+  margin: 0;
+  max-width: 36ch;
   color: var(--text-secondary);
   font-size: 0.95rem;
-  line-height: 1.5;
+  line-height: 1.55;
 }
 
 /* —— Final CTA —— */
 
 .finale {
   display: grid;
-  gap: 12px;
-  justify-items: center;
-  padding: 28px 20px;
-  border: 1px solid var(--border);
-  border-radius: calc(var(--home-radius) + 6px);
-  text-align: center;
+  justify-items: stretch;
+  padding: 2px;
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  border-radius: 18px;
   background:
     linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--accent) 8%, var(--surface)),
-      var(--surface)
+      160deg,
+      color-mix(in srgb, #2a1f18 70%, var(--surface)),
+      color-mix(in srgb, #14110f 88%, var(--background))
     );
   animation: homeRise 0.8s ease both;
+  box-shadow: 0 18px 40px color-mix(in srgb, #000 22%, transparent);
+}
+
+html[data-resolved-theme="light"] .finale {
+  background:
+    linear-gradient(
+      160deg,
+      color-mix(in srgb, var(--accent) 10%, var(--surface)),
+      color-mix(in srgb, var(--surface-secondary) 55%, var(--surface))
+    );
+  box-shadow: 0 16px 36px var(--shadow);
+}
+
+.finaleInner {
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+  padding: 28px 20px;
+  text-align: center;
 }
 
 .finale h2 {
+  max-width: 16ch;
   font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(1.55rem, 5vw, 2.1rem);
+  font-size: clamp(1.5rem, 5vw, 2.05rem);
   font-weight: 500;
   letter-spacing: -0.03em;
   line-height: 1.15;
@@ -242,29 +518,60 @@
 }
 
 .finale p {
+  max-width: 32ch;
   color: var(--text-secondary);
-  font-size: 1rem;
-  line-height: 1.55;
+  font-size: 0.98rem;
+  line-height: 1.5;
 }
 
 .finale .ctaRow {
   margin-inline: auto;
+  margin-top: 6px;
 }
 
+/* —— Footer —— */
+
 .footer {
-  display: grid;
-  gap: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
   max-width: var(--home-max);
-  margin: 36px auto 0;
+  margin: 28px auto 0;
+  padding-top: 18px;
+  border-top: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
   color: var(--text-secondary);
-  font-size: 0.86rem;
-  text-align: center;
+  font-size: 0.84rem;
+}
+
+.footerBrand {
+  margin: 0;
+  font-weight: 550;
+  letter-spacing: 0.02em;
+}
+
+.footerNav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+}
+
+.footerLink {
+  color: var(--text-secondary);
+  font-weight: 550;
+  text-decoration: none;
+  transition: color 160ms ease;
+}
+
+.footerLink:hover {
+  color: var(--accent);
 }
 
 @keyframes homeRise {
   from {
     opacity: 0;
-    transform: translateY(12px);
+    transform: translateY(10px);
   }
   to {
     opacity: 1;
@@ -275,9 +582,14 @@
 @media (prefers-reduced-motion: reduce) {
   .heroVisual,
   .heroCopy,
+  .memories,
   .section,
-  .finale {
+  .finale,
+  .heroImage,
+  .memoryImage,
+  .ctaRow :global(.button) {
     animation: none !important;
+    transition: none !important;
   }
 }
 
@@ -285,39 +597,59 @@
 
 @media (min-width: 720px) {
   .home {
-    padding: 24px 32px 56px;
+    padding: 18px 28px 48px;
   }
 
-  .header :global(.wordmark) {
-    width: 184px;
-    height: 68px;
-    background-position: -41px -55px;
-    background-size: 267px 178px;
+  .headerWordmark {
+    width: 168px !important;
+    height: 60px !important;
+    background-position: -38px -50px !important;
+    background-size: 244px 162px !important;
+  }
+
+  .headerUser {
+    max-width: 12rem;
+  }
+
+  .headerLinkDesktop {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .headerMenuButton {
+    display: none;
+  }
+
+  .headerMenu {
+    display: none;
   }
 
   .main {
-    gap: 64px;
-    padding-top: 40px;
+    gap: 52px;
+    padding-top: 28px;
   }
 
   .hero {
-    grid-template-columns: auto 1fr;
-    gap: 40px;
+    grid-template-columns: minmax(280px, 38%) minmax(0, 1fr);
+    gap: 36px;
     align-items: center;
     justify-items: start;
     text-align: left;
+    min-height: min(52vh, 460px);
   }
 
   .heroVisual {
-    width: 260px;
+    width: min(340px, 100%);
   }
 
   .heroCopy {
     justify-items: start;
+    max-width: 28rem;
   }
 
   .title {
-    font-size: clamp(2.6rem, 4.2vw, 3.6rem);
+    max-width: none;
+    font-size: clamp(2.55rem, 4.1vw, 3.55rem);
   }
 
   .ctaRow {
@@ -329,7 +661,51 @@
 
   .ctaRow :global(.button) {
     width: auto;
-    min-width: 180px;
+    min-width: 168px;
+  }
+
+  .memoriesEyebrow,
+  .memoriesTitle {
+    text-align: left;
+  }
+
+  .memoryMosaic {
+    grid-template-columns: 1.1fr 0.9fr 1fr;
+    grid-template-rows: 160px 180px;
+    gap: 10px;
+  }
+
+  .memoryTall {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    min-height: 0;
+    aspect-ratio: auto;
+    height: 100%;
+  }
+
+  .memoryWide {
+    grid-column: 2 / span 2;
+    grid-row: 1;
+    min-height: 0;
+    aspect-ratio: auto;
+  }
+
+  .memorySquare {
+    grid-column: 2;
+    grid-row: 2;
+    min-height: 0;
+    aspect-ratio: auto;
+  }
+
+  .memorySquareAlt {
+    grid-column: 3;
+    grid-row: 2;
+    min-height: 0;
+    aspect-ratio: auto;
+  }
+
+  .memoryFeature {
+    display: none;
   }
 
   .sectionHead {
@@ -337,35 +713,60 @@
     justify-items: start;
   }
 
-  .conceptList {
-    max-width: 40rem;
+  .conceptItem {
+    grid-template-columns: 4rem 1fr;
+    gap: 20px 28px;
+    padding: 28px 0;
   }
 
-  .finale {
-    padding: 40px 48px;
+  .conceptCopy h3 {
+    font-size: 1.4rem;
+    letter-spacing: 0.01em;
+  }
+
+  .finaleInner {
+    padding: 36px 40px;
   }
 }
 
 @media (min-width: 1024px) {
   .home {
-    padding: 28px 48px 72px;
+    padding: 22px 40px 56px;
   }
 
   .main {
-    gap: 80px;
-    padding-top: 48px;
+    gap: 64px;
+    padding-top: 36px;
   }
 
   .hero {
-    gap: 56px;
-    min-height: min(58vh, 520px);
+    gap: 48px;
+    min-height: min(56vh, 500px);
   }
 
   .heroVisual {
-    width: 300px;
+    width: min(400px, 100%);
+  }
+
+  .heroMark {
+    border-radius: 30px;
   }
 
   .lead {
-    font-size: 1.12rem;
+    font-size: 1.1rem;
+  }
+
+  .memoryMosaic {
+    grid-template-columns: 1.15fr 0.95fr 1.05fr;
+    grid-template-rows: 190px 210px;
+    gap: 12px;
+  }
+
+  .conceptList {
+    max-width: 44rem;
+  }
+
+  .finaleInner {
+    padding: 40px 48px;
   }
 }

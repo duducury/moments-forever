@@ -31,7 +31,7 @@ function getDotIndexes(
   }
   const half = Math.floor(COMPACT_DOT_WINDOW / 2);
   let start = Math.max(0, active - half);
-  let end = Math.min(count - 1, start + COMPACT_DOT_WINDOW - 1);
+  const end = Math.min(count - 1, start + COMPACT_DOT_WINDOW - 1);
   start = Math.max(0, end - COMPACT_DOT_WINDOW + 1);
   return Array.from({ length: end - start + 1 }, (_, index) => start + index);
 }

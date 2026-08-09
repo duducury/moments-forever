@@ -13,6 +13,14 @@ html[data-resolved-theme="light"] {
   --paper: var(--background);
   --ink: var(--text);
   --muted: var(--text-secondary);
+  /* Elevation: keep overlays above Leaflet (400–1000). */
+  --z-base: 0;
+  --z-map: 0;
+  --z-sticky: 10;
+  --z-popover: 100;
+  --z-drawer: 2000;
+  --z-modal: 2100;
+  --z-toast: 2200;
 }
 
 html[data-resolved-theme="dark"] {

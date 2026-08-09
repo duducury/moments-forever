@@ -10,6 +10,7 @@ import {
   type FormEvent,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 
 import { useProgressiveLocalPhoto } from "@/lib/local-photos/use-progressive-local-photo";
 import { useLocalPhotoObjectUrl } from "@/lib/local-photos/use-local-photo-urls";
@@ -23,6 +24,17 @@ import {
   type TripPhoto,
 } from "./album-types";
 import styles from "./trip.module.css";
+
+function formatLightboxCapturedAt(value: string | null): string | null {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  const includeTime = /T\d{2}:\d{2}/u.test(value);
+  return new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "long",
+    ...(includeTime ? { timeStyle: "short" as const } : {}),
+  }).format(date);
+}
 
 function AlbumCover({ photoId }: { readonly photoId: string | null }) {
   const src = useLocalPhotoObjectUrl(photoId, "thumbnail");
@@ -107,11 +119,15 @@ export function PhotoLightbox({
   photoId,
   onClose,
   onSelect,
+  experienceTitle = null,
+  albumLabel = null,
 }: {
   readonly photos: readonly TripPhoto[];
   readonly photoId: string;
   readonly onClose: () => void;
   readonly onSelect: (photoId: string) => void;
+  readonly experienceTitle?: string | null;
+  readonly albumLabel?: string | null;
 }) {
   const index = photos.findIndex((photo) => photo.id === photoId);
   const photo = index >= 0 ? photos[index] : null;
@@ -145,6 +161,7 @@ export function PhotoLightbox({
   }, []);
 
   if (!photo) return null;
+  if (typeof document === "undefined") return null;
 
   function go(delta: number) {
     if (photos.length < 2) return;
@@ -152,7 +169,15 @@ export function PhotoLightbox({
     if (next) onSelect(next.id);
   }
 
-  return (
+  const capturedLabel = formatLightboxCapturedAt(photo.capturedAt);
+  const placeLabel = photo.locationLabel?.trim() || null;
+  const tripLabel = experienceTitle?.trim() || null;
+  const folderLabel = albumLabel?.trim() || null;
+  const secondaryParts = [capturedLabel, tripLabel, folderLabel].filter(
+    (part): part is string => Boolean(part),
+  );
+
+  const dialog = (
     <div
       aria-label="Visualização da foto"
       aria-modal="true"
@@ -198,11 +223,9 @@ export function PhotoLightbox({
           className={styles.lightboxStage}
           data-has-image={thumbSrc || fullSrc ? "true" : "false"}
           data-tone={toneFromId(photo.id)}
-          style={
-            photo.width && photo.height
-              ? { aspectRatio: `${photo.width} / ${photo.height}` }
-              : undefined
-          }
+          onClick={(event) => {
+            if (event.target === event.currentTarget) onClose();
+          }}
         >
           {thumbSrc ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -225,8 +248,19 @@ export function PhotoLightbox({
             />
           ) : null}
         </div>
-        <p className={styles.lightboxCaption}>
-          Foto {index + 1} de {photos.length}
+      </div>
+
+      <div className={styles.lightboxMeta}>
+        {placeLabel ? (
+          <p className={styles.lightboxMetaLine}>{placeLabel}</p>
+        ) : null}
+        {secondaryParts.length > 0 ? (
+          <p className={styles.lightboxMetaSecondary}>
+            {secondaryParts.join(" · ")}
+          </p>
+        ) : null}
+        <p className={styles.lightboxMetaCount}>
+          {index + 1} / {photos.length}
         </p>
       </div>
 
@@ -242,6 +276,8 @@ export function PhotoLightbox({
       ) : null}
     </div>
   );
+
+  return createPortal(dialog, document.body);
 }
 
 export function TripBreadcrumb({

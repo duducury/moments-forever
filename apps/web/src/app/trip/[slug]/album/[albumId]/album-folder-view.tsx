@@ -436,10 +436,12 @@ export function AlbumFolderView({
             className={styles.albumMapSection}
           >
             <TripMap
+              albumLabel={album.displayName}
               currentAlbumId={albumId}
               emptyHint="Fotos sem GPS continuam na galeria abaixo."
               emptyTitle="Não encontramos localizações nas fotos deste lugar."
               experienceSlug={experience.slug}
+              experienceTitle={experience.title}
               focus={placeMapFocus}
               initialFit="focus"
               photos={albumPhotos}
@@ -630,6 +632,8 @@ export function AlbumFolderView({
 
       {lightboxId ? (
         <PhotoLightbox
+          albumLabel={album.displayName}
+          experienceTitle={experience.title}
           onClose={() => setLightboxId(null)}
           onSelect={setLightboxId}
           photoId={lightboxId}

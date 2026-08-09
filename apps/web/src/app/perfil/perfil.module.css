@@ -712,8 +712,8 @@
 .dialogBackdrop {
   position: fixed;
   inset: 0;
-  /* Above Leaflet map panes (often 400–700). */
-  z-index: 2000;
+  /* Above Leaflet map panes (often 400–1000). */
+  z-index: var(--z-modal);
   display: grid;
   place-items: center;
   padding: 20px;

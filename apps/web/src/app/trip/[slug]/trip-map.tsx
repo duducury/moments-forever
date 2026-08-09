@@ -32,6 +32,8 @@ const TripMapCanvas = dynamic(
 export function TripMap({
   photos,
   experienceSlug = null,
+  experienceTitle = null,
+  albumLabel = null,
   variant = "full",
   emptyTitle,
   emptyHint,
@@ -41,6 +43,8 @@ export function TripMap({
 }: {
   readonly photos: readonly TripPhoto[];
   readonly experienceSlug?: string | null;
+  readonly experienceTitle?: string | null;
+  readonly albumLabel?: string | null;
   readonly variant?: TripMapVariant;
   readonly emptyTitle?: string;
   readonly emptyHint?: string | null;
@@ -50,10 +54,12 @@ export function TripMap({
 }) {
   return (
     <TripMapCanvas
+      albumLabel={albumLabel}
       currentAlbumId={currentAlbumId}
       emptyHint={emptyHint}
       emptyTitle={emptyTitle}
       experienceSlug={experienceSlug}
+      experienceTitle={experienceTitle}
       focus={focus}
       initialFit={initialFit}
       photos={photos}

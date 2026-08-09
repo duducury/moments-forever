@@ -116,6 +116,8 @@ function flyToSelection(
 export function TripMapCanvas({
   photos,
   experienceSlug,
+  experienceTitle = null,
+  albumLabel = null,
   variant = "full",
   emptyTitle = "Não encontramos localizações nas fotos desta viagem.",
   emptyHint = "Fotos sem GPS continuam disponíveis nos lugares e na aba Fotos.",
@@ -125,6 +127,8 @@ export function TripMapCanvas({
 }: {
   readonly photos: readonly TripPhoto[];
   readonly experienceSlug?: string | null;
+  readonly experienceTitle?: string | null;
+  readonly albumLabel?: string | null;
   readonly variant?: TripMapVariant;
   readonly emptyTitle?: string;
   readonly emptyHint?: string | null;
@@ -565,6 +569,8 @@ export function TripMapCanvas({
 
       {lightboxId && activePhotos.length > 0 ? (
         <PhotoLightbox
+          albumLabel={albumLabel}
+          experienceTitle={experienceTitle}
           onClose={() => setLightboxId(null)}
           onSelect={setLightboxId}
           photoId={lightboxId}

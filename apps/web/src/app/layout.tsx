@@ -2,18 +2,47 @@ import type { Metadata, Viewport } from "next";
 
 import { AuthProvider } from "@/components/auth-provider";
 import { ThemeProvider } from "@/components/theme-provider";
+import { getSiteUrl } from "@/lib/site-url";
 import { THEME_STORAGE_KEY } from "@/lib/theme/theme";
 
 import "./globals.css";
 
+const siteUrl = getSiteUrl();
+const defaultDescription = "Colecione momentos, não coisas.";
+const defaultOgImage = {
+  url: "/brand/icon-512.png",
+  width: 512,
+  height: 512,
+  alt: "Moments Forever",
+};
+
 export const metadata: Metadata = {
-  title: "Moments Forever",
-  description: "Colecione momentos, não coisas.",
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: "Moments Forever",
+    template: "%s · Moments Forever",
+  },
+  description: defaultDescription,
   applicationName: "Moments Forever",
   appleWebApp: {
     capable: true,
     title: "Moments Forever",
     statusBarStyle: "black-translucent",
+  },
+  openGraph: {
+    type: "website",
+    locale: "pt_BR",
+    siteName: "Moments Forever",
+    title: "Moments Forever",
+    description: defaultDescription,
+    url: siteUrl,
+    images: [defaultOgImage],
+  },
+  twitter: {
+    card: "summary",
+    title: "Moments Forever",
+    description: defaultDescription,
+    images: [defaultOgImage.url],
   },
   icons: {
     icon: [

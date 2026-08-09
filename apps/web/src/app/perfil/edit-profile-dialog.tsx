@@ -8,6 +8,10 @@ import {
   clearProfileAvatar,
   saveProfileAvatarFromFile,
 } from "@/lib/profile/profile-avatar-store";
+import {
+  clearProfileAvatarFromR2,
+  uploadProfileAvatarToR2,
+} from "@/lib/profile/upload-profile-avatar-to-r2";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 import { ProfileAvatar } from "./profile-avatar";
@@ -101,9 +105,12 @@ export function EditProfileDialog({
       if (!supabase) throw new Error("Supabase não configurado.");
 
       if (pendingFile) {
+        // Local cache for this device + R2 for share previews (WhatsApp / OG).
         await saveProfileAvatarFromFile(ownerId, pendingFile);
+        await uploadProfileAvatarToR2(pendingFile);
       } else if (removeAvatar) {
         await clearProfileAvatar(ownerId);
+        await clearProfileAvatarFromR2();
       }
 
       const { error: authError } = await supabase.auth.updateUser({
@@ -111,7 +118,6 @@ export function EditProfileDialog({
       });
       if (authError) throw new Error(authError.message);
 
-      // Clear legacy trip-photo avatar; phone image lives in IndexedDB.
       const { error: profileError } = await supabase
         .from("users")
         .update({

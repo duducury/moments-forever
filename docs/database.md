@@ -53,7 +53,8 @@ Perfil mínimo ligado ao Supabase Auth. Detalhamento de preferências fica para 
 | `profile_slug` | `text` | sim | `null` | sistema (a partir do nome; estável) |
 | `display_name` | `text` | sim | `null` | usuário |
 | `bio` | `text` | sim | `null` | usuário (até 280 chars) |
-| `avatar_photo_id` | `uuid` | sim | `null` | usuário (foto própria; ON DELETE SET NULL) |
+| `avatar_photo_id` | `uuid` | sim | `null` | legado (foto de viagem; ON DELETE SET NULL) |
+| `avatar_storage_key` | `text` | sim | `null` | usuário (objeto R2 `avatars/{userId}/avatar.*` para prévia de partilha) |
 | `created_at` | `timestamptz` | não | `now()` | sistema |
 | `updated_at` | `timestamptz` | não | `now()` | sistema |
 

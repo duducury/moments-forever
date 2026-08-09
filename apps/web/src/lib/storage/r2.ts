@@ -75,6 +75,25 @@ export function buildPhotoObjectKey(input: {
   return `photos/${input.userId}/${input.experienceId}/${input.photoId}/${input.variant}`;
 }
 
+/** Profile avatar object — one current file per user. */
+export function buildAvatarObjectKey(input: {
+  readonly userId: string;
+  readonly extension?: "jpg" | "jpeg" | "png" | "webp";
+}): string {
+  const extension = input.extension ?? "jpg";
+  return `avatars/${input.userId}/avatar.${extension}`;
+}
+
+export function isAvatarObjectKeyForUser(
+  key: string,
+  userId: string,
+): boolean {
+  return new RegExp(
+    `^avatars/${userId.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&")}/avatar\\.(jpe?g|png|webp)$`,
+    "u",
+  ).test(key);
+}
+
 export function parsePhotoObjectKey(key: string): {
   readonly userId: string;
   readonly experienceId: string;
@@ -190,4 +209,28 @@ export async function putR2Object(input: {
       ContentType: input.contentType,
     }),
   );
+}
+
+export async function getR2ObjectBytes(input: {
+  readonly key: string;
+}): Promise<{ readonly body: Uint8Array; readonly contentType: string } | null> {
+  const config = getR2Config();
+  if (!config) return null;
+  const client = getR2Client(config);
+  try {
+    const result = await client.send(
+      new GetObjectCommand({
+        Bucket: config.bucketName,
+        Key: input.key,
+      }),
+    );
+    if (!result.Body) return null;
+    const body = new Uint8Array(await result.Body.transformToByteArray());
+    return {
+      body,
+      contentType: result.ContentType?.trim() || "application/octet-stream",
+    };
+  } catch {
+    return null;
+  }
 }

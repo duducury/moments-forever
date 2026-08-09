@@ -50,6 +50,8 @@ export type PublicProfile = {
   readonly displayName: string | null;
   readonly bio: string | null;
   readonly avatarPhotoId: string | null;
+  /** Permanent R2 key when the owner uploaded an avatar for share previews. */
+  readonly hasPermanentAvatar: boolean;
 };
 
 export async function lookupPublicProfile(
@@ -61,7 +63,9 @@ export async function lookupPublicProfile(
 
   const result = await supabase
     .from("users")
-    .select("id, profile_slug, display_name, bio, avatar_photo_id")
+    .select(
+      "id, profile_slug, display_name, bio, avatar_photo_id, avatar_storage_key",
+    )
     .eq("profile_slug", slug)
     .maybeSingle();
 
@@ -73,6 +77,9 @@ export async function lookupPublicProfile(
     displayName: (result.data.display_name as string | null) ?? null,
     bio: (result.data.bio as string | null) ?? null,
     avatarPhotoId: (result.data.avatar_photo_id as string | null) ?? null,
+    hasPermanentAvatar: Boolean(
+      (result.data.avatar_storage_key as string | null)?.trim(),
+    ),
   };
 }
 

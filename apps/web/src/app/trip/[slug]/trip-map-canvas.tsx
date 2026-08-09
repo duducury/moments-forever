@@ -230,10 +230,15 @@ export function TripMapCanvas({
         previewPhotoIds.map(async (photoId) => {
           try {
             const blob = await getLocalPhotoBlob(photoId, "thumbnail");
-            if (!blob || cancelled) return;
-            const url = URL.createObjectURL(blob);
-            createdUrls.push(url);
-            next[photoId] = url;
+            if (cancelled) return;
+            if (blob) {
+              const url = URL.createObjectURL(blob);
+              createdUrls.push(url);
+              next[photoId] = url;
+              return;
+            }
+            // Permanent store (authorized redirect to short-lived signed URL).
+            next[photoId] = `/api/media/${encodeURIComponent(photoId)}?variant=thumbnail`;
           } catch {
             // Keep pin fallback when local blob is missing.
           }

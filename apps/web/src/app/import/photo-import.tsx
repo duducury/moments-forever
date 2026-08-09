@@ -46,6 +46,7 @@ import {
   getStagedImportFilesForBoot,
   IMPORT_FILE_ACCEPT,
 } from "@/lib/photo-import/pending-import-files";
+import { uploadManyPhotoBlobsToR2 } from "@/lib/storage/upload-photo-to-r2";
 
 import styles from "./photo-import.module.css";
 
@@ -651,8 +652,16 @@ export function PhotoImport() {
         readonly slug?: string;
         readonly error?: string;
       };
-      if (!response.ok || !body.slug) {
+      if (!response.ok || !body.slug || !body.id) {
         throw new Error(body.error ?? "Não foi possível criar a experiência.");
+      }
+
+      // Permanent store: IndexedDB remains a local cache.
+      try {
+        await uploadManyPhotoBlobsToR2(body.id, localBlobs);
+      } catch {
+        // Metadata already persisted; photos remain visible via IndexedDB.
+        // User can re-open and we can retry upload later.
       }
 
       setCreatedSlug(body.slug);

@@ -10,6 +10,7 @@ import {
   createBrowserThumbnail,
   extractBrowserPhotoMetadata,
 } from "@/lib/photo-import/browser-metadata";
+import { uploadManyPhotoBlobsToR2 } from "@/lib/storage/upload-photo-to-r2";
 
 import type { TripAlbum } from "./album-types";
 import styles from "./trip.module.css";
@@ -162,6 +163,23 @@ export function AddPhotosPanel({
       const payload = (await response.json()) as { readonly error?: string };
       if (!response.ok) {
         throw new Error(payload.error ?? "Não foi possível adicionar as fotos.");
+      }
+
+      setProgress("Enviando ao armazenamento permanente…");
+      try {
+        await uploadManyPhotoBlobsToR2(
+          experienceId,
+          prepared.map((item) => ({
+            id: item.id,
+            full: item.full,
+            thumbnail: item.thumbnail,
+          })),
+          (done, total) => {
+            setProgress(`Enviando foto ${done} de ${total}…`);
+          },
+        );
+      } catch {
+        // Photos remain usable via IndexedDB cache on this device.
       }
 
       onAdded?.();

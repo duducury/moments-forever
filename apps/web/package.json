@@ -11,6 +11,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1106.0",
+    "@aws-sdk/s3-request-presigner": "^3.1106.0",
     "@moments-forever/config": "*",
     "@moments-forever/shared": "*",
     "@supabase/ssr": "^0.7.0",

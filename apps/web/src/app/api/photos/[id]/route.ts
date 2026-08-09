@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { deleteR2Objects, getR2Config } from "@/lib/storage/r2";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 interface PatchPhotoBody {
@@ -19,7 +20,7 @@ async function loadOwnedPhoto(
   const photo = await supabase
     .from("photos")
     .select(
-      "id, experience_id, album_id, moment_id, position_in_album, position_in_moment",
+      "id, experience_id, album_id, moment_id, position_in_album, position_in_moment, storage_key, thumbnail_storage_key",
     )
     .eq("id", photoId)
     .maybeSingle();
@@ -267,12 +268,25 @@ export async function DELETE(
     return NextResponse.json({ error: "Foto não encontrada." }, { status: 404 });
   }
 
+  const storageKeys = [photo.storage_key, photo.thumbnail_storage_key].filter(
+    (key): key is string => typeof key === "string" && key.length > 0,
+  );
+
+  // Delete DB first so the app never shows a photo without a row.
   const deleted = await supabase.from("photos").delete().eq("id", id);
   if (deleted.error) {
     return NextResponse.json(
       { error: deleted.error.message ?? "Falha ao excluir foto." },
       { status: 400 },
     );
+  }
+
+  if (storageKeys.length > 0 && getR2Config()) {
+    try {
+      await deleteR2Objects(storageKeys);
+    } catch {
+      // Orphan objects can be cleaned later; DB is already consistent.
+    }
   }
 
   return NextResponse.json({ ok: true });

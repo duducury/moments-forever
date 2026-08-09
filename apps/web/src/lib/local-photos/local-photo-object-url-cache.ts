@@ -43,10 +43,17 @@ export async function getOrCreateLocalPhotoObjectUrl(
     .then((blob) => {
       const again = urls.get(key);
       if (again) return again;
-      if (!blob) return null;
-      const url = URL.createObjectURL(blob);
-      urls.set(key, url);
-      return url;
+      if (blob) {
+        const url = URL.createObjectURL(blob);
+        urls.set(key, url);
+        return url;
+      }
+      // Permanent store fallback (private R2 via authorized redirect).
+      const remote = `/api/media/${encodeURIComponent(photoId)}?variant=${
+        variant === "thumbnail" ? "thumbnail" : "full"
+      }`;
+      urls.set(key, remote);
+      return remote;
     })
     .catch(() => null)
     .finally(() => {
@@ -63,7 +70,9 @@ export function forgetLocalPhotoObjectUrls(photoId: string): void {
     const key = cacheKey(photoId, variant);
     const url = urls.get(key);
     if (!url) continue;
-    URL.revokeObjectURL(url);
+    if (url.startsWith("blob:")) {
+      URL.revokeObjectURL(url);
+    }
     urls.delete(key);
   }
 }

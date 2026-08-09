@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { deleteR2Objects, getR2Config } from "@/lib/storage/r2";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 interface UpdateBody {
@@ -167,7 +168,7 @@ export async function DELETE(
 
   const photos = await supabase
     .from("photos")
-    .select("id")
+    .select("id, storage_key, thumbnail_storage_key")
     .eq("experience_id", id);
 
   if (photos.error) {
@@ -175,6 +176,11 @@ export async function DELETE(
   }
 
   const deletedPhotoIds = (photos.data ?? []).map((row) => row.id as string);
+  const storageKeys = (photos.data ?? []).flatMap((row) =>
+    [row.storage_key, row.thumbnail_storage_key].filter(
+      (key): key is string => typeof key === "string" && key.length > 0,
+    ),
+  );
 
   // Clear cover FKs before cascade so RESTRICT/composite covers never block.
   const clearExperienceCover = await supabase
@@ -211,6 +217,14 @@ export async function DELETE(
       { error: deleted.error.message ?? "Falha ao excluir a viagem." },
       { status: 400 },
     );
+  }
+
+  if (storageKeys.length > 0 && getR2Config()) {
+    try {
+      await deleteR2Objects(storageKeys);
+    } catch {
+      // Orphan objects can be cleaned later; DB cascade already completed.
+    }
   }
 
   return NextResponse.json({ ok: true, deleted_photo_ids: deletedPhotoIds });

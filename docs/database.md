@@ -387,6 +387,12 @@ Na confirmação, a transação: cria/atualiza momentos e fotos → define `cove
 - Não exige migration: o par nulo já é válido (`photos_gps_pair_valid`).
 - Mapas e loaders que filtram GPS (`NOT NULL`) deixam de incluir a foto; a galeria e a estrutura Experience → Album → Photo não mudam.
 
+**Armazenamento permanente (Cloudflare R2)**
+
+- `photos.storage_key` / `photos.thumbnail_storage_key` guardam o caminho do objeto privado no R2 (não URL pública).
+- Formato: `photos/{ownerId}/{experienceId}/{photoId}/original|thumbnail`.
+- IndexedDB continua como cache local no browser; leitura remota via rota autorizada + URL assinada curta.
+
 Metadados técnicos (`width`, `height`, `bytes`, `format`) também podem ser nulos se a leitura local falhar.
 
 ---

@@ -800,6 +800,13 @@
   font-weight: 650;
 }
 
+.coverFromPhoneRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
 .coverPicker,
 .modePicker {
   margin: 0;

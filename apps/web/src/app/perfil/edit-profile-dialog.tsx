@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useRef, useState, type FormEvent } from "react";
 
+import { ImageCropDialog } from "@/components/image-crop-dialog";
 import {
   clearProfileAvatar,
   saveProfileAvatarFromFile,
@@ -26,10 +27,12 @@ export function EditProfileDialog({
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const previewUrlRef = useRef<string | null>(null);
+  const cropUrlRef = useRef<string | null>(null);
   const [name, setName] = useState(initialName);
   const [bio, setBio] = useState(initialBio);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
   const [removeAvatar, setRemoveAvatar] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,9 +40,17 @@ export function EditProfileDialog({
   function clearPreview() {
     if (previewUrlRef.current) {
       URL.revokeObjectURL(previewUrlRef.current);
-      previewUrlRef.current = null;
     }
+    previewUrlRef.current = null;
     setPreviewUrl(null);
+  }
+
+  function clearCropSrc() {
+    if (cropUrlRef.current) {
+      URL.revokeObjectURL(cropUrlRef.current);
+    }
+    cropUrlRef.current = null;
+    setCropSrc(null);
   }
 
   function onPickFile(fileList: FileList | null) {
@@ -50,12 +61,24 @@ export function EditProfileDialog({
       return;
     }
     setError(null);
+    clearCropSrc();
+    const url = URL.createObjectURL(file);
+    cropUrlRef.current = url;
+    setCropSrc(url);
+  }
+
+  function onCropCancel() {
+    clearCropSrc();
+  }
+
+  function onCropConfirm(file: File) {
     setRemoveAvatar(false);
     clearPreview();
     const url = URL.createObjectURL(file);
     previewUrlRef.current = url;
     setPreviewUrl(url);
     setPendingFile(file);
+    clearCropSrc();
   }
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -109,104 +132,117 @@ export function EditProfileDialog({
   }
 
   return (
-    <div
-      aria-label="Editar perfil"
-      aria-modal="true"
-      className={styles.dialogBackdrop}
-      onClick={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
-      role="dialog"
-    >
-      <div className={styles.dialogCard}>
-        <h2 className={styles.dialogTitle}>Editar perfil</h2>
-        <form
-          className={styles.dialogForm}
-          onSubmit={(event) => void onSubmit(event)}
-        >
-          <div className={styles.editProfileAvatarRow}>
-            <ProfileAvatar
-              displayName={name || initialName}
-              ownerId={ownerId}
-              previewUrl={removeAvatar ? null : previewUrl}
-              size="md"
-            />
-            <div className={styles.editProfileAvatarActions}>
-              <input
-                accept="image/*"
-                className={styles.srOnlyFile}
-                onChange={(event) => {
-                  onPickFile(event.target.files);
-                  event.target.value = "";
-                }}
-                ref={fileInputRef}
-                type="file"
+    <>
+      <div
+        aria-label="Editar perfil"
+        aria-modal="true"
+        className={styles.dialogBackdrop}
+        onClick={(event) => {
+          if (event.target === event.currentTarget && !cropSrc) onClose();
+        }}
+        role="dialog"
+      >
+        <div className={styles.dialogCard}>
+          <h2 className={styles.dialogTitle}>Editar perfil</h2>
+          <form
+            className={styles.dialogForm}
+            onSubmit={(event) => void onSubmit(event)}
+          >
+            <div className={styles.editProfileAvatarRow}>
+              <ProfileAvatar
+                displayName={name || initialName}
+                ownerId={ownerId}
+                previewUrl={removeAvatar ? null : previewUrl}
+                size="md"
               />
+              <div className={styles.editProfileAvatarActions}>
+                <input
+                  accept="image/*"
+                  className={styles.srOnlyFile}
+                  onChange={(event) => {
+                    onPickFile(event.target.files);
+                    event.target.value = "";
+                  }}
+                  ref={fileInputRef}
+                  type="file"
+                />
+                <button
+                  className="button secondary"
+                  disabled={busy}
+                  onClick={() => fileInputRef.current?.click()}
+                  type="button"
+                >
+                  Escolher do telefone
+                </button>
+                <button
+                  className={styles.sectionEditButton}
+                  disabled={busy}
+                  onClick={() => {
+                    setPendingFile(null);
+                    clearPreview();
+                    setRemoveAvatar(true);
+                  }}
+                  type="button"
+                >
+                  Remover foto
+                </button>
+                <p className={styles.fieldHint}>
+                  Depois de escolher, você pode dar zoom e encaixar o rostinho.
+                </p>
+              </div>
+            </div>
+
+            <label htmlFor="profile-name">Nome</label>
+            <input
+              id="profile-name"
+              onChange={(event) => setName(event.target.value)}
+              required
+              value={name}
+            />
+
+            <label htmlFor="profile-bio">Texto</label>
+            <textarea
+              id="profile-bio"
+              maxLength={280}
+              onChange={(event) => setBio(event.target.value)}
+              placeholder="Nossas viagens e momentos pelo mundo."
+              rows={3}
+              value={bio}
+            />
+            <p className={styles.fieldHint}>{bio.trim().length}/280</p>
+
+            <div className={styles.dialogActions}>
+              <button className="button primary" disabled={busy} type="submit">
+                {busy ? "Salvando…" : "Salvar"}
+              </button>
               <button
                 className="button secondary"
                 disabled={busy}
-                onClick={() => fileInputRef.current?.click()}
+                onClick={onClose}
                 type="button"
               >
-                Escolher do telefone
+                Cancelar
               </button>
-              <button
-                className={styles.sectionEditButton}
-                disabled={busy}
-                onClick={() => {
-                  setPendingFile(null);
-                  clearPreview();
-                  setRemoveAvatar(true);
-                }}
-                type="button"
-              >
-                Remover foto
-              </button>
-              <p className={styles.fieldHint}>
-                A foto fica neste aparelho (como as fotos das viagens).
-              </p>
             </div>
-          </div>
-
-          <label htmlFor="profile-name">Nome</label>
-          <input
-            id="profile-name"
-            onChange={(event) => setName(event.target.value)}
-            required
-            value={name}
-          />
-
-          <label htmlFor="profile-bio">Texto</label>
-          <textarea
-            id="profile-bio"
-            maxLength={280}
-            onChange={(event) => setBio(event.target.value)}
-            placeholder="Nossas viagens e momentos pelo mundo."
-            rows={3}
-            value={bio}
-          />
-          <p className={styles.fieldHint}>{bio.trim().length}/280</p>
-
-          <div className={styles.dialogActions}>
-            <button className="button primary" disabled={busy} type="submit">
-              {busy ? "Salvando…" : "Salvar"}
-            </button>
-            <button
-              className="button secondary"
-              disabled={busy}
-              onClick={onClose}
-              type="button"
-            >
-              Cancelar
-            </button>
-          </div>
-          {error ? (
-            <p className={styles.dialogError} role="alert">
-              {error}
-            </p>
-          ) : null}
-        </form>
+            {error ? (
+              <p className={styles.dialogError} role="alert">
+                {error}
+              </p>
+            ) : null}
+          </form>
+        </div>
       </div>
-    </div>
+
+      {cropSrc ? (
+        <ImageCropDialog
+          confirmLabel="Usar esta foto"
+          imageSrc={cropSrc}
+          onCancel={onCropCancel}
+          onConfirm={onCropConfirm}
+          shape="circle"
+          title="Encaixar foto de perfil"
+        />
+      ) : null}
+    </>
   );
 }

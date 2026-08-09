@@ -1,16 +1,22 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+
+import { mapLocalDateSourceToDb } from "@moments-forever/shared";
 
 import { ExperienceCoverThumb } from "@/components/experience-cover-thumb";
 import type { OwnerExperienceListItem } from "@/lib/experiences/load-owner-experiences";
-import { deleteLocalPhotoBlobs } from "@/lib/local-photos/photo-blob-store";
 import {
-  clearCardPreviewPrefs,
-  getCardPreviewPrefs,
-  setCardPreviewPrefs,
-} from "@/lib/profile/card-preview-prefs";
+  deleteLocalPhotoBlobs,
+  putLocalPhotoBlobs,
+} from "@/lib/local-photos/photo-blob-store";
+import {
+  createBrowserThumbnail,
+  extractBrowserPhotoMetadata,
+} from "@/lib/photo-import/browser-metadata";
+import { clearCardPreviewPrefs } from "@/lib/profile/card-preview-prefs";
+import { uploadManyPhotoBlobsToR2 } from "@/lib/storage/upload-photo-to-r2";
 
 import styles from "./perfil.module.css";
 
@@ -28,6 +34,31 @@ interface AlbumOption {
 
 type DialogTab = "card" | "delete";
 
+async function ensureRootAlbumId(
+  experienceId: string,
+  albums: readonly AlbumOption[],
+): Promise<string> {
+  const existing = albums.find((album) => album.parent_album_id === null);
+  if (existing) return existing.id;
+
+  const response = await fetch(`/api/experiences/${experienceId}/albums`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      name: "Viagem",
+      parent_album_id: null,
+    }),
+  });
+  const payload = (await response.json()) as {
+    readonly album?: { readonly id: string };
+    readonly error?: string;
+  };
+  if (!response.ok || !payload.album?.id) {
+    throw new Error(payload.error ?? "Não foi possível criar um lugar.");
+  }
+  return payload.album.id;
+}
+
 export function EditTripDialog({
   experience,
   onClose,
@@ -36,18 +67,15 @@ export function EditTripDialog({
   readonly onClose: () => void;
 }) {
   const router = useRouter();
+  const coverFileRef = useRef<HTMLInputElement | null>(null);
   const [tab, setTab] = useState<DialogTab>("card");
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [progress, setProgress] = useState<string | null>(null);
   const [photos, setPhotos] = useState<readonly PhotoOption[]>([]);
   const [albums, setAlbums] = useState<readonly AlbumOption[]>([]);
   const [coverPhotoId, setCoverPhotoId] = useState(experience.coverPhotoId);
-  const [previewIds, setPreviewIds] = useState<readonly string[]>(() => {
-    const saved = getCardPreviewPrefs(experience.id);
-    if (saved?.previewPhotoIds.length) return [...saved.previewPhotoIds];
-    return [...experience.previewPhotoIds].slice(0, 4);
-  });
 
   useEffect(() => {
     let cancelled = false;
@@ -91,18 +119,6 @@ export function EditTripDialog({
     };
   }, [experience.id]);
 
-  function togglePreview(photoId: string) {
-    setPreviewIds((current) => {
-      if (current.includes(photoId)) {
-        return current.filter((id) => id !== photoId);
-      }
-      if (current.length >= 4) {
-        return [...current.slice(1), photoId];
-      }
-      return [...current, photoId];
-    });
-  }
-
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
@@ -124,13 +140,104 @@ export function EditTripDialog({
       if (!response.ok) {
         throw new Error(payload.error ?? "Não foi possível salvar.");
       }
-      setCardPreviewPrefs(experience.id, { previewPhotoIds: previewIds });
+      clearCardPreviewPrefs(experience.id);
       onClose();
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Falha ao salvar.");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function addCoverFromCameraRoll(fileList: FileList | null) {
+    const file = fileList?.[0] ?? null;
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setError("Escolha uma imagem do rolo da câmera.");
+      return;
+    }
+
+    setBusy(true);
+    setError(null);
+    setProgress("Preparando foto…");
+    try {
+      const id = crypto.randomUUID();
+      const metadata = await extractBrowserPhotoMetadata(id, file);
+      const thumbnail = await createBrowserThumbnail(file);
+      const mapped = mapLocalDateSourceToDb(
+        metadata.dateSource,
+        metadata.date,
+        metadata.exif.availableFields,
+      );
+      const albumId = await ensureRootAlbumId(experience.id, albums);
+
+      setProgress("Salvando no aparelho…");
+      await putLocalPhotoBlobs([
+        {
+          id,
+          full: file,
+          thumbnail: thumbnail?.blob ?? null,
+        },
+      ]);
+
+      setProgress("Adicionando à viagem…");
+      const response = await fetch(`/api/experiences/${experience.id}/photos`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          placement: "album",
+          photos: [
+            {
+              id,
+              album_id: albumId,
+              captured_at: mapped.capturedAt,
+              date_source: mapped.dateSource,
+              exact_latitude: metadata.gps?.latitude ?? null,
+              exact_longitude: metadata.gps?.longitude ?? null,
+              width: metadata.dimensions?.width ?? thumbnail?.width ?? null,
+              height: metadata.dimensions?.height ?? thumbnail?.height ?? null,
+              bytes: metadata.size,
+              format: metadata.type || null,
+            },
+          ],
+        }),
+      });
+      const payload = (await response.json()) as { readonly error?: string };
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Não foi possível adicionar a foto.");
+      }
+
+      setProgress("Enviando ao armazenamento…");
+      try {
+        await uploadManyPhotoBlobsToR2(experience.id, [
+          { id, full: file, thumbnail: thumbnail?.blob ?? null },
+        ]);
+      } catch {
+        // Usable via IndexedDB on this device.
+      }
+
+      setPhotos((current) => [{ id, album_id: albumId }, ...current]);
+      setCoverPhotoId(id);
+      if (!albums.some((album) => album.id === albumId)) {
+        setAlbums((current) => [
+          {
+            id: albumId,
+            name: "Viagem",
+            parent_album_id: null,
+            photo_count: 1,
+          },
+          ...current,
+        ]);
+      }
+      router.refresh();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Falha ao importar a foto.",
+      );
+    } finally {
+      setBusy(false);
+      setProgress(null);
     }
   }
 
@@ -154,7 +261,6 @@ export function EditTripDialog({
       }
       await deleteLocalPhotoBlobs([photoId]);
       setPhotos((current) => current.filter((photo) => photo.id !== photoId));
-      setPreviewIds((current) => current.filter((id) => id !== photoId));
       if (coverPhotoId === photoId) {
         setCoverPhotoId(null);
       }
@@ -240,7 +346,6 @@ export function EditTripDialog({
       if (albumsRes.ok) setAlbums(albumsPayload.albums ?? []);
       if (deletedIds.length > 0) {
         const removed = new Set(deletedIds);
-        setPreviewIds((current) => current.filter((id) => !removed.has(id)));
         if (coverPhotoId && removed.has(coverPhotoId)) {
           setCoverPhotoId(null);
         }
@@ -324,72 +429,56 @@ export function EditTripDialog({
             {loading ? (
               <p className={styles.fieldHint}>Carregando fotos…</p>
             ) : (
-              <>
-                <fieldset className={styles.coverPicker}>
-                  <legend>Foto de capa do card</legend>
-                  <div className={styles.coverChoices}>
-                    {photos.map((photo) => (
-                      <button
-                        aria-pressed={coverPhotoId === photo.id}
-                        className={styles.coverChoice}
-                        data-selected={
-                          coverPhotoId === photo.id ? "true" : "false"
-                        }
-                        key={photo.id}
-                        onClick={() => setCoverPhotoId(photo.id)}
-                        type="button"
-                      >
-                        <ExperienceCoverThumb
-                          className={styles.coverChoiceThumb}
-                          coverPhotoId={photo.id}
-                          fallbackClassName={styles.coverFallback}
-                          imageClassName={styles.coverImage}
-                          title={experience.title}
-                          variant="thumbnail"
-                        />
-                      </button>
-                    ))}
-                  </div>
-                </fieldset>
-
-                <fieldset className={styles.coverPicker}>
-                  <legend>Até 4 fotos do strip ({previewIds.length}/4)</legend>
-                  <p className={styles.fieldHint}>
-                    Toque para marcar/desmarcar. A ordem é a ordem em que você
-                    escolhe.
-                  </p>
-                  <div className={styles.coverChoices}>
-                    {photos.map((photo) => {
-                      const index = previewIds.indexOf(photo.id);
-                      const selected = index >= 0;
-                      return (
-                        <button
-                          aria-pressed={selected}
-                          className={styles.coverChoice}
-                          data-selected={selected ? "true" : "false"}
-                          key={`strip-${photo.id}`}
-                          onClick={() => togglePreview(photo.id)}
-                          type="button"
-                        >
-                          <ExperienceCoverThumb
-                            className={styles.coverChoiceThumb}
-                            coverPhotoId={photo.id}
-                            fallbackClassName={styles.coverFallback}
-                            imageClassName={styles.coverImage}
-                            title={experience.title}
-                            variant="thumbnail"
-                          />
-                          {selected ? (
-                            <span className={styles.choiceBadge}>
-                              {index + 1}
-                            </span>
-                          ) : null}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </fieldset>
-              </>
+              <fieldset className={styles.coverPicker}>
+                <legend>Foto de capa do card</legend>
+                <p className={styles.fieldHint}>
+                  Escolha uma foto da viagem ou importe do rolo da câmera.
+                </p>
+                <div className={styles.coverFromPhoneRow}>
+                  <input
+                    accept="image/*"
+                    className={styles.srOnlyFile}
+                    onChange={(event) => {
+                      void addCoverFromCameraRoll(event.target.files);
+                      event.target.value = "";
+                    }}
+                    ref={coverFileRef}
+                    type="file"
+                  />
+                  <button
+                    className="button secondary"
+                    disabled={busy}
+                    onClick={() => coverFileRef.current?.click()}
+                    type="button"
+                  >
+                    Do rolo da câmera
+                  </button>
+                </div>
+                {progress ? <p className={styles.fieldHint}>{progress}</p> : null}
+                <div className={styles.coverChoices}>
+                  {photos.map((photo) => (
+                    <button
+                      aria-pressed={coverPhotoId === photo.id}
+                      className={styles.coverChoice}
+                      data-selected={
+                        coverPhotoId === photo.id ? "true" : "false"
+                      }
+                      key={photo.id}
+                      onClick={() => setCoverPhotoId(photo.id)}
+                      type="button"
+                    >
+                      <ExperienceCoverThumb
+                        className={styles.coverChoiceThumb}
+                        coverPhotoId={photo.id}
+                        fallbackClassName={styles.coverFallback}
+                        imageClassName={styles.coverImage}
+                        title={experience.title}
+                        variant="thumbnail"
+                      />
+                    </button>
+                  ))}
+                </div>
+              </fieldset>
             )}
 
             <div className={styles.dialogActions}>

@@ -6,11 +6,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { ExperienceCoverThumb } from "@/components/experience-cover-thumb";
 import type { OwnerPlaceCardItem } from "@/lib/experiences/load-owner-place-cards";
 import { deleteLocalPhotoBlobs } from "@/lib/local-photos/photo-blob-store";
-import {
-  clearCardPreviewPrefs,
-  getCardPreviewPrefs,
-  setCardPreviewPrefs,
-} from "@/lib/profile/card-preview-prefs";
+import { clearCardPreviewPrefs } from "@/lib/profile/card-preview-prefs";
 
 import styles from "./perfil.module.css";
 
@@ -36,11 +32,6 @@ export function EditPlaceDialog({
   const [photos, setPhotos] = useState<readonly PhotoOption[]>([]);
   const [name, setName] = useState(place.title);
   const [coverPhotoId, setCoverPhotoId] = useState(place.coverPhotoId);
-  const [previewIds, setPreviewIds] = useState<readonly string[]>(() => {
-    const saved = getCardPreviewPrefs(place.albumId);
-    if (saved?.previewPhotoIds.length) return [...saved.previewPhotoIds];
-    return [...place.previewPhotoIds].slice(0, 4);
-  });
 
   useEffect(() => {
     let cancelled = false;
@@ -79,18 +70,6 @@ export function EditPlaceDialog({
     };
   }, [place.albumId, place.experienceId]);
 
-  function togglePreview(photoId: string) {
-    setPreviewIds((current) => {
-      if (current.includes(photoId)) {
-        return current.filter((id) => id !== photoId);
-      }
-      if (current.length >= 4) {
-        return [...current.slice(1), photoId];
-      }
-      return [...current, photoId];
-    });
-  }
-
   async function onSaveCard(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const nextName = name.trim();
@@ -113,7 +92,7 @@ export function EditPlaceDialog({
       if (!response.ok) {
         throw new Error(payload.error ?? "Não foi possível salvar.");
       }
-      setCardPreviewPrefs(place.albumId, { previewPhotoIds: previewIds });
+      clearCardPreviewPrefs(place.albumId);
       onClose();
       router.refresh();
     } catch (err) {
@@ -241,46 +220,6 @@ export function EditPlaceDialog({
                         />
                       </button>
                     ))}
-                  </div>
-                </fieldset>
-
-                <fieldset className={styles.coverPicker}>
-                  <legend>
-                    Até 4 fotos do strip ({previewIds.length}/4)
-                  </legend>
-                  <p className={styles.fieldHint}>
-                    Toque para marcar/desmarcar. A ordem é a ordem em que você
-                    escolhe.
-                  </p>
-                  <div className={styles.coverChoices}>
-                    {photos.map((photo) => {
-                      const index = previewIds.indexOf(photo.id);
-                      const selected = index >= 0;
-                      return (
-                        <button
-                          aria-pressed={selected}
-                          className={styles.coverChoice}
-                          data-selected={selected ? "true" : "false"}
-                          key={`strip-${photo.id}`}
-                          onClick={() => togglePreview(photo.id)}
-                          type="button"
-                        >
-                          <ExperienceCoverThumb
-                            className={styles.coverChoiceThumb}
-                            coverPhotoId={photo.id}
-                            fallbackClassName={styles.coverFallback}
-                            imageClassName={styles.coverImage}
-                            title={place.title}
-                            variant="thumbnail"
-                          />
-                          {selected ? (
-                            <span className={styles.choiceBadge}>
-                              {index + 1}
-                            </span>
-                          ) : null}
-                        </button>
-                      );
-                    })}
                   </div>
                 </fieldset>
               </>

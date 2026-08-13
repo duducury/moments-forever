@@ -6,6 +6,7 @@ import { displayNameFromUser } from "@/lib/auth/display-name";
 import { profilePath } from "@/lib/routes/app-routes";
 
 import { useAuth } from "./auth-provider";
+import { CopyPageLinkButton } from "./copy-page-link-button";
 import { ThemeSelector } from "./theme-selector";
 
 export function AuthStatus() {
@@ -14,6 +15,7 @@ export function AuthStatus() {
   if (loading) {
     return (
       <div className="auth-actions">
+        <CopyPageLinkButton />
         <ThemeSelector />
         <span className="text-link">Carregando…</span>
       </div>
@@ -23,6 +25,7 @@ export function AuthStatus() {
   if (!user) {
     return (
       <div className="auth-actions">
+        <CopyPageLinkButton />
         <ThemeSelector />
         <Link className="text-link" href="/login">
           Entrar
@@ -35,6 +38,7 @@ export function AuthStatus() {
 
   return (
     <div className="auth-actions">
+      <CopyPageLinkButton />
       <Link className="nav-user-name" href={profilePath()} title="Meu perfil">
         {name}
       </Link>

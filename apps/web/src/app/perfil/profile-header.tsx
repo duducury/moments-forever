@@ -78,25 +78,26 @@ export function ProfileHeader({
   return (
     <>
       <header className={styles.profileHeader}>
-        <div className={styles.profileHeaderAvatarCol}>
-          <ProfileAvatar
-            avatarPhotoId={avatarPhotoId}
-            displayName={displayName}
-            ownerId={ownerId}
-          />
-          {isOwner ? (
-            <button
-              className={styles.editProfileButton}
-              onClick={() => setEditOpen(true)}
-              type="button"
-            >
-              Editar perfil
-            </button>
-          ) : null}
-        </div>
+        <ProfileAvatar
+          avatarPhotoId={avatarPhotoId}
+          displayName={displayName}
+          ownerId={ownerId}
+        />
 
         <div className={styles.profileHeaderCopy}>
-          <h1 className={styles.profileDisplayName}>{displayName}</h1>
+          <div className={styles.profileHeaderTitleRow}>
+            <h1 className={styles.profileDisplayName}>{displayName}</h1>
+            {isOwner ? (
+              <button
+                aria-label="Editar perfil"
+                className={styles.editProfileButton}
+                onClick={() => setEditOpen(true)}
+                type="button"
+              >
+                Editar
+              </button>
+            ) : null}
+          </div>
           {countryCodes.length > 0 ? (
             <ul
               aria-label="Países visitados"
@@ -120,29 +121,30 @@ export function ProfileHeader({
             </ul>
           ) : null}
           <p className={styles.profileBio}>{bioText}</p>
-          <ul className={styles.profileStats}>
-            <li>
-              <StatIcon kind="trip" />
-              <span>
-                <strong>{tripCount}</strong>{" "}
-                {tripCount === 1 ? "viagem" : "viagens"}
-              </span>
-            </li>
-            <li>
-              <StatIcon kind="photo" />
-              <span>
-                <strong>{photoCount}</strong> foto{photoCount === 1 ? "" : "s"}
-              </span>
-            </li>
-            <li>
-              <StatIcon kind="country" />
-              <span>
-                <strong>{countryCount}</strong>{" "}
-                {countryCount === 1 ? "país" : "países"}
-              </span>
-            </li>
-          </ul>
         </div>
+
+        <ul className={styles.profileStats}>
+          <li>
+            <StatIcon kind="trip" />
+            <span>
+              <strong>{tripCount}</strong>{" "}
+              {tripCount === 1 ? "viagem" : "viagens"}
+            </span>
+          </li>
+          <li>
+            <StatIcon kind="photo" />
+            <span>
+              <strong>{photoCount}</strong> foto{photoCount === 1 ? "" : "s"}
+            </span>
+          </li>
+          <li>
+            <StatIcon kind="country" />
+            <span>
+              <strong>{countryCount}</strong>{" "}
+              {countryCount === 1 ? "país" : "países"}
+            </span>
+          </li>
+        </ul>
       </header>
 
       {editOpen ? (

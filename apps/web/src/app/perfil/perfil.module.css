@@ -5,19 +5,20 @@
 }
 
 .profileHeader {
-  display: flex;
-  align-items: flex-start;
-  gap: 20px 28px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 16px 20px;
   margin: 10px 0 40px;
   text-align: left;
 }
 
-.profileHeaderAvatarCol {
+.profileHeaderTitleRow {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
-  flex: 0 0 auto;
+  gap: 10px 12px;
+  width: 100%;
 }
 
 .profileAvatar {
@@ -63,16 +64,16 @@
 }
 
 .editProfileButton {
-  padding: 8px 16px;
+  flex: 0 0 auto;
+  padding: 6px 12px;
   border: 1px solid color-mix(in srgb, var(--accent) 50%, var(--border));
   border-radius: 999px;
   background: transparent;
   color: color-mix(in srgb, var(--text) 92%, var(--accent));
   font: inherit;
   font-size: 0.78rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-weight: 650;
+  letter-spacing: 0.02em;
   cursor: pointer;
   white-space: nowrap;
   transition:
@@ -93,18 +94,18 @@
   align-items: flex-start;
   gap: 10px;
   min-width: 0;
-  flex: 1 1 auto;
   padding-top: 10px;
 }
 
 .profileDisplayName {
   margin: 0;
-  max-width: none;
+  min-width: 0;
+  flex: 1 1 auto;
   font-size: clamp(1.9rem, 4.8vw, 2.6rem);
   font-weight: 650;
   letter-spacing: -0.03em;
   line-height: 1.05;
-  text-wrap: balance;
+  overflow-wrap: anywhere;
 }
 
 .profileCountryFlags {
@@ -142,11 +143,11 @@
 }
 
 .profileStats {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px 0;
-  margin: 4px 0 0;
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  margin: 2px 0 0;
   padding: 0;
   list-style: none;
   color: color-mix(in srgb, var(--accent) 82%, var(--text-secondary));
@@ -156,15 +157,21 @@
 }
 
 .profileStats li {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 7px;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 0 8px;
+  text-align: center;
 }
 
 .profileStats li + li {
-  margin-left: 14px;
-  padding-left: 14px;
   border-left: 1px solid color-mix(in srgb, var(--accent) 28%, var(--border));
+}
+
+.profileStats li span {
+  min-width: 0;
 }
 
 .profileStats strong {
@@ -211,7 +218,7 @@
 
 @media (max-width: 520px) {
   .profileHeader {
-    gap: 14px 16px;
+    gap: 12px 14px;
     margin-bottom: 32px;
   }
 
@@ -221,12 +228,12 @@
   }
 
   .profileHeaderCopy {
-    padding-top: 4px;
+    padding-top: 2px;
     gap: 8px;
   }
 
   .profileDisplayName {
-    font-size: 1.85rem;
+    font-size: 1.55rem;
   }
 
   .profileBio {
@@ -234,17 +241,12 @@
   }
 
   .profileStats {
-    font-size: 0.84rem;
-  }
-
-  .profileStats li + li {
-    margin-left: 10px;
-    padding-left: 10px;
+    font-size: 0.8rem;
   }
 
   .editProfileButton {
-    font-size: 0.7rem;
-    padding: 7px 12px;
+    font-size: 0.74rem;
+    padding: 5px 10px;
   }
 }
 

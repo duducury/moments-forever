@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useMemo, useState, type ReactNode } from "react";
 
 import { ProfileAvatar } from "@/app/perfil/profile-avatar";
+import { AppCreditFooter } from "@/components/app-credit-footer";
 import { ExperienceCoverThumb } from "@/components/experience-cover-thumb";
 import type { PassportData } from "@/lib/passport/build-passport";
 
@@ -459,6 +460,10 @@ export function PassaporteClient({
           )}
         </div>
       </section>
+
+      <footer>
+        <AppCreditFooter />
+      </footer>
     </div>
   );
 }

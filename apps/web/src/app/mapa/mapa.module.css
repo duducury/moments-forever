@@ -1,6 +1,6 @@
 .page {
   --globe-top: calc(52px + env(safe-area-inset-top, 0px));
-  --globe-bottom: calc(78px + env(safe-area-inset-bottom, 0px));
+  --globe-bottom: calc(70px + env(safe-area-inset-bottom, 0px));
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   width: 100%;

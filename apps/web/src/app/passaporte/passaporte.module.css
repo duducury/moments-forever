@@ -6,6 +6,10 @@
   padding: 8px 4px 32px;
 }
 
+.page > footer {
+  margin-top: -4px;
+}
+
 .identity {
   display: flex;
   align-items: flex-start;

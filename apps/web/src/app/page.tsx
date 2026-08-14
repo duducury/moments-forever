@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import { AppCreditFooter } from "@/components/app-credit-footer";
 import { HomePrimaryCta } from "./home-cta";
 import { HomeHeader } from "./home-header";
 import styles from "./home.module.css";
@@ -214,7 +215,10 @@ export default function Home() {
       </div>
 
       <footer className={styles.footer}>
-        <p className={styles.footerBrand}>Moments Forever</p>
+        <div>
+          <p className={styles.footerBrand}>Moments Forever</p>
+          <AppCreditFooter />
+        </div>
         <nav aria-label="Rodapé" className={styles.footerNav}>
           <Link className={styles.footerLink} href="/privacidade">
             Privacidade

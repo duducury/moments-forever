@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+import { AppCreditFooter } from "@/components/app-credit-footer";
 import { useAuth } from "@/components/auth-provider";
 import { useTheme } from "@/components/theme-provider";
 import { displayNameFromUser } from "@/lib/auth/display-name";
@@ -93,6 +94,10 @@ export function GeralSettingsClient() {
           </button>
         </li>
       </ul>
+
+      <footer>
+        <AppCreditFooter />
+      </footer>
     </section>
   );
 }

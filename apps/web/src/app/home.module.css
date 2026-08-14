@@ -613,6 +613,11 @@
   letter-spacing: 0.02em;
 }
 
+.footer :global(.app-credit) {
+  margin-top: 6px;
+  text-align: left;
+}
+
 .footerNav {
   display: flex;
   flex-wrap: wrap;

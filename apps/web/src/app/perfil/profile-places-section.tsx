@@ -169,7 +169,7 @@ export function ProfilePlacesSection({
             ) : (
               <button
                 className={styles.sectionEditButton}
-                onClick={() => setDraft([...orderedPlaces])}
+                onClick={() => setDraft([...datedPlaces])}
                 type="button"
               >
                 Editar

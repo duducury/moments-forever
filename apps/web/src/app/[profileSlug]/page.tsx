@@ -8,6 +8,7 @@ import { loadOwnerPlaceCards } from "@/lib/experiences/load-owner-place-cards";
 import {
   isReservedProfileSlug,
   lookupPublicProfile,
+  profileAvatarPublicPath,
   publicProfilePath,
 } from "@/lib/profile/profile-slug";
 import { absoluteUrl } from "@/lib/site-url";
@@ -125,6 +126,11 @@ export default async function PublicProfilePage({
   return (
     <ProfileView
       avatarPhotoId={profile.avatarPhotoId}
+      avatarRemoteSrc={
+        profile.hasPermanentAvatar
+          ? profileAvatarPublicPath(profile.profileSlug)
+          : null
+      }
       bio={profile.bio}
       carouselPhotos={carouselPhotos}
       displayName={displayName}

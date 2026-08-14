@@ -21,6 +21,7 @@ export function ProfileView({
   displayName,
   bio,
   avatarPhotoId,
+  avatarRemoteSrc = null,
   isOwner,
   places,
   mapPhotos,
@@ -32,6 +33,7 @@ export function ProfileView({
   readonly displayName: string;
   readonly bio: string | null;
   readonly avatarPhotoId: string | null;
+  readonly avatarRemoteSrc?: string | null;
   readonly isOwner: boolean;
   readonly places: readonly OwnerPlaceCardItem[];
   readonly mapPhotos: readonly TripPhoto[];
@@ -76,6 +78,7 @@ export function ProfileView({
       <section className={styles.page}>
         <ProfileHeader
           avatarPhotoId={avatarPhotoId}
+          avatarRemoteSrc={avatarRemoteSrc}
           bio={bio}
           countryCodes={visitedCountryCodes}
           displayName={displayName}

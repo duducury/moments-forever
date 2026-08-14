@@ -9,6 +9,7 @@ import { buildPassport } from "@/lib/passport/build-passport";
 import {
   ensureOwnerProfileSlug,
   lookupPublicProfile,
+  profileAvatarPublicPath,
   publicProfilePath,
 } from "@/lib/profile/profile-slug";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -68,6 +69,11 @@ export default async function PassaportePage() {
       ) : (
         <PassaporteClient
           avatarPhotoId={profile?.avatarPhotoId ?? null}
+          avatarRemoteSrc={
+            profile?.hasPermanentAvatar
+              ? profileAvatarPublicPath(slug)
+              : null
+          }
           bio={profile?.bio ?? null}
           displayName={displayName}
           ownerId={user.id}

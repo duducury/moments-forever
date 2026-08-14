@@ -21,11 +21,13 @@ export function EditProfileDialog({
   ownerId,
   initialName,
   initialBio,
+  remoteSrc = null,
   onClose,
 }: {
   readonly ownerId: string;
   readonly initialName: string;
   readonly initialBio: string;
+  readonly remoteSrc?: string | null;
   readonly onClose: () => void;
 }) {
   const router = useRouter();
@@ -105,9 +107,9 @@ export function EditProfileDialog({
       if (!supabase) throw new Error("Supabase não configurado.");
 
       if (pendingFile) {
-        // Local cache for this device + R2 for share previews (WhatsApp / OG).
-        await saveProfileAvatarFromFile(ownerId, pendingFile);
+        // Cloud first so other devices can load the photo; then cache locally.
         await uploadProfileAvatarToR2(pendingFile);
+        await saveProfileAvatarFromFile(ownerId, pendingFile);
       } else if (removeAvatar) {
         await clearProfileAvatar(ownerId);
         await clearProfileAvatarFromR2();
@@ -159,6 +161,7 @@ export function EditProfileDialog({
                 displayName={name || initialName}
                 ownerId={ownerId}
                 previewUrl={removeAvatar ? null : previewUrl}
+                remoteSrc={removeAvatar ? null : remoteSrc}
                 size="md"
               />
               <div className={styles.editProfileAvatarActions}>

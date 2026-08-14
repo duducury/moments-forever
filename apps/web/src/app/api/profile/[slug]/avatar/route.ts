@@ -61,7 +61,7 @@ export async function GET(
     status: 200,
     headers: {
       "content-type": object.contentType,
-      "cache-control": "public, max-age=3600, stale-while-revalidate=86400",
+      "cache-control": "public, max-age=60, stale-while-revalidate=600",
     },
   });
 }

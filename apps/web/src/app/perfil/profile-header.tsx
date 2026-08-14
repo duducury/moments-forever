@@ -56,6 +56,7 @@ export function ProfileHeader({
   displayName,
   bio,
   avatarPhotoId,
+  avatarRemoteSrc = null,
   isOwner,
   tripCount,
   photoCount,
@@ -65,6 +66,7 @@ export function ProfileHeader({
   readonly displayName: string;
   readonly bio: string | null;
   readonly avatarPhotoId: string | null;
+  readonly avatarRemoteSrc?: string | null;
   readonly isOwner: boolean;
   readonly tripCount: number;
   readonly photoCount: number;
@@ -82,6 +84,7 @@ export function ProfileHeader({
           avatarPhotoId={avatarPhotoId}
           displayName={displayName}
           ownerId={ownerId}
+          remoteSrc={avatarRemoteSrc}
         />
 
         <div className={styles.profileHeaderCopy}>
@@ -153,6 +156,7 @@ export function ProfileHeader({
           initialName={displayName}
           onClose={() => setEditOpen(false)}
           ownerId={ownerId}
+          remoteSrc={avatarRemoteSrc}
         />
       ) : null}
     </>

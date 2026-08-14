@@ -48,6 +48,11 @@ export function publicProfilePath(slug: string): string {
   return `/${encodeURIComponent(slug)}`;
 }
 
+/** In-app and OG avatar bytes from R2 (empty when the owner has no uploaded avatar). */
+export function profileAvatarPublicPath(slug: string): string {
+  return `/api/profile/${encodeURIComponent(slug)}/avatar`;
+}
+
 export type PublicProfile = {
   readonly id: string;
   readonly profileSlug: string;

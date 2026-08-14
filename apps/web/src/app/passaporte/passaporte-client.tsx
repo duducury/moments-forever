@@ -61,12 +61,14 @@ export function PassaporteClient({
   displayName,
   bio,
   avatarPhotoId,
+  avatarRemoteSrc = null,
   passport,
 }: {
   readonly ownerId: string;
   readonly displayName: string;
   readonly bio: string | null;
   readonly avatarPhotoId: string | null;
+  readonly avatarRemoteSrc?: string | null;
   readonly passport: PassportData;
 }) {
   const [selectedCode, setSelectedCode] = useState<string | null>(
@@ -113,6 +115,7 @@ export function PassaporteClient({
           avatarPhotoId={avatarPhotoId}
           displayName={displayName}
           ownerId={ownerId}
+          remoteSrc={avatarRemoteSrc}
         />
         <div className={styles.identityCopy}>
           <p className={styles.eyebrow}>Passaporte</p>

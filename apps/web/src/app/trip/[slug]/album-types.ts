@@ -62,6 +62,32 @@ export function photosWithGps(
   );
 }
 
+function latestCapturedAt(
+  photos: readonly TripPhoto[],
+  albumId: string,
+): string {
+  let latest = "";
+  for (const photo of photos) {
+    if (photo.albumId !== albumId || !photo.capturedAt) continue;
+    if (photo.capturedAt > latest) latest = photo.capturedAt;
+  }
+  return latest;
+}
+
+export function compareAlbumRecency(
+  a: Pick<TripAlbum, "id" | "position">,
+  b: Pick<TripAlbum, "id" | "position">,
+  photos: readonly TripPhoto[],
+): number {
+  const ta = latestCapturedAt(photos, a.id);
+  const tb = latestCapturedAt(photos, b.id);
+  if (!ta && !tb) return a.position - b.position;
+  if (!ta) return 1;
+  if (!tb) return -1;
+  if (ta !== tb) return tb.localeCompare(ta);
+  return a.position - b.position;
+}
+
 export interface AlbumCardModel extends TripAlbum {
   readonly photoCount: number;
   readonly childCount: number;
@@ -82,7 +108,7 @@ export function buildAlbumCards(
   const children = albums
     .filter((album) => album.parentAlbumId === parentAlbumId)
     .slice()
-    .sort((a, b) => a.position - b.position);
+    .sort((a, b) => compareAlbumRecency(a, b, photos));
 
   return children.map((album) => {
     const albumPhotos = photos

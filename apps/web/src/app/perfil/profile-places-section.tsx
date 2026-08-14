@@ -3,18 +3,15 @@
 import {
   useMemo,
   useState,
-  useSyncExternalStore,
   type DragEvent as ReactDragEvent,
   type PointerEvent as ReactPointerEvent,
 } from "react";
 
-import type { OwnerPlaceCardItem } from "@/lib/experiences/load-owner-place-cards";
 import {
-  applyPlaceOrder,
-  getPlaceOrderPrefs,
-  setPlaceOrderPrefs,
-  subscribePlaceOrderPrefs,
-} from "@/lib/profile/place-order-prefs";
+  comparePlaceRecency,
+  type OwnerPlaceCardItem,
+} from "@/lib/experiences/load-owner-place-cards";
+import { setPlaceOrderPrefs } from "@/lib/profile/place-order-prefs";
 
 import { ProfilePlaceCard } from "./profile-place-card";
 import styles from "./perfil.module.css";
@@ -53,18 +50,9 @@ export function ProfilePlacesSection({
   readonly isOwner: boolean;
   readonly totalPhotos: number;
 }) {
-  const orderKey = useSyncExternalStore(
-    subscribePlaceOrderPrefs,
-    () => getPlaceOrderPrefs().join("|"),
-    () => "",
-  );
-  const orderedPlaces = useMemo(
-    () =>
-      applyPlaceOrder(
-        [...initialPlaces],
-        orderKey.length > 0 ? orderKey.split("|") : [],
-      ),
-    [initialPlaces, orderKey],
+  const datedPlaces = useMemo(
+    () => [...initialPlaces].sort(comparePlaceRecency),
+    [initialPlaces],
   );
 
   const [draft, setDraft] = useState<OwnerPlaceCardItem[] | null>(null);
@@ -74,12 +62,12 @@ export function ProfilePlacesSection({
   const [touchPickId, setTouchPickId] = useState<string | null>(null);
 
   const editing = draft !== null;
-  const items = draft ?? orderedPlaces;
+  const items = draft ?? datedPlaces;
 
   function moveItem(fromId: string, toId: string) {
     if (fromId === toId) return;
     setDraft((current) => {
-      const source = current ?? orderedPlaces;
+      const source = current ?? datedPlaces;
       const from = source.findIndex((item) => item.albumId === fromId);
       const to = source.findIndex((item) => item.albumId === toId);
       if (from < 0 || to < 0) return current;

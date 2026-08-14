@@ -196,13 +196,21 @@ export async function loadOwnerPlaceCards(
     };
   });
 
-  // Newest experiences first; within the same experience keep album position.
-  places.sort((a, b) => {
-    const expA = experienceById.get(a.experienceId)?.createdAt ?? "";
-    const expB = experienceById.get(b.experienceId)?.createdAt ?? "";
-    if (expA !== expB) return expB.localeCompare(expA);
-    return 0;
-  });
+  // Most recent photo date first (not import/created order).
+  places.sort((a, b) => comparePlaceRecency(a, b));
 
   return { places, error: null };
+}
+
+export function comparePlaceRecency(
+  a: Pick<OwnerPlaceCardItem, "startsAt" | "endsAt" | "title">,
+  b: Pick<OwnerPlaceCardItem, "startsAt" | "endsAt" | "title">,
+): number {
+  const ta = a.endsAt ?? a.startsAt ?? "";
+  const tb = b.endsAt ?? b.startsAt ?? "";
+  if (!ta && !tb) return a.title.localeCompare(b.title, "pt");
+  if (!ta) return 1;
+  if (!tb) return -1;
+  if (ta !== tb) return tb.localeCompare(ta);
+  return a.title.localeCompare(b.title, "pt");
 }

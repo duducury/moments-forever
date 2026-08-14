@@ -39,6 +39,7 @@ import {
   buildBreadcrumb,
   formatPhotoPeriod,
   gpsCenter,
+  compareAlbumRecency,
   photosWithGps,
   sortAlbumPhotos,
   type TripAlbum,
@@ -166,8 +167,12 @@ export function AlbumFolderView({
   }, [albumPhotos]);
 
   const childAlbums = useMemo(
-    () => albums.filter((item) => item.parentAlbumId === albumId),
-    [albumId, albums],
+    () =>
+      albums
+        .filter((item) => item.parentAlbumId === albumId)
+        .slice()
+        .sort((a, b) => compareAlbumRecency(a, b, photos)),
+    [albumId, albums, photos],
   );
 
   const otherAlbums = useMemo(

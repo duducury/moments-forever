@@ -8,6 +8,7 @@ import { loadOwnerPlaceCards } from "@/lib/experiences/load-owner-place-cards";
 import { buildPassport } from "@/lib/passport/build-passport";
 import {
   ensureOwnerProfileSlug,
+  lookupPublicProfile,
   publicProfilePath,
 } from "@/lib/profile/profile-slug";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -47,10 +48,12 @@ export default async function PassaportePage() {
     displayNameFromUser(user),
   );
   const homeHref = publicProfilePath(slug);
+  const profile = await lookupPublicProfile(supabase, slug);
   const result = await loadOwnerPlaceCards(supabase, user.id);
   const places = result.places ?? [];
   const passport = buildPassport(places, user.created_at ?? null);
-  const displayName = displayNameFromUser(user);
+  const displayName =
+    profile?.displayName?.trim() || displayNameFromUser(user);
 
   return (
     <main className="page-shell" data-bottom-nav="true">
@@ -63,7 +66,13 @@ export default async function PassaportePage() {
           {result.error}
         </p>
       ) : (
-        <PassaporteClient displayName={displayName} passport={passport} />
+        <PassaporteClient
+          avatarPhotoId={profile?.avatarPhotoId ?? null}
+          bio={profile?.bio ?? null}
+          displayName={displayName}
+          ownerId={user.id}
+          passport={passport}
+        />
       )}
       <AppBottomNav homeHref={homeHref} mapHref="/mapa" showCreate />
     </main>

@@ -2,12 +2,12 @@
   position: fixed;
   left: 10px;
   right: 10px;
-  bottom: 4px;
+  /* Sit lower than the old 10px + full inset, without stretching the pill. */
+  bottom: max(8px, calc(env(safe-area-inset-bottom, 0px) - 16px));
   z-index: var(--z-drawer);
   display: none;
   /* Keep overflow visible so the raised + button is not clipped. */
   overflow: visible;
-  padding-bottom: env(safe-area-inset-bottom, 0px);
   border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
   border-radius: 28px;
   background: color-mix(in srgb, var(--surface) 86%, transparent);

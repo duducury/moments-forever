@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
   useEffect,
   useRef,
@@ -15,6 +16,7 @@ import { toneFromId, type TripPhoto } from "../../album-types";
 import styles from "../../trip.module.css";
 
 const SWIPE_THRESHOLD_PX = 56;
+const TAP_SLOP_PX = 28;
 const DRAG_FACTOR = 0.72;
 const WIDE_STACK_MQ = "(min-width: 1100px)";
 const COMPACT_DOTS_MQ = "(max-width: 719px)";
@@ -185,12 +187,15 @@ function isCarouselControlTarget(target: EventTarget | null): boolean {
 export function AlbumCarousel({
   photos,
   onOpen,
+  getHref,
   getCaption,
   getCaptionText,
   centerActionLabel = "Abrir foto em destaque",
 }: {
   readonly photos: readonly TripPhoto[];
   readonly onOpen: (photoId: string) => void;
+  /** When set, the center card is a real link (more reliable on iOS). */
+  readonly getHref?: (photo: TripPhoto) => string | null;
   readonly getCaption?: (photo: TripPhoto) => ReactNode;
   readonly getCaptionText?: (photo: TripPhoto) => string | null;
   readonly centerActionLabel?: string;
@@ -201,6 +206,7 @@ export function AlbumCarousel({
   const lockAxisRef = useRef<"x" | "y" | null>(null);
   const movedRef = useRef(false);
   const suppressClickRef = useRef(false);
+  const pointerOnCenterRef = useRef(false);
   const settleFrameRef = useRef<number | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -275,7 +281,6 @@ export function AlbumCarousel({
       cancelAnimationFrame(settleFrameRef.current);
       settleFrameRef.current = null;
     }
-    // Keep transitions off while we swap slots + clear drag, then ease into place.
     setIsDragging(true);
     setDragOffset(0);
     setActiveIndex(nextIndex);
@@ -287,20 +292,39 @@ export function AlbumCarousel({
     });
   }
 
+  function openActivePhoto() {
+    const photo = photos[safeIndex];
+    if (!photo) return;
+    onOpen(photo.id);
+  }
+
   function handlePointerDown(event: ReactPointerEvent<HTMLDivElement>) {
-    if (count <= 1) return;
     if (isCarouselControlTarget(event.target)) return;
     if (settleFrameRef.current !== null) {
       cancelAnimationFrame(settleFrameRef.current);
       settleFrameRef.current = null;
     }
-    isDraggingRef.current = true;
-    lockAxisRef.current = null;
+
+    const card =
+      event.target instanceof Element
+        ? event.target.closest("[data-slot]")
+        : null;
+    pointerOnCenterRef.current =
+      card?.getAttribute("data-slot") === "0" || count <= 1;
+
     movedRef.current = false;
     suppressClickRef.current = false;
     pointerStartXRef.current = event.clientX;
     pointerStartYRef.current = event.clientY;
-    // Don't lock touch-action until the gesture is clearly horizontal.
+
+    if (count <= 1) {
+      isDraggingRef.current = false;
+      lockAxisRef.current = null;
+      return;
+    }
+
+    isDraggingRef.current = true;
+    lockAxisRef.current = null;
     setIsDragging(false);
     setDragOffset(0);
     event.currentTarget.setPointerCapture(event.pointerId);
@@ -316,7 +340,6 @@ export function AlbumCarousel({
       lockAxisRef.current =
         Math.abs(deltaX) >= Math.abs(deltaY) ? "x" : "y";
       if (lockAxisRef.current === "y") {
-        // Let the page scroll; abandon horizontal drag.
         isDraggingRef.current = false;
         setIsDragging(false);
         setDragOffset(0);
@@ -331,7 +354,7 @@ export function AlbumCarousel({
     if (lockAxisRef.current !== "x") return;
 
     event.preventDefault();
-    if (Math.abs(deltaX) > 6) {
+    if (Math.abs(deltaX) > SWIPE_THRESHOLD_PX) {
       movedRef.current = true;
       suppressClickRef.current = true;
     }
@@ -343,30 +366,62 @@ export function AlbumCarousel({
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
 
-    if (!isDraggingRef.current) {
+    const deltaX = event.clientX - pointerStartXRef.current;
+    const deltaY = event.clientY - pointerStartYRef.current;
+    const isTap =
+      Math.abs(deltaX) < TAP_SLOP_PX && Math.abs(deltaY) < TAP_SLOP_PX;
+
+    // Single photo: no drag session — open on tap via pointerup (iOS-safe).
+    if (count <= 1) {
+      if (isTap && pointerOnCenterRef.current) {
+        suppressClickRef.current = true;
+        openActivePhoto();
+      }
       lockAxisRef.current = null;
       return;
     }
 
-    const deltaX = event.clientX - pointerStartXRef.current;
+    if (!isDraggingRef.current) {
+      // Vertical scroll abandoned drag; still allow center tap to open.
+      if (isTap && pointerOnCenterRef.current && !movedRef.current) {
+        suppressClickRef.current = true;
+        openActivePhoto();
+      }
+      lockAxisRef.current = null;
+      return;
+    }
+
     const axis = lockAxisRef.current;
     isDraggingRef.current = false;
     lockAxisRef.current = null;
 
     if (axis === "x" && deltaX <= -SWIPE_THRESHOLD_PX) {
       suppressClickRef.current = true;
+      movedRef.current = true;
       commitIndex(wrapIndex(safeIndex + 1, count));
       return;
     }
     if (axis === "x" && deltaX >= SWIPE_THRESHOLD_PX) {
       suppressClickRef.current = true;
+      movedRef.current = true;
       commitIndex(wrapIndex(safeIndex - 1, count));
       return;
     }
 
-    // Cancelled swipe — ease cards back to the active slot.
     setIsDragging(false);
     setDragOffset(0);
+
+    // Tap on center card: open folder now. Don't wait for click (often lost
+    // on iOS after pointer capture on the stage).
+    if (isTap && pointerOnCenterRef.current) {
+      suppressClickRef.current = true;
+      movedRef.current = false;
+      openActivePhoto();
+      return;
+    }
+
+    suppressClickRef.current = false;
+    movedRef.current = false;
   }
 
   const nextIndex = wrapIndex(safeIndex + 1, count);
@@ -420,6 +475,28 @@ export function AlbumCarousel({
             const captionText =
               getCaptionText?.(photo)?.trim() ||
               (typeof caption === "string" ? caption.trim() : null);
+            const href = isCenter ? (getHref?.(photo) ?? null) : null;
+            const label = isCenter
+              ? captionText
+                ? `${centerActionLabel}: ${captionText}`
+                : centerActionLabel
+              : "Selecionar foto";
+
+            const media = (
+              <>
+                {visible ? (
+                  <CarouselPhoto
+                    eager={isCenter}
+                    photo={photo}
+                    preferFull={isCenter}
+                    preloadFull={index === nextIndex || index === prevIndex}
+                  />
+                ) : null}
+                {caption ? (
+                  <span className={styles.albumCarouselCaption}>{caption}</span>
+                ) : null}
+              </>
+            );
 
             return (
               <article
@@ -429,46 +506,44 @@ export function AlbumCarousel({
                 key={photo.id}
                 style={getStackedCardStyle(slot, dragOffset)}
               >
-                <button
-                  aria-current={isCenter ? "true" : undefined}
-                  aria-label={
-                    isCenter
-                      ? captionText
-                        ? `${centerActionLabel}: ${captionText}`
-                        : centerActionLabel
-                      : "Selecionar foto"
-                  }
-                  className={styles.albumCarouselCardButton}
-                  onClick={() => {
-                    if (suppressClickRef.current || movedRef.current) {
-                      suppressClickRef.current = false;
-                      movedRef.current = false;
-                      return;
-                    }
-                    if (isCenter) {
-                      onOpen(photo.id);
-                      return;
-                    }
-                    commitIndex(index);
-                  }}
-                  type="button"
-                >
-                  {visible ? (
-                    <CarouselPhoto
-                      eager={isCenter}
-                      photo={photo}
-                      preferFull={isCenter}
-                      preloadFull={
-                        index === nextIndex || index === prevIndex
+                {href ? (
+                  <Link
+                    aria-current="true"
+                    aria-label={label}
+                    className={styles.albumCarouselCardButton}
+                    href={href}
+                    onClick={(event) => {
+                      if (suppressClickRef.current || movedRef.current) {
+                        event.preventDefault();
+                        suppressClickRef.current = false;
+                        movedRef.current = false;
                       }
-                    />
-                  ) : null}
-                  {caption ? (
-                    <span className={styles.albumCarouselCaption}>
-                      {caption}
-                    </span>
-                  ) : null}
-                </button>
+                    }}
+                  >
+                    {media}
+                  </Link>
+                ) : (
+                  <button
+                    aria-current={isCenter ? "true" : undefined}
+                    aria-label={label}
+                    className={styles.albumCarouselCardButton}
+                    onClick={() => {
+                      if (suppressClickRef.current || movedRef.current) {
+                        suppressClickRef.current = false;
+                        movedRef.current = false;
+                        return;
+                      }
+                      if (isCenter) {
+                        onOpen(photo.id);
+                        return;
+                      }
+                      commitIndex(index);
+                    }}
+                    type="button"
+                  >
+                    {media}
+                  </button>
+                )}
               </article>
             );
           })}

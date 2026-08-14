@@ -299,6 +299,11 @@
   gap: 10px 12px;
 }
 
+.tripsSection {
+  scroll-margin-top: 24px;
+  scroll-margin-bottom: 100px;
+}
+
 .sectionHeading {
   display: grid;
   gap: 6px;
@@ -607,6 +612,8 @@
   display: grid;
   gap: 10px;
   margin: 72px 0 36px;
+  scroll-margin-top: 24px;
+  scroll-margin-bottom: 88px;
 }
 
 .mapHeader {
@@ -741,7 +748,10 @@
   z-index: var(--z-modal);
   display: grid;
   place-items: center;
-  padding: 20px;
+  padding: max(20px, env(safe-area-inset-top, 0px))
+    max(20px, env(safe-area-inset-right, 0px))
+    max(20px, env(safe-area-inset-bottom, 0px))
+    max(20px, env(safe-area-inset-left, 0px));
   background: color-mix(in srgb, #120e0b 55%, transparent);
 }
 

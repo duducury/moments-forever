@@ -149,6 +149,7 @@ export function TripMapCanvas({
   );
   const compact = variant === "compact";
   const featured = variant === "featured";
+  const immersive = variant === "immersive";
 
   const geoPoints = useMemo<readonly GeoPoint<TripPhoto>[]>(
     () =>
@@ -208,10 +209,15 @@ export function TripMapCanvas({
     [activePhotos],
   );
 
-  const openAlbumHref =
-    experienceSlug && openAlbumId && openAlbumId !== currentAlbumId
-      ? `/perfil/${encodeURIComponent(experienceSlug)}/album/${openAlbumId}`
-      : null;
+  const openAlbumHref = useMemo(() => {
+    if (!openAlbumId || openAlbumId === currentAlbumId) return null;
+    const slugFromPhotos = activePhotos.find(
+      (photo) => photo.experienceSlug,
+    )?.experienceSlug;
+    const slug = experienceSlug ?? slugFromPhotos ?? null;
+    if (!slug) return null;
+    return `/perfil/${encodeURIComponent(slug)}/album/${openAlbumId}`;
+  }, [activePhotos, currentAlbumId, experienceSlug, openAlbumId]);
 
   const focusLat = focus?.latitude ?? null;
   const focusLng = focus?.longitude ?? null;
@@ -461,22 +467,30 @@ export function TripMapCanvas({
     ? styles.mapLayoutCompact
     : featured
       ? styles.mapLayoutFeatured
-      : styles.mapLayout;
+      : immersive
+        ? styles.mapLayoutImmersive
+        : styles.mapLayout;
   const frameClass = compact
     ? styles.mapFrameCompact
     : featured
       ? styles.mapFrameFeatured
-      : styles.mapFrame;
+      : immersive
+        ? styles.mapFrameImmersive
+        : styles.mapFrame;
   const canvasClass = compact
     ? styles.mapCanvasCompact
     : featured
       ? styles.mapCanvasFeatured
-      : styles.mapCanvas;
+      : immersive
+        ? styles.mapCanvasImmersive
+        : styles.mapCanvas;
   const emptyClass = compact
     ? styles.mapEmptyCompact
     : featured
       ? styles.mapEmptyFeatured
-      : styles.mapEmpty;
+      : immersive
+        ? styles.mapEmptyImmersive
+        : styles.mapEmpty;
 
   if (geoPoints.length === 0) {
     return (
@@ -561,7 +575,7 @@ export function TripMapCanvas({
         ) : null}
       </div>
 
-      {activePhotos.length === 0 && !compact && !featured ? (
+      {activePhotos.length === 0 && !compact && !featured && !immersive ? (
         <p className={styles.mapHint}>
           Toque em um ponto para aproximar o mapa e ver as fotos daquele local.
         </p>

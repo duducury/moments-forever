@@ -4,6 +4,8 @@ import { createPresignedGetUrl, getR2Config } from "@/lib/storage/r2";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 function normalizeVariant(raw: string | null): "original" | "thumbnail" {
+  // Client `full` / anything non-thumbnail maps to R2 key `original`, which in
+  // the MVP stores the ~2048px preview derivative (not the camera file).
   if (raw === "thumbnail") return "thumbnail";
   return "original";
 }

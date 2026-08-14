@@ -101,7 +101,7 @@ export default async function ProfileTripAlbumPage({
   );
 
   const page = (
-    <main className="page-shell">
+    <main className="page-shell" data-bottom-nav="true">
       <nav className="topbar" aria-label="Navegação">
         <AppWordmark />
         <AuthStatus />

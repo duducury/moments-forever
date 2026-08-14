@@ -3,15 +3,20 @@
 /**
  * Uploads local photo blobs to private R2 via short-lived presigned PUT URLs.
  * Secrets never touch the browser — only the signed URL from our API.
+ *
+ * MVP: `full` is the display preview (~2048px JPEG), stored under the R2 key
+ * variant `original` for backward-compatible object paths. Camera originals
+ * are not uploaded. See docs/photo-storage.md.
  */
 
 export async function uploadPhotoBlobsToR2(input: {
   readonly photoId: string;
   readonly experienceId: string;
+  /** MVP preview derivative (not the camera original). */
   readonly full: Blob;
   readonly thumbnail: Blob | null;
 }): Promise<void> {
-  const originalType = input.full.type || "application/octet-stream";
+  const originalType = input.full.type || "image/jpeg";
   const original = await requestUploadUrl({
     photoId: input.photoId,
     experienceId: input.experienceId,

@@ -1,5 +1,6 @@
 import { countryCodeFromPlaceLabel } from "@moments-forever/shared";
 
+import { AppBottomNav } from "@/components/app-bottom-nav";
 import { AppWordmark } from "@/components/app-wordmark";
 import { AuthStatus } from "@/components/auth-status";
 import { NewTripButton } from "@/components/new-trip-button";
@@ -7,6 +8,7 @@ import { R2UploadWarningBanner } from "@/components/r2-upload-warning-banner";
 import type { TripPhoto } from "@/app/trip/[slug]/album-types";
 import type { ProfileCarouselPhoto } from "@/lib/experiences/load-owner-carousel-photos";
 import type { OwnerPlaceCardItem } from "@/lib/experiences/load-owner-place-cards";
+import { profilePath } from "@/lib/routes/app-routes";
 
 import styles from "./perfil.module.css";
 import { ProfileCarousel } from "./profile-carousel";
@@ -24,6 +26,7 @@ export function ProfileView({
   mapPhotos,
   carouselPhotos,
   loadError,
+  homeHref = profilePath(),
 }: {
   readonly ownerId: string;
   readonly displayName: string;
@@ -34,6 +37,8 @@ export function ProfileView({
   readonly mapPhotos: readonly TripPhoto[];
   readonly carouselPhotos: readonly ProfileCarouselPhoto[];
   readonly loadError: string | null;
+  /** Canonical profile URL for bottom-nav Início (public slug when known). */
+  readonly homeHref?: string;
 }) {
   const totalPhotos = places.reduce((sum, item) => sum + item.photoCount, 0);
   const visitedCountryCodes = (() => {
@@ -53,16 +58,18 @@ export function ProfileView({
   })();
 
   return (
-    <main className="page-shell">
+    <main className="page-shell" data-bottom-nav="true">
       <nav className="topbar" aria-label="Navegação">
         <AppWordmark />
         <div className={styles.topActions}>
           {isOwner ? (
-            <NewTripButton className={styles.newTripNavButton}>
+            <NewTripButton
+              className={`${styles.newTripNavButton} hide-when-bottom-nav`}
+            >
               Nova viagem
             </NewTripButton>
           ) : null}
-          <AuthStatus />
+          <AuthStatus hideUserName={isOwner} />
         </div>
       </nav>
 
@@ -117,6 +124,12 @@ export function ProfileView({
           <ProfileMap photos={mapPhotos} />
         ) : null}
       </section>
+
+      <AppBottomNav
+        homeHref={homeHref}
+        mapHref={isOwner ? "/mapa" : `${homeHref}/mapa`}
+        showCreate={isOwner}
+      />
     </main>
   );
 }

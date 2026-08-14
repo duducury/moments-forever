@@ -7,7 +7,7 @@ import { mapLocalDateSourceToDb } from "@moments-forever/shared";
 
 import { putLocalPhotoBlobs } from "@/lib/local-photos/photo-blob-store";
 import {
-  createBrowserThumbnail,
+  createBrowserPhotoDerivatives,
   extractBrowserPhotoMetadata,
 } from "@/lib/photo-import/browser-metadata";
 import { uploadManyPhotoBlobsToR2 } from "@/lib/storage/upload-photo-to-r2";
@@ -108,7 +108,15 @@ export function AddPhotosPanel({
         setProgress(`Lendo foto ${index + 1} de ${files.length}…`);
         const id = crypto.randomUUID();
         const metadata = await extractBrowserPhotoMetadata(id, file);
-        const thumbnail = await createBrowserThumbnail(file);
+        const derivatives = await createBrowserPhotoDerivatives(file);
+        const thumbnail = derivatives?.thumbnail ?? null;
+        const preview = derivatives?.preview ?? null;
+        const full = preview?.blob ?? thumbnail?.blob ?? null;
+        if (!full) {
+          throw new Error(
+            `Não foi possível preparar a foto ${file.name || index + 1} neste navegador.`,
+          );
+        }
         const mapped = mapLocalDateSourceToDb(
           metadata.dateSource,
           metadata.date,
@@ -116,7 +124,7 @@ export function AddPhotosPanel({
         );
         prepared.push({
           id,
-          full: file,
+          full,
           thumbnail: thumbnail?.blob ?? null,
           payloadBase: {
             id,
@@ -126,8 +134,8 @@ export function AddPhotosPanel({
             exact_longitude: metadata.gps?.longitude ?? null,
             width: metadata.dimensions?.width ?? thumbnail?.width ?? null,
             height: metadata.dimensions?.height ?? thumbnail?.height ?? null,
-            bytes: metadata.size,
-            format: metadata.type || null,
+            bytes: full.size,
+            format: full.type || "image/jpeg",
           },
         });
       }

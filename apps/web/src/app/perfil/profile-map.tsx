@@ -13,7 +13,11 @@ export function ProfileMap({
   const gpsCount = photos.length;
 
   return (
-    <section aria-label="Mapa das suas fotos" className={styles.mapSection}>
+    <section
+      aria-label="Mapa das suas fotos"
+      className={styles.mapSection}
+      id="mapa"
+    >
       <div className={styles.mapHeader}>
         <h2 className={styles.sectionTitle}>Mapa</h2>
         <p className={styles.mapHint}>

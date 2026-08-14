@@ -6,16 +6,20 @@ O MVP guarda somente derivados adequados à experiência, nunca originais. As pr
 
 ## Variantes
 
-- **Thumbnail:** grids, clusters e previews; tamanhos responsivos pequenos.
-- **Preview:** visualização normal/tela cheia, com lado maior inicialmente próximo de 2.048 px.
+- **Thumbnail:** grids, clusters, mapa e previews pequenos; lado maior ~640 px (JPEG no dispositivo).
+- **Preview:** visualização normal/tela cheia e capas; lado maior inicialmente próximo de 2.048 px (JPEG no dispositivo).
 - **Original:** proibido no fluxo do MVP; extensão futura premium com consentimento, cota, preço e retenção próprios.
+
+### Compatibilidade de chave R2 (MVP)
+
+No bucket, o objeto sob a variante de caminho `original` **é o preview ~2048**, não o arquivo da câmera. O cliente continua pedindo `variant=full` / IndexedDB `full` para esse ativo. Renomear a chave na API (`preview`) fica como follow-up; fotos já enviadas antes desta regra podem ainda ser originais de câmera até reprocessamento.
 
 Formatos modernos podem ser negociados no web, mantendo fallback amplamente compatível. HEIC/RAW precisam de orientação, cor e conversão testadas. Metadados úteis vão ao banco; EXIF e GPS são removidos dos arquivos entregues.
 
 ## Pipeline
 
-1. Dispositivo normaliza orientação e gera derivados.
-2. Calcula checksum, dimensões e bytes.
+1. Dispositivo normaliza orientação e gera derivados (thumb + preview).
+2. Calcula checksum, dimensões e bytes (dos derivados).
 3. API valida cota e emite URLs assinadas curtas.
 4. Upload vai diretamente ao R2, com retomada quando necessário.
 5. Confirmação torna o ativo elegível para publicação.
@@ -29,7 +33,8 @@ Bucket não é público. Uma camada edge valida acesso:
 
 - mídia pública pode usar cache CDN longo e chaves versionadas;
 - mídia privada usa autorização curta e não entra em cache público compartilhado;
-- mapa recebe somente thumbnails;
+- mapa e grids recebem somente thumbnails;
+- capas e lightbox usam o preview (`full` / chave `original`);
 - URLs de objeto não revelam usuário, local ou título.
 
 Cloudflare R2 armazena a mídia, separado do Supabase Auth/PostgreSQL. Isso evita usar o banco ou Supabase Storage para arquivos pesados. R2 reduz egress dentro do ecossistema Cloudflare, mas operações, transformação e fornecedor continuam sendo custos/risco. O modelo de `media_variants` e o contrato de storage permitem adicionar `original` ou migrar fornecedor sem redesenhar memórias.

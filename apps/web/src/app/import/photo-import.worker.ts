@@ -8,7 +8,7 @@ import type {
 } from "@moments-forever/shared";
 
 import {
-  createBrowserThumbnail,
+  createBrowserPhotoDerivatives,
   extractBrowserPhotoMetadata,
 } from "@/lib/photo-import/browser-metadata";
 import type {
@@ -57,7 +57,9 @@ async function analyze(request: BrowserAnalyzeRequest): Promise<void> {
         }
         const deduplicatedMetadata =
           duplicateOf === null ? extracted : { ...extracted, duplicateOf };
-        const thumbnail = await createBrowserThumbnail(entry.file);
+        const derivatives = await createBrowserPhotoDerivatives(entry.file);
+        const thumbnail = derivatives?.thumbnail ?? null;
+        const preview = derivatives?.preview ?? null;
         const metadataWithDimensions =
           thumbnail && deduplicatedMetadata.dimensions === null
             ? {
@@ -77,6 +79,7 @@ async function analyze(request: BrowserAnalyzeRequest): Promise<void> {
           type: "item",
           metadata,
           thumbnail: thumbnail?.blob ?? null,
+          preview: preview?.blob ?? null,
         };
         worker.postMessage(item);
       } catch (error: unknown) {

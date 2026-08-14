@@ -189,9 +189,10 @@ export async function loadOwnerCarouselPhotos(
     const experience = experienceById.get(photo.experience_id as string);
     if (!experience?.slug) continue;
     const albumId = (photo.album_id as string | null) ?? null;
-    const placeLabel = albumId
-      ? (placeLabelByAlbumId.get(albumId) ?? experience.title)
-      : experience.title;
+    // Skip unfiled photos — Destaques must deep-link to a place folder.
+    if (!albumId) continue;
+    const placeLabel =
+      placeLabelByAlbumId.get(albumId) ?? experience.title;
 
     mapped.push({
       id: photo.id as string,

@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import type { TripPhoto } from "./album-types";
 import styles from "./trip.module.css";
 
-export type TripMapVariant = "full" | "compact" | "featured";
+export type TripMapVariant = "full" | "compact" | "featured" | "immersive";
 
 /** How the map chooses its first camera: whole GPS dataset vs focus place. */
 export type TripMapInitialFit = "all" | "focus";
@@ -24,6 +24,18 @@ const TripMapCanvas = dynamic(
     loading: () => (
       <div className={styles.mapEmpty}>
         <p>Carregando mapa…</p>
+      </div>
+    ),
+  },
+);
+
+const GlobeMapCanvas = dynamic(
+  () => import("./globe-map-canvas").then((mod) => mod.GlobeMapCanvas),
+  {
+    ssr: false,
+    loading: () => (
+      <div className={styles.mapEmptyImmersive}>
+        <p>Carregando globo…</p>
       </div>
     ),
   },
@@ -52,6 +64,19 @@ export function TripMap({
   readonly initialFit?: TripMapInitialFit;
   readonly currentAlbumId?: string | null;
 }) {
+  if (variant === "immersive") {
+    return (
+      <GlobeMapCanvas
+        albumLabel={albumLabel}
+        currentAlbumId={currentAlbumId}
+        emptyHint={emptyHint}
+        emptyTitle={emptyTitle}
+        experienceTitle={experienceTitle}
+        photos={photos}
+      />
+    );
+  }
+
   return (
     <TripMapCanvas
       albumLabel={albumLabel}

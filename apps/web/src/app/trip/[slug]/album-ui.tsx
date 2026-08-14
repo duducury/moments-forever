@@ -12,7 +12,6 @@ import {
 import { createPortal } from "react-dom";
 
 import { deleteLocalPhotoBlobs } from "@/lib/local-photos/photo-blob-store";
-import { useProgressiveLocalPhoto } from "@/lib/local-photos/use-progressive-local-photo";
 import { useLocalPhotoObjectUrl } from "@/lib/local-photos/use-local-photo-urls";
 
 import {
@@ -60,15 +59,15 @@ function ProgressiveTileMedia({
   readonly photoId: string;
   readonly className: string;
 }) {
-  const { nodeRef, thumbSrc, fullSrc } = useProgressiveLocalPhoto(photoId);
-  const hasImage = Boolean(thumbSrc || fullSrc);
+  // Grids stay on thumbnail only — preview/full is for lightbox and covers.
+  const thumbSrc = useLocalPhotoObjectUrl(photoId, "thumbnail");
+  const hasImage = Boolean(thumbSrc);
 
   return (
     <span
       className={className}
       data-has-image={hasImage ? "true" : "false"}
       data-tone={toneFromId(photoId)}
-      ref={nodeRef}
     >
       {thumbSrc ? (
         // eslint-disable-next-line @next/next/no-img-element
@@ -79,16 +78,6 @@ function ProgressiveTileMedia({
           draggable={false}
           loading="lazy"
           src={thumbSrc}
-        />
-      ) : null}
-      {fullSrc ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          alt=""
-          className={`${styles.tileImage} ${styles.tileImageFull}`}
-          decoding="async"
-          draggable={false}
-          src={fullSrc}
         />
       ) : null}
     </span>
@@ -136,8 +125,19 @@ export function PhotoLightbox({
 }) {
   const index = photos.findIndex((photo) => photo.id === photoId);
   const photo = index >= 0 ? photos[index] : null;
+  const neighborPrevId =
+    photos.length > 1 && index >= 0
+      ? photos[(index - 1 + photos.length) % photos.length]?.id
+      : null;
+  const neighborNextId =
+    photos.length > 1 && index >= 0
+      ? photos[(index + 1) % photos.length]?.id
+      : null;
   const thumbSrc = useLocalPhotoObjectUrl(photo?.id, "thumbnail");
   const fullSrc = useLocalPhotoObjectUrl(photo?.id, "full");
+  // Prefetch ±1 neighbors so swipe feels instant (same idea as album carousel).
+  useLocalPhotoObjectUrl(neighborPrevId, "full");
+  useLocalPhotoObjectUrl(neighborNextId, "full");
   const [removingLocation, setRemovingLocation] = useState(false);
   const [dismissDragY, setDismissDragY] = useState(0);
 

@@ -8,7 +8,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 
-import { useProgressiveLocalPhoto } from "@/lib/local-photos/use-progressive-local-photo";
+import { useLocalPhotoObjectUrl } from "@/lib/local-photos/use-local-photo-urls";
 
 import { toneFromId, type TripPhoto } from "../../album-types";
 import styles from "../../trip.module.css";
@@ -16,14 +16,13 @@ import styles from "../../trip.module.css";
 const DRAG_THRESHOLD_PX = 10;
 
 function OrganizeThumb({ photo }: { readonly photo: TripPhoto }) {
-  const { nodeRef, thumbSrc, fullSrc } = useProgressiveLocalPhoto(photo.id);
-  const hasImage = Boolean(thumbSrc || fullSrc);
+  const thumbSrc = useLocalPhotoObjectUrl(photo.id, "thumbnail");
+  const hasImage = Boolean(thumbSrc);
   return (
     <span
       className={styles.squareTile}
       data-has-image={hasImage ? "true" : "false"}
       data-tone={toneFromId(photo.id)}
-      ref={nodeRef}
     >
       {thumbSrc ? (
         // eslint-disable-next-line @next/next/no-img-element
@@ -34,16 +33,6 @@ function OrganizeThumb({ photo }: { readonly photo: TripPhoto }) {
           draggable={false}
           loading="lazy"
           src={thumbSrc}
-        />
-      ) : null}
-      {fullSrc ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          alt=""
-          className={`${styles.tileImage} ${styles.tileImageFull}`}
-          decoding="async"
-          draggable={false}
-          src={fullSrc}
         />
       ) : null}
     </span>

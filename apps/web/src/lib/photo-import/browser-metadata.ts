@@ -117,17 +117,96 @@ export async function extractBrowserPhotoMetadata(
 
 export interface BrowserThumbnail {
   readonly blob: Blob;
+  /** Source pixel width (before downscale) — useful when EXIF lacks dimensions. */
   readonly width: number;
   readonly height: number;
 }
 
-/** Default edge for map/strip thumbs — sharp enough on retina, still light. */
+/** Default edge for map/strip/grid thumbs — sharp enough on retina, still light. */
 export const DEFAULT_THUMBNAIL_EDGE = 640;
 
+/** MVP display/lightbox/cover asset — docs/photo-storage.md preview (~2048). */
+export const DEFAULT_PREVIEW_EDGE = 2048;
+
+const DEFAULT_THUMBNAIL_QUALITY = 0.88;
+const DEFAULT_PREVIEW_QUALITY = 0.86;
+
+async function encodeJpegDerivative(
+  bitmap: ImageBitmap,
+  maximumEdge: number,
+  quality: number,
+): Promise<Blob | null> {
+  const scale = Math.min(1, maximumEdge / Math.max(bitmap.width, bitmap.height));
+  const width = Math.max(1, Math.round(bitmap.width * scale));
+  const height = Math.max(1, Math.round(bitmap.height * scale));
+  const canvas = new OffscreenCanvas(width, height);
+  const context = canvas.getContext("2d");
+  if (!context) return null;
+  context.drawImage(bitmap, 0, 0, width, height);
+  return canvas.convertToBlob({
+    type: "image/jpeg",
+    quality,
+  });
+}
+
+/**
+ * Decode once and produce MVP derivatives: thumbnail (~640) + preview (~2048).
+ * Never returns the camera original — both outputs are JPEG re-encodes.
+ */
+export async function createBrowserPhotoDerivatives(
+  source: Blob,
+  options?: {
+    readonly thumbnailEdge?: number;
+    readonly previewEdge?: number;
+    readonly thumbnailQuality?: number;
+    readonly previewQuality?: number;
+  },
+): Promise<{
+  readonly thumbnail: BrowserThumbnail | null;
+  readonly preview: BrowserThumbnail | null;
+} | null> {
+  if (
+    typeof createImageBitmap !== "function" ||
+    typeof OffscreenCanvas === "undefined"
+  ) {
+    return null;
+  }
+  let bitmap: ImageBitmap | null = null;
+  try {
+    bitmap = await createImageBitmap(source);
+    const sourceWidth = bitmap.width;
+    const sourceHeight = bitmap.height;
+    const [thumbBlob, previewBlob] = await Promise.all([
+      encodeJpegDerivative(
+        bitmap,
+        options?.thumbnailEdge ?? DEFAULT_THUMBNAIL_EDGE,
+        options?.thumbnailQuality ?? DEFAULT_THUMBNAIL_QUALITY,
+      ),
+      encodeJpegDerivative(
+        bitmap,
+        options?.previewEdge ?? DEFAULT_PREVIEW_EDGE,
+        options?.previewQuality ?? DEFAULT_PREVIEW_QUALITY,
+      ),
+    ]);
+    return {
+      thumbnail: thumbBlob
+        ? { blob: thumbBlob, width: sourceWidth, height: sourceHeight }
+        : null,
+      preview: previewBlob
+        ? { blob: previewBlob, width: sourceWidth, height: sourceHeight }
+        : null,
+    };
+  } catch {
+    return null;
+  } finally {
+    bitmap?.close();
+  }
+}
+
 export async function createBrowserThumbnail(
-  file: File,
+  file: Blob,
   maximumEdge = DEFAULT_THUMBNAIL_EDGE,
-  quality = 0.88,
+  quality = DEFAULT_THUMBNAIL_QUALITY,
 ): Promise<BrowserThumbnail | null> {
   if (
     typeof createImageBitmap !== "function" ||
@@ -138,21 +217,21 @@ export async function createBrowserThumbnail(
   let bitmap: ImageBitmap | null = null;
   try {
     bitmap = await createImageBitmap(file);
-    const scale = Math.min(1, maximumEdge / Math.max(bitmap.width, bitmap.height));
-    const width = Math.max(1, Math.round(bitmap.width * scale));
-    const height = Math.max(1, Math.round(bitmap.height * scale));
-    const canvas = new OffscreenCanvas(width, height);
-    const context = canvas.getContext("2d");
-    if (!context) return null;
-    context.drawImage(bitmap, 0, 0, width, height);
-    const blob = await canvas.convertToBlob({
-      type: "image/jpeg",
-      quality,
-    });
+    const blob = await encodeJpegDerivative(bitmap, maximumEdge, quality);
+    if (!blob) return null;
     return { blob, width: bitmap.width, height: bitmap.height };
   } catch {
     return null;
   } finally {
     bitmap?.close();
   }
+}
+
+/** Display asset for lightbox/covers — max edge ~2048 JPEG (MVP “full” / R2 original key). */
+export async function createBrowserPreview(
+  file: Blob,
+  maximumEdge = DEFAULT_PREVIEW_EDGE,
+  quality = DEFAULT_PREVIEW_QUALITY,
+): Promise<BrowserThumbnail | null> {
+  return createBrowserThumbnail(file, maximumEdge, quality);
 }

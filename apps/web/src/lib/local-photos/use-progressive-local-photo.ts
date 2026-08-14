@@ -5,8 +5,9 @@ import { useEffect, useRef, useState } from "react";
 import { useLocalPhotoObjectUrl } from "./use-local-photo-urls";
 
 /**
- * Thumbnail first, then full when the element enters (or approaches) the viewport.
- * Object URLs come from the session cache (see local-photo-object-url-cache).
+ * Thumbnail first, then full when near the viewport.
+ * Album grids no longer use this (thumb-only for bandwidth); kept for surfaces
+ * that still want progressive upgrade to the MVP preview (`full`).
  */
 export function useProgressiveLocalPhoto(photoId: string | null | undefined) {
   const nodeRef = useRef<HTMLSpanElement | null>(null);

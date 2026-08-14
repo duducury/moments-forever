@@ -10,18 +10,21 @@ import {
   usStateCodeFromPlaceLabel,
 } from "@moments-forever/shared";
 
+import { SeeAlsoPlaces } from "@/app/perfil/see-also-places";
+import { AppBottomNav } from "@/components/app-bottom-nav";
+import { ExperienceCoverThumb } from "@/components/experience-cover-thumb";
+import type { OwnerPlaceCardItem } from "@/lib/experiences/load-owner-place-cards";
 import {
   deleteLocalPhotoBlob,
   deleteLocalPhotoBlobs,
 } from "@/lib/local-photos/photo-blob-store";
+import { useLocalPhotoObjectUrl } from "@/lib/local-photos/use-local-photo-urls";
 import { boundsFromGeoPoints } from "@/lib/map/cluster-photos";
 import {
   confirmRemovePhotoLocation,
   removeLocationFromPhotos,
 } from "@/lib/privacy/remove-location";
-
-import { SeeAlsoPlaces } from "@/app/perfil/see-also-places";
-import type { OwnerPlaceCardItem } from "@/lib/experiences/load-owner-place-cards";
+import { profilePath } from "@/lib/routes/app-routes";
 
 import { AddPhotosPanel } from "../../add-photos-panel";
 import {
@@ -97,6 +100,7 @@ export function AlbumFolderView({
     );
     return inAlbum ? initialPhotoId : null;
   });
+  const [coverPickerOpen, setCoverPickerOpen] = useState(false);
   const [albumsSyncKey, setAlbumsSyncKey] = useState(initialAlbums);
   const [photosSyncKey, setPhotosSyncKey] = useState(initialPhotos);
 
@@ -298,6 +302,7 @@ export function AlbumFolderView({
           item.id === albumId ? { ...item, coverPhotoId: photoId } : item,
         ),
       );
+      setCoverPickerOpen(false);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Falha ao definir capa.");
@@ -443,52 +448,85 @@ export function AlbumFolderView({
     );
   }
 
+  const heroCoverId = album.coverPhotoId ?? carouselPhotos[0]?.id ?? null;
+
   return (
+    <>
     <LibraryShell
       breadcrumb={breadcrumb}
       className={`${styles.page} ${styles.albumPage}`}
       header={
-        <header className={styles.albumHeroHeader}>
-          <div className={styles.albumHeroCopy}>
-            <div className={styles.albumHeroTitleRow}>
-              {countryCode ? (
-                // eslint-disable-next-line @next/next/no-img-element -- small flag CDN asset
-                <img
-                  alt=""
-                  className={styles.albumHeroFlag}
-                  decoding="async"
-                  height={22}
-                  src={`https://flagcdn.com/w80/${countryCode.toLowerCase()}.png`}
-                  width={30}
-                />
-              ) : null}
-              <h1 className={styles.albumHeroTitle}>{album.displayName}</h1>
-            </div>
-            {placeUsState ? (
-              <p className={styles.albumHeroCountry}>{placeUsState}</p>
-            ) : experience.primaryCountry ? (
-              <p className={styles.albumHeroCountry}>
-                {experience.primaryCountry}
-              </p>
-            ) : null}
-            {metaLine ? (
-              <p className={styles.albumHeroMeta}>{metaLine}</p>
-            ) : null}
-            {error ? (
-              <p className={styles.error} role="alert">
-                {error}
-              </p>
-            ) : null}
-            {isOwner ? (
-              <PendingR2Sync
-                experienceId={experience.id}
-                photoIdsMissingStorage={photos
-                  .filter((photo) => photo.hasPermanentStorage === false)
-                  .map((photo) => photo.id)}
+        <>
+          <header className={styles.albumHeroHeader}>
+            <div aria-hidden="true" className={styles.albumHeroMedia}>
+              <ExperienceCoverThumb
+                coverPhotoId={heroCoverId}
+                fallbackClassName={styles.albumHeroFallback}
+                imageClassName={styles.albumHeroImage}
+                title={album.displayName}
               />
+            </div>
+            <div aria-hidden="true" className={styles.albumHeroOverlay} />
+
+            {isOwner ? (
+              <div className={styles.albumHeroActions}>
+                <button
+                  className={styles.albumHeroCoverButton}
+                  disabled={busy || albumPhotos.length === 0}
+                  onClick={() => {
+                    setError(null);
+                    setCoverPickerOpen(true);
+                  }}
+                  type="button"
+                >
+                  Escolher capa
+                </button>
+              </div>
             ) : null}
-          </div>
-        </header>
+
+            <div className={styles.albumHeroCopy}>
+              <div className={styles.albumHeroTitleRow}>
+                {countryCode ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- small flag CDN asset
+                  <img
+                    alt=""
+                    className={styles.albumHeroFlag}
+                    decoding="async"
+                    height={22}
+                    src={`https://flagcdn.com/w80/${countryCode.toLowerCase()}.png`}
+                    width={30}
+                  />
+                ) : null}
+                <h1 className={styles.albumHeroTitle}>{album.displayName}</h1>
+              </div>
+              {placeUsState ? (
+                <p className={styles.albumHeroCountry}>{placeUsState}</p>
+              ) : experience.primaryCountry ? (
+                <p className={styles.albumHeroCountry}>
+                  {experience.primaryCountry}
+                </p>
+              ) : null}
+              {metaLine ? (
+                <p className={styles.albumHeroMeta}>{metaLine}</p>
+              ) : null}
+            </div>
+          </header>
+
+          {error ? (
+            <p className={styles.albumHeroError} role="alert">
+              {error}
+            </p>
+          ) : null}
+
+          {isOwner ? (
+            <PendingR2Sync
+              experienceId={experience.id}
+              photoIdsMissingStorage={photos
+                .filter((photo) => photo.hasPermanentStorage === false)
+                .map((photo) => photo.id)}
+            />
+          ) : null}
+        </>
       }
     >
       <div className={styles.albumStory}>
@@ -496,6 +534,7 @@ export function AlbumFolderView({
           <section
             aria-label="Mapa do lugar"
             className={styles.albumMapSection}
+            id="mapa"
           >
             <TripMap
               albumLabel={album.displayName}
@@ -810,6 +849,103 @@ export function AlbumFolderView({
           onClose={() => setAddPhotosOpen(false)}
         />
       ) : null}
+
+      {coverPickerOpen && isOwner ? (
+        <div
+          className={styles.coverPickerBackdrop}
+          onClick={() => {
+            if (!busy) setCoverPickerOpen(false);
+          }}
+          role="presentation"
+        >
+          <div
+            aria-labelledby="cover-picker-title"
+            aria-modal="true"
+            className={styles.coverPickerSheet}
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+          >
+            <div className={styles.coverPickerHeader}>
+              <h2 id="cover-picker-title">Escolher capa</h2>
+              <button
+                className={styles.coverPickerClose}
+                disabled={busy}
+                onClick={() => setCoverPickerOpen(false)}
+                type="button"
+              >
+                Fechar
+              </button>
+            </div>
+            {albumPhotos.length === 0 ? (
+              <p className={styles.coverPickerEmpty}>
+                Adicione fotos a este lugar para escolher uma capa.
+              </p>
+            ) : (
+              <div className={styles.coverPickerGrid}>
+                {carouselPhotos.map((photo) => (
+                  <CoverPickerTile
+                    busy={busy}
+                    current={heroCoverId === photo.id}
+                    key={photo.id}
+                    onSelect={() => void setAlbumCover(photo.id)}
+                    photoId={photo.id}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      ) : null}
     </LibraryShell>
+
+      <AppBottomNav
+        homeHref={profileHomeHref ?? profilePath()}
+        mapHref={
+          isOwner
+            ? "/mapa"
+            : profileHomeHref
+              ? `${profileHomeHref}/mapa`
+              : "/mapa"
+        }
+        showCreate={isOwner}
+      />
+    </>
+  );
+}
+
+function CoverPickerTile({
+  photoId,
+  current,
+  busy,
+  onSelect,
+}: {
+  readonly photoId: string;
+  readonly current: boolean;
+  readonly busy: boolean;
+  readonly onSelect: () => void;
+}) {
+  const src = useLocalPhotoObjectUrl(photoId, "thumbnail");
+  return (
+    <button
+      aria-current={current ? "true" : undefined}
+      aria-label={current ? "Capa atual" : "Usar como capa"}
+      className={styles.coverPickerTile}
+      data-current={current ? "true" : "false"}
+      disabled={busy}
+      onClick={onSelect}
+      type="button"
+    >
+      {src ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          alt=""
+          className={styles.coverPickerTileImg}
+          decoding="async"
+          src={src}
+        />
+      ) : (
+        <span className={styles.coverPickerTileImg} />
+      )}
+    </button>
   );
 }

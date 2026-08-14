@@ -118,6 +118,8 @@ export interface PhotoWorkerItemResult<Thumbnail> {
   readonly type: "item";
   readonly metadata: LocalPhotoMetadata;
   readonly thumbnail: Thumbnail | null;
+  /** MVP display derivative (~2048 JPEG). Absent on older workers. */
+  readonly preview?: Thumbnail | null;
 }
 
 export interface PhotoWorkerProgress {

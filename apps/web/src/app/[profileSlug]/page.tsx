@@ -128,6 +128,7 @@ export default async function PublicProfilePage({
       bio={profile.bio}
       carouselPhotos={carouselPhotos}
       displayName={displayName}
+      homeHref={publicProfilePath(profile.profileSlug)}
       isOwner={isOwner}
       loadError={
         result.error ? "Não foi possível carregar as viagens deste perfil." : null

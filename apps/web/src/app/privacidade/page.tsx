@@ -1,8 +1,14 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { AppBottomNav } from "@/components/app-bottom-nav";
 import { AppWordmark } from "@/components/app-wordmark";
 import { AuthStatus } from "@/components/auth-status";
+import { displayNameFromUser } from "@/lib/auth/display-name";
+import {
+  ensureOwnerProfileSlug,
+  publicProfilePath,
+} from "@/lib/profile/profile-slug";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import { PrivacyTripsClient } from "./privacy-trips-client";
@@ -51,6 +57,13 @@ export default async function PrivacyPage() {
     redirect("/login");
   }
 
+  const slug = await ensureOwnerProfileSlug(
+    supabase,
+    user.id,
+    displayNameFromUser(user),
+  );
+  const homeHref = publicProfilePath(slug);
+
   const experiences = await supabase
     .from("experiences")
     .select("id, slug, title")
@@ -59,7 +72,7 @@ export default async function PrivacyPage() {
 
   if (experiences.error) {
     return (
-      <main className="page-shell">
+      <main className="page-shell" data-bottom-nav="true">
         <nav className="topbar" aria-label="Navegação">
           <AppWordmark />
           <AuthStatus />
@@ -70,6 +83,7 @@ export default async function PrivacyPage() {
             {experiences.error.message}
           </p>
         </section>
+        <AppBottomNav homeHref={homeHref} mapHref="/mapa" showCreate />
       </main>
     );
   }
@@ -120,13 +134,13 @@ export default async function PrivacyPage() {
   }
 
   return (
-    <main className="page-shell">
+    <main className="page-shell" data-bottom-nav="true">
       <nav className="topbar" aria-label="Navegação">
         <AppWordmark />
         <AuthStatus />
       </nav>
       <section className="narrow">
-        <p className="eyebrow">Conta</p>
+        <p className="eyebrow">Geral</p>
         <h1>Privacidade</h1>
         <p className={styles.intro}>
           Algumas fotos podem conter informações de localização. Escolha um
@@ -145,11 +159,12 @@ export default async function PrivacyPage() {
         <PrivacyTripsClient trips={rows} />
 
         <p className={styles.back}>
-          <Link className="text-link" href="/perfil">
-            Voltar ao perfil
+          <Link className="text-link" href="/geral">
+            Voltar para Geral
           </Link>
         </p>
       </section>
+      <AppBottomNav homeHref={homeHref} mapHref="/mapa" showCreate />
     </main>
   );
 }

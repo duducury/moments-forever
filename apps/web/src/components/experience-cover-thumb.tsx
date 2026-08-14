@@ -4,7 +4,7 @@ import { useLocalPhotoObjectUrl } from "@/lib/local-photos/use-local-photo-urls"
 
 /**
  * Renders a trip/place cover from IndexedDB by photo id.
- * Cover surfaces always request the full blob (thumb only as placeholder).
+ * Cover surfaces request the MVP preview (`full` / R2 original key); thumb is placeholder.
  * Compact pickers can keep `variant="thumbnail"`.
  */
 export function ExperienceCoverThumb({
@@ -20,7 +20,7 @@ export function ExperienceCoverThumb({
   readonly className?: string;
   readonly imageClassName?: string;
   readonly fallbackClassName?: string;
-  /** `cover` = full quality; `thumbnail` = small preview only. */
+  /** `cover` = preview quality; `thumbnail` = small preview only. */
   readonly variant?: "cover" | "thumbnail";
 }) {
   const initial = title.trim().slice(0, 1).toUpperCase() || "·";
@@ -92,7 +92,7 @@ function CoverFull({
   readonly fallbackClassName?: string;
   readonly initial: string;
 }) {
-  // Always load full for trip/place covers — thumbnails look soft on wide cards.
+  // Load MVP preview (`full`) for trip/place covers — thumbnails look soft on wide cards.
   const thumbSrc = useLocalPhotoObjectUrl(coverPhotoId, "thumbnail");
   const fullSrc = useLocalPhotoObjectUrl(coverPhotoId, "full");
   const hasImage = Boolean(thumbSrc || fullSrc);
@@ -129,7 +129,6 @@ function CoverFull({
           className={imageClassName}
           data-cover-full=""
           decoding="async"
-          fetchPriority="high"
           src={fullSrc}
         />
       ) : null}

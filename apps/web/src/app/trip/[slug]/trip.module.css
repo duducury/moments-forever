@@ -991,6 +991,88 @@
   min-height: 300px;
 }
 
+.mapLayoutImmersive {
+  display: grid;
+  height: 100%;
+  min-height: 0;
+}
+
+.mapFrameImmersive {
+  position: relative;
+  z-index: var(--z-map);
+  isolation: isolate;
+  overflow: hidden;
+  height: 100%;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 48%, #1a2430 0%, #07090c 68%, #030405 100%);
+  box-shadow: none;
+}
+
+.mapCanvasImmersive {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  background: transparent;
+}
+
+.mapCanvasImmersive :global(.maplibregl-canvas) {
+  outline: none;
+}
+
+.mapCanvasImmersive :global(.maplibregl-ctrl-attrib) {
+  font-size: 10px;
+  color: #e8e4dc;
+  background: rgb(8 10 14 / 55%);
+}
+
+.mapCanvasImmersive :global(.maplibregl-ctrl-group) {
+  border: 0;
+  background: rgb(255 255 255 / 90%);
+  box-shadow: 0 8px 20px rgb(0 0 0 / 28%);
+}
+
+/* Pins on the far side of the globe — hide + ignore taps. */
+.mapCanvasImmersive :global(.maplibregl-marker-covered) {
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+.globeHint {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  z-index: 2;
+  margin: 0;
+  padding: 6px 12px;
+  border-radius: 999px;
+  color: rgb(243 239 232 / 88%);
+  background: rgb(8 10 14 / 42%);
+  backdrop-filter: blur(8px);
+  font-size: 0.78rem;
+  font-weight: 550;
+  letter-spacing: 0.02em;
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
+.mapEmptyImmersive {
+  display: grid;
+  place-content: center;
+  gap: 8px;
+  height: 100%;
+  min-height: 280px;
+  padding: 28px;
+  text-align: center;
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+}
+
+.mapEmptyImmersive p {
+  margin: 0;
+}
+
 .mapCanvas :global(.leaflet-control-attribution),
 .mapCanvasFeatured :global(.leaflet-control-attribution),
 .mapCanvasCompact :global(.leaflet-control-attribution) {
@@ -1333,17 +1415,77 @@
 }
 
 .albumHeroHeader {
+  position: relative;
   display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px 12px;
+  flex-direction: column;
+  justify-content: flex-end;
+  overflow: hidden;
+  width: 100%;
+  min-height: clamp(200px, 52vw, 260px);
+  height: clamp(200px, 52vw, 260px);
   margin-bottom: 14px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--surface) 88%, #1a1a1a);
+  box-shadow: 0 12px 28px var(--shadow);
+  isolation: isolate;
+}
+
+.albumHeroMedia {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.albumHeroMedia :global([data-progressive-cover]),
+.albumHeroMedia :global([data-has-image]) {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.albumHeroImage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.albumHeroFallback {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  color: color-mix(in srgb, var(--muted) 70%, transparent);
+  font-size: 2.4rem;
+  font-weight: 650;
+  background:
+    radial-gradient(ellipse 80% 70% at 30% 20%, #3a4658 0%, transparent 55%),
+    linear-gradient(160deg, #1c222c 0%, #0d1016 100%);
+}
+
+.albumHeroOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      180deg,
+      rgb(8 10 14 / 18%) 0%,
+      rgb(8 10 14 / 12%) 38%,
+      rgb(8 10 14 / 72%) 100%
+    );
 }
 
 .albumHeroCopy {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  gap: 6px;
   min-width: 0;
-  flex: 1 1 12rem;
+  padding: 16px 16px 14px;
 }
 
 .albumHeroTitleRow {
@@ -1358,31 +1500,173 @@
   width: 30px;
   height: auto;
   border-radius: 3px;
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--border) 70%, transparent);
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 28%);
   object-fit: cover;
 }
 
 .albumHeroTitle {
   margin: 0;
   min-width: 0;
-  font-size: clamp(1.7rem, 6.8vw, 2.45rem);
+  color: #fff;
+  font-size: clamp(1.55rem, 6.2vw, 2.2rem);
   line-height: 1.08;
+  text-shadow: 0 1px 12px rgb(0 0 0 / 45%);
   overflow-wrap: anywhere;
 }
 
 .albumHeroCountry {
-  margin: 6px 0 0;
-  color: var(--muted);
-  font-size: 0.95rem;
+  margin: 0;
+  color: rgb(243 239 232 / 82%);
+  font-size: 0.92rem;
   font-weight: 550;
   line-height: 1.3;
 }
 
 .albumHeroMeta {
-  margin: 4px 0 0;
-  color: var(--muted);
-  font-size: 0.9rem;
+  margin: 0;
+  color: rgb(243 239 232 / 78%);
+  font-size: 0.88rem;
   line-height: 1.35;
+}
+
+.albumHeroActions {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 3;
+  display: flex;
+  gap: 8px;
+}
+
+.albumHeroCoverButton {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid rgb(255 255 255 / 28%);
+  border-radius: 999px;
+  color: #fff;
+  background: rgb(8 10 14 / 42%);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.albumHeroCoverButton:hover {
+  background: rgb(8 10 14 / 58%);
+}
+
+.albumHeroCoverButton:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.albumHeroError {
+  position: relative;
+  z-index: 2;
+  margin: 0 16px 12px;
+  color: #ffb4b4;
+  font-size: 0.86rem;
+}
+
+.coverPickerBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-drawer);
+  display: grid;
+  align-items: end;
+  padding: 12px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  background: rgb(0 0 0 / 48%);
+}
+
+.coverPickerSheet {
+  width: min(100%, 560px);
+  max-height: min(72vh, 640px);
+  margin: 0 auto;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: 0 18px 40px var(--shadow);
+}
+
+.coverPickerHeader {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  backdrop-filter: blur(10px);
+}
+
+.coverPickerHeader h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.coverPickerClose {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.coverPickerClose:hover {
+  color: var(--ink);
+}
+
+.coverPickerGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding: 12px 16px 16px;
+}
+
+.coverPickerTile {
+  position: relative;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  padding: 0;
+  background: color-mix(in srgb, var(--surface) 80%, #111);
+  cursor: pointer;
+}
+
+.coverPickerTile[data-current="true"] {
+  border-color: var(--accent);
+}
+
+.coverPickerTile:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.coverPickerTileImg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.coverPickerEmpty {
+  margin: 0;
+  padding: 24px 16px;
+  color: var(--muted);
+  text-align: center;
 }
 
 .quietAction {
@@ -1484,6 +1768,8 @@
 
 .albumMapSection {
   order: 0;
+  scroll-margin-top: 24px;
+  scroll-margin-bottom: 88px;
 }
 
 .albumToolbar {
@@ -2076,18 +2362,24 @@
 
   .albumHeroHeader {
     margin-bottom: 16px;
+    min-height: clamp(220px, 36vw, 280px);
+    height: clamp(220px, 36vw, 280px);
   }
 
   .albumHeroTitle {
-    font-size: clamp(1.85rem, 3.2vw, 2.45rem);
+    font-size: clamp(1.75rem, 3vw, 2.35rem);
   }
 
   .albumHeroCountry {
-    font-size: 1.05rem;
+    font-size: 1rem;
   }
 
   .albumHeroMeta {
     font-size: 0.92rem;
+  }
+
+  .coverPickerGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   .albumToolbar {

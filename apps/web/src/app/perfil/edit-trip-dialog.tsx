@@ -12,7 +12,7 @@ import {
   putLocalPhotoBlobs,
 } from "@/lib/local-photos/photo-blob-store";
 import {
-  createBrowserThumbnail,
+  createBrowserPhotoDerivatives,
   extractBrowserPhotoMetadata,
 } from "@/lib/photo-import/browser-metadata";
 import { clearCardPreviewPrefs } from "@/lib/profile/card-preview-prefs";
@@ -164,7 +164,13 @@ export function EditTripDialog({
     try {
       const id = crypto.randomUUID();
       const metadata = await extractBrowserPhotoMetadata(id, file);
-      const thumbnail = await createBrowserThumbnail(file);
+      const derivatives = await createBrowserPhotoDerivatives(file);
+      const thumbnail = derivatives?.thumbnail ?? null;
+      const preview = derivatives?.preview ?? null;
+      const full = preview?.blob ?? thumbnail?.blob ?? null;
+      if (!full) {
+        throw new Error("Não foi possível preparar a foto neste navegador.");
+      }
       const mapped = mapLocalDateSourceToDb(
         metadata.dateSource,
         metadata.date,
@@ -176,7 +182,7 @@ export function EditTripDialog({
       await putLocalPhotoBlobs([
         {
           id,
-          full: file,
+          full,
           thumbnail: thumbnail?.blob ?? null,
         },
       ]);
@@ -197,8 +203,8 @@ export function EditTripDialog({
               exact_longitude: metadata.gps?.longitude ?? null,
               width: metadata.dimensions?.width ?? thumbnail?.width ?? null,
               height: metadata.dimensions?.height ?? thumbnail?.height ?? null,
-              bytes: metadata.size,
-              format: metadata.type || null,
+              bytes: full.size,
+              format: full.type || "image/jpeg",
             },
           ],
         }),
@@ -211,7 +217,7 @@ export function EditTripDialog({
       setProgress("Enviando ao armazenamento…");
       try {
         await uploadManyPhotoBlobsToR2(experience.id, [
-          { id, full: file, thumbnail: thumbnail?.blob ?? null },
+          { id, full, thumbnail: thumbnail?.blob ?? null },
         ]);
       } catch (cloudError) {
         setError(

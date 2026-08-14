@@ -17,15 +17,21 @@ export async function loadOwnerMapPhotos(
 ): Promise<readonly TripPhoto[]> {
   const experiences = await supabase
     .from("experiences")
-    .select("id, title")
+    .select("id, title, slug")
     .eq("owner_id", ownerId);
 
   if (experiences.error || !experiences.data?.length) {
     return [];
   }
 
-  const titleById = new Map(
-    experiences.data.map((row) => [row.id as string, row.title as string]),
+  const metaById = new Map(
+    experiences.data.map((row) => [
+      row.id as string,
+      {
+        title: row.title as string,
+        slug: row.slug as string,
+      },
+    ]),
   );
   const experienceIds = experiences.data.map((row) => row.id as string);
 
@@ -48,17 +54,21 @@ export async function loadOwnerMapPhotos(
         Number.isFinite(photo.exact_latitude as number) &&
         Number.isFinite(photo.exact_longitude as number),
     )
-    .map((photo) => ({
-      id: photo.id as string,
-      albumId: (photo.album_id as string | null) ?? null,
-      momentId: photo.moment_id as string,
-      positionInAlbum: (photo.position_in_album as number | null) ?? null,
-      positionInMoment: photo.position_in_moment as number,
-      capturedAt: (photo.captured_at as string | null) ?? null,
-      width: (photo.width as number | null) ?? null,
-      height: (photo.height as number | null) ?? null,
-      exactLatitude: photo.exact_latitude as number,
-      exactLongitude: photo.exact_longitude as number,
-      locationLabel: titleById.get(photo.experience_id as string) ?? null,
-    }));
+    .map((photo) => {
+      const meta = metaById.get(photo.experience_id as string);
+      return {
+        id: photo.id as string,
+        albumId: (photo.album_id as string | null) ?? null,
+        momentId: photo.moment_id as string,
+        positionInAlbum: (photo.position_in_album as number | null) ?? null,
+        positionInMoment: photo.position_in_moment as number,
+        capturedAt: (photo.captured_at as string | null) ?? null,
+        width: (photo.width as number | null) ?? null,
+        height: (photo.height as number | null) ?? null,
+        exactLatitude: photo.exact_latitude as number,
+        exactLongitude: photo.exact_longitude as number,
+        locationLabel: meta?.title ?? null,
+        experienceSlug: meta?.slug ?? null,
+      };
+    });
 }

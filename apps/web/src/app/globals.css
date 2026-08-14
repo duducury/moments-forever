@@ -2,14 +2,15 @@
 :root,
 html[data-resolved-theme="light"] {
   color-scheme: light;
-  --background: #f7f4ee;
-  --surface: #ffffff;
-  --surface-secondary: #f0ebe3;
-  --text: #1d1d1b;
-  --text-secondary: #6f6b64;
-  --border: #ded8ce;
-  --accent: #9d4e35;
-  --shadow: rgb(29 29 27 / 10%);
+  /* Warm paper, not near-white — more contrast and less glare. */
+  --background: #e8e0d4;
+  --surface: #f6f0e6;
+  --surface-secondary: #ddd4c6;
+  --text: #1a1612;
+  --text-secondary: #5c554c;
+  --border: #c9bfb0;
+  --accent: #8b3f28;
+  --shadow: rgb(42 32 22 / 16%);
   --paper: var(--background);
   --ink: var(--text);
   --muted: var(--text-secondary);
@@ -93,7 +94,23 @@ a {
 .landing,
 .page-shell {
   min-height: 100vh;
-  padding: 20px;
+  min-height: 100dvh;
+  /* Standalone iPhone: clear Dynamic Island / status bar / home indicator. */
+  padding-top: calc(20px + env(safe-area-inset-top, 0px));
+  padding-right: calc(20px + env(safe-area-inset-right, 0px));
+  padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  padding-left: calc(20px + env(safe-area-inset-left, 0px));
+}
+
+/* Room for fixed Instagram-style bottom nav on mobile. */
+@media (max-width: 719px) {
+  .page-shell[data-bottom-nav="true"] {
+    padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .hide-when-bottom-nav {
+    display: none !important;
+  }
 }
 
 .topbar {
@@ -467,7 +484,10 @@ form .button {
 @media (min-width: 640px) {
   .landing,
   .page-shell {
-    padding: 28px 40px;
+    padding-top: calc(28px + env(safe-area-inset-top, 0px));
+    padding-right: calc(40px + env(safe-area-inset-right, 0px));
+    padding-bottom: calc(28px + env(safe-area-inset-bottom, 0px));
+    padding-left: calc(40px + env(safe-area-inset-left, 0px));
   }
 
   .actions {

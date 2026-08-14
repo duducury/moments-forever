@@ -150,7 +150,11 @@ export function ProfilePlacesSection({
   }
 
   return (
-    <section aria-label="Viagens">
+    <section
+      aria-label="Viagens"
+      className={styles.tripsSection}
+      id="viagens"
+    >
       <div className={styles.sectionHeading}>
         <div className={styles.sectionHeadingMain}>
           <h2 className={styles.sectionTitle}>Viagens</h2>

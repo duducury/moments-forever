@@ -1,0 +1,502 @@
+.page {
+  display: grid;
+  gap: 28px;
+  width: min(100%, 920px);
+  margin: 0 auto;
+  padding: 8px 4px 32px;
+}
+
+.hero {
+  display: grid;
+  gap: 8px;
+}
+
+.eyebrow {
+  margin: 0;
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.title {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(2rem, 7vw, 3.1rem);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+}
+
+.lead {
+  margin: 0;
+  max-width: 36rem;
+  color: var(--muted);
+  font-size: 1.02rem;
+  line-height: 1.45;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.stat {
+  padding: 16px 16px 14px;
+  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  border-radius: 18px;
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--surface) 88%, transparent),
+      color-mix(in srgb, var(--surface-secondary) 70%, var(--surface))
+    );
+  box-shadow: 0 10px 28px var(--shadow);
+}
+
+.stat[data-wide="true"] {
+  grid-column: 1 / -1;
+}
+
+.statValue {
+  margin: 0;
+  color: var(--accent);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.8rem, 6vw, 2.4rem);
+  font-weight: 650;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.statLabel {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.section {
+  display: grid;
+  gap: 12px;
+}
+
+.sectionHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.worldCard {
+  overflow: hidden;
+  height: min(48vw, 280px);
+  min-height: 200px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: #0d1016;
+  box-shadow: 0 12px 32px var(--shadow);
+}
+
+.worldMap {
+  width: 100%;
+  height: 100%;
+}
+
+.countryPanel {
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+}
+
+.countryName {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.countryMeta,
+.cities {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.albumLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.albumChip {
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--border));
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  font-size: 0.82rem;
+  font-weight: 650;
+}
+
+.toggleBook {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  color: var(--accent);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.book {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(82%, 1fr);
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+
+.book[data-open="false"] .bookPage:last-child {
+  opacity: 0.55;
+}
+
+.bookPage {
+  scroll-snap-align: start;
+  min-height: 280px;
+  padding: 22px 20px;
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--border));
+  border-radius: 8px 18px 18px 8px;
+  background:
+    radial-gradient(circle at 12% 10%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 42%),
+    linear-gradient(160deg, #1a1612 0%, #2a231c 55%, #171410 100%);
+  color: #f3efe8;
+  box-shadow: 0 16px 36px rgb(0 0 0 / 28%);
+}
+
+html[data-resolved-theme="light"] .bookPage {
+  background:
+    radial-gradient(circle at 12% 10%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 42%),
+    linear-gradient(160deg, #f4ead8 0%, #e8d7bc 100%);
+  color: #1a1612;
+}
+
+.bookBrand {
+  margin: 0;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.bookHeading {
+  margin: 10px 0 18px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.55rem;
+  font-weight: 600;
+}
+
+.bookMeta {
+  display: grid;
+  gap: 12px;
+}
+
+.bookMeta dt {
+  color: color-mix(in srgb, currentColor 55%, transparent);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.bookMeta dd {
+  margin: 2px 0 0;
+  font-size: 1.05rem;
+  font-weight: 650;
+}
+
+.stampsLabel {
+  margin: 0 0 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.stamps {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.stamp {
+  display: grid;
+  gap: 2px;
+  padding: 12px 8px;
+  border: 2px dashed color-mix(in srgb, var(--accent) 70%, #fff);
+  border-radius: 8px;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+  transform: rotate(-3deg);
+  font: inherit;
+  text-align: center;
+}
+
+.stamp[data-tone="2"] {
+  transform: rotate(4deg);
+}
+
+.stamp[data-tone="3"] {
+  transform: rotate(-6deg);
+}
+
+.stampFlag {
+  font-size: 1.2rem;
+}
+
+.stampName {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.stampMark {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.yearBlock {
+  display: grid;
+  gap: 10px;
+}
+
+.year {
+  margin: 0;
+  color: var(--accent);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.4rem;
+}
+
+.journeyList {
+  display: grid;
+  gap: 10px;
+  list-style: none;
+}
+
+.journeyCard {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: 0 8px 20px var(--shadow);
+}
+
+.journeyCover,
+.journeyCoverFallback {
+  display: block;
+  overflow: hidden;
+  width: 72px;
+  height: 72px;
+  border-radius: 12px;
+  background: var(--surface-secondary);
+}
+
+.journeyCoverImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.journeyTitle {
+  margin: 0;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.journeyMeta {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.achLead {
+  margin: -4px 0 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.achievements {
+  display: grid;
+  gap: 12px;
+  list-style: none;
+}
+
+.achievement {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--surface);
+  box-shadow: 0 10px 24px var(--shadow);
+}
+
+.achievement[data-unlocked="false"] {
+  opacity: 0.55;
+  filter: grayscale(0.55);
+}
+
+.achievement[data-unlocked="true"] {
+  border-color: color-mix(in srgb, var(--accent) 48%, var(--border));
+  background:
+    radial-gradient(
+      circle at 12% 20%,
+      color-mix(in srgb, var(--accent) 18%, transparent),
+      transparent 46%
+    ),
+    var(--surface);
+}
+
+.trophy {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  color: #3a2a18;
+  background:
+    radial-gradient(circle at 32% 28%, #ffe7b0 0%, #e2b15a 42%, #a36b22 78%, #6d4514 100%);
+  box-shadow:
+    0 8px 18px color-mix(in srgb, #a36b22 35%, transparent),
+    inset 0 1px 0 rgb(255 255 255 / 55%);
+}
+
+.trophy::after {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border-radius: 50%;
+  border: 1px solid rgb(255 255 255 / 28%);
+  pointer-events: none;
+}
+
+.achievement[data-unlocked="true"] .trophy {
+  animation: trophyShine 2.8s ease-in-out infinite;
+}
+
+.achievement[data-unlocked="false"] .trophy {
+  background:
+    radial-gradient(circle at 32% 28%, #d7d1c8 0%, #9d968c 55%, #6f6a64 100%);
+  color: #3f3b37;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 25%);
+}
+
+.trophy svg {
+  width: 30px;
+  height: 30px;
+}
+
+.achCopy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.achCopy strong {
+  font-size: 1rem;
+}
+
+.achCopy span {
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.35;
+}
+
+.achCopy em {
+  margin-top: 2px;
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.achievement[data-unlocked="false"] .achCopy em {
+  color: var(--muted);
+}
+
+@keyframes trophyShine {
+  0%,
+  100% {
+    filter: brightness(1);
+    transform: translateY(0);
+  }
+  50% {
+    filter: brightness(1.12);
+    transform: translateY(-1px);
+  }
+}
+
+.empty {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .achievement[data-unlocked="true"] .trophy {
+    animation: none;
+  }
+}
+
+@media (min-width: 720px) {
+  .stats {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .stat[data-wide="true"] {
+    grid-column: auto;
+  }
+
+  .book {
+    grid-auto-flow: row;
+    grid-template-columns: 1fr 1fr;
+    overflow: visible;
+  }
+
+  .worldCard {
+    height: 320px;
+  }
+
+  .stamps {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

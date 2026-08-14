@@ -34,8 +34,10 @@ import {
   type PhotoSelectionState,
 } from "@moments-forever/shared";
 
+import { AppBottomNav } from "@/components/app-bottom-nav";
 import { AppWordmark } from "@/components/app-wordmark";
 import { useAuth } from "@/components/auth-provider";
+import { profilePath } from "@/lib/routes/app-routes";
 import {
   enrichImportGroupLabels,
   mergeEnrichedGroupLabels,
@@ -121,21 +123,6 @@ function isSupportedImageFile(file: File): boolean {
     "arw",
     "raf",
   ].includes(extension ?? "");
-}
-
-function isBrowserDisplayableImage(file: File): boolean {
-  const type = file.type.toLowerCase();
-  if (
-    type === "image/jpeg" ||
-    type === "image/png" ||
-    type === "image/webp" ||
-    type === "image/gif" ||
-    type === "image/bmp"
-  ) {
-    return true;
-  }
-  const extension = file.name.split(".").pop()?.toLowerCase();
-  return ["jpg", "jpeg", "png", "webp", "gif", "bmp"].includes(extension ?? "");
 }
 
 function fileExtension(name: string): string | null {
@@ -466,6 +453,7 @@ export function PhotoImport() {
   const pendingPhotosRef = useRef<LocalPhotoMetadata[]>([]);
   const thumbnailUrlsRef = useRef(new Map<string, string>());
   const thumbnailBlobsRef = useRef(new Map<string, Blob>());
+  const previewBlobsRef = useRef(new Map<string, Blob>());
   const pendingCompletedRef = useRef(0);
   const progressFrameRef = useRef<number | null>(null);
   const manualGroupCounterRef = useRef(0);
@@ -522,6 +510,7 @@ export function PhotoImport() {
     thumbnailUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
     thumbnailUrlsRef.current.clear();
     thumbnailBlobsRef.current.clear();
+    previewBlobsRef.current.clear();
     setThumbnailUrls(new Map());
   }
 
@@ -629,16 +618,12 @@ export function PhotoImport() {
         throw new Error("Nenhum momento/foto válido para persistir.");
       }
 
+      // MVP: store/upload derivatives only (preview ~2048 + thumb). Never the camera file.
       const localBlobs = draft.photos.flatMap((photo) => {
-        const file = fileRegistry.get(photo.id);
         const thumbnail = thumbnailBlobsRef.current.get(photo.id) ?? null;
-        const full =
-          file && isBrowserDisplayableImage(file)
-            ? file
-            : (thumbnail ?? file ?? null);
-        return full
-          ? [{ id: photo.id, full, thumbnail }]
-          : [];
+        const preview = previewBlobsRef.current.get(photo.id) ?? null;
+        const full = preview ?? thumbnail;
+        return full ? [{ id: photo.id, full, thumbnail }] : [];
       });
       await putLocalPhotoBlobs(localBlobs);
 
@@ -781,6 +766,9 @@ export function PhotoImport() {
           );
           const url = URL.createObjectURL(message.thumbnail);
           thumbnailUrlsRef.current.set(message.metadata.id, url);
+        }
+        if (message.preview) {
+          previewBlobsRef.current.set(message.metadata.id, message.preview);
         }
       } else if (message.type === "progress") {
         pendingCompletedRef.current = message.completed;
@@ -1237,6 +1225,8 @@ export function PhotoImport() {
           photo={previewPhoto}
         />
       ) : null}
+
+      <AppBottomNav homeHref={profilePath()} mapHref="/mapa" showCreate />
     </main>
   );
 }

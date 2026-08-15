@@ -5,7 +5,7 @@
   /* Sit lower than the old 10px + full inset, without stretching the pill. */
   bottom: max(8px, calc(env(safe-area-inset-bottom, 0px) - 16px));
   z-index: var(--z-drawer);
-  display: none;
+  display: block;
   /* Keep overflow visible so the raised + button is not clipped. */
   overflow: visible;
   border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
@@ -18,9 +18,13 @@
   -webkit-backdrop-filter: blur(18px) saturate(1.2);
 }
 
-@media (max-width: 719px) {
+@media (min-width: 720px) {
   .bar {
-    display: block;
+    left: 50%;
+    right: auto;
+    width: min(520px, calc(100% - 32px));
+    transform: translateX(-50%);
+    bottom: 16px;
   }
 }
 

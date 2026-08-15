@@ -102,15 +102,13 @@ a {
   padding-left: calc(20px + env(safe-area-inset-left, 0px));
 }
 
-/* Room for fixed Instagram-style bottom nav on mobile. */
-@media (max-width: 719px) {
-  .page-shell[data-bottom-nav="true"] {
-    padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px));
-  }
+/* Room for the fixed tab bar (phone + desktop dock). */
+.page-shell[data-bottom-nav="true"] {
+  padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+}
 
-  .hide-when-bottom-nav {
-    display: none !important;
-  }
+.hide-when-bottom-nav {
+  display: none !important;
 }
 
 .topbar {

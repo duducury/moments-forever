@@ -95,8 +95,8 @@ function MoreIcon() {
 }
 
 /**
- * Mobile tabs: Álbuns · Mapa · + · Passaporte · Mais
- * Hidden from CSS at ≥720px.
+ * App tabs: Álbuns · Mapa · + · Passaporte · Mais
+ * Floating pill on phone and a centered dock on desktop.
  */
 export function AppBottomNav({
   homeHref,

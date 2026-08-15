@@ -113,6 +113,8 @@ export function PhotoLightbox({
   albumLabel = null,
   canRemoveLocation = false,
   onRemoveLocation,
+  canDelete = false,
+  onDelete,
 }: {
   readonly photos: readonly TripPhoto[];
   readonly photoId: string;
@@ -122,6 +124,8 @@ export function PhotoLightbox({
   readonly albumLabel?: string | null;
   readonly canRemoveLocation?: boolean;
   readonly onRemoveLocation?: (photoId: string) => void | Promise<void>;
+  readonly canDelete?: boolean;
+  readonly onDelete?: (photoId: string) => void | Promise<void>;
 }) {
   const index = photos.findIndex((photo) => photo.id === photoId);
   const photo = index >= 0 ? photos[index] : null;
@@ -139,6 +143,7 @@ export function PhotoLightbox({
   useLocalPhotoObjectUrl(neighborPrevId, "full");
   useLocalPhotoObjectUrl(neighborNextId, "full");
   const [removingLocation, setRemovingLocation] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [dismissDragY, setDismissDragY] = useState(0);
 
   useEffect(() => {
@@ -197,12 +202,29 @@ export function PhotoLightbox({
     canRemoveLocation && Boolean(onRemoveLocation) && hasGps;
 
   async function handleRemoveLocation() {
-    if (!onRemoveLocation || removingLocation) return;
+    if (!onRemoveLocation || removingLocation || deleting) return;
     setRemovingLocation(true);
     try {
       await onRemoveLocation(currentPhoto.id);
     } finally {
       setRemovingLocation(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!onDelete || deleting) return;
+    if (
+      !window.confirm(
+        "Excluir esta foto? Esta ação não pode ser desfeita.",
+      )
+    ) {
+      return;
+    }
+    setDeleting(true);
+    try {
+      await onDelete(currentPhoto.id);
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -298,15 +320,29 @@ export function PhotoLightbox({
           {index + 1} / {photos.length}
           {hasGps ? " · com localização" : ""}
         </p>
-        {showRemoveLocation ? (
-          <button
-            className={styles.lightboxPrivacyButton}
-            disabled={removingLocation}
-            onClick={() => void handleRemoveLocation()}
-            type="button"
-          >
-            {removingLocation ? "Removendo…" : "Remover localização"}
-          </button>
+        {showRemoveLocation || (canDelete && onDelete) ? (
+          <div className={styles.lightboxActions}>
+            {showRemoveLocation ? (
+              <button
+                className={styles.lightboxPrivacyButton}
+                disabled={removingLocation || deleting}
+                onClick={() => void handleRemoveLocation()}
+                type="button"
+              >
+                {removingLocation ? "Removendo…" : "Remover localização"}
+              </button>
+            ) : null}
+            {canDelete && onDelete ? (
+              <button
+                className={styles.lightboxDeleteButton}
+                disabled={deleting || removingLocation}
+                onClick={() => void handleDelete()}
+                type="button"
+              >
+                {deleting ? "Excluindo…" : "Excluir foto"}
+              </button>
+            ) : null}
+          </div>
         ) : null}
       </div>
 

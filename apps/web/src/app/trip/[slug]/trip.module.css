@@ -676,7 +676,7 @@
 .lightboxPrivacyButton {
   justify-self: start;
   min-height: 40px;
-  margin-top: 8px;
+  margin-top: 0;
   border: 1px solid rgb(245 242 236 / 28%);
   border-radius: 999px;
   padding: 0 14px;
@@ -694,6 +694,39 @@
 }
 
 .lightboxPrivacyButton:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.lightboxActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.lightboxDeleteButton {
+  justify-self: start;
+  min-height: 40px;
+  margin-top: 0;
+  margin-left: 0;
+  border: 1px solid rgb(255 140 140 / 45%);
+  border-radius: 999px;
+  padding: 0 14px;
+  color: #ffd6d6;
+  background: rgb(80 12 12 / 55%);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 650;
+  pointer-events: auto;
+}
+
+.lightboxDeleteButton:hover {
+  background: rgb(110 18 18 / 70%);
+}
+
+.lightboxDeleteButton:disabled {
   opacity: 0.6;
   cursor: wait;
 }

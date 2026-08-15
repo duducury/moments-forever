@@ -145,23 +145,6 @@
   text-transform: uppercase;
 }
 
-.jumpNav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: -8px;
-}
-
-.jumpNav a {
-  padding: 8px 12px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--surface);
-  color: var(--text);
-  font-size: 0.8rem;
-  font-weight: 700;
-}
-
 .section {
   display: grid;
   gap: 12px;
@@ -198,35 +181,11 @@
 
 .countryPanel {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 14px;
-  align-items: start;
-  padding: 14px;
+  gap: 4px;
+  padding: 16px;
   border: 1px solid var(--border);
   border-radius: 16px;
   background: var(--surface);
-}
-
-.countryPanel:has(.countryCover) {
-  grid-template-columns: 88px minmax(0, 1fr);
-}
-
-.countryCover,
-.countryCoverFallback {
-  width: 88px;
-  height: 88px;
-  border-radius: 14px;
-  overflow: hidden;
-}
-
-.countryCoverImg {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.countryCopy {
-  min-width: 0;
 }
 
 .countryName {
@@ -245,12 +204,11 @@
   object-fit: cover;
 }
 
-.countryMeta,
-.cities {
+.countryMeta {
   margin: 6px 0 0;
   color: var(--muted);
   font-size: 0.9rem;
-  line-height: 1.4;
+  line-height: 1.45;
 }
 
 .albumLinks {
@@ -453,35 +411,6 @@ html[data-resolved-theme="light"] .bookPage {
   max-height: min(56vh, 460px);
   overflow-y: auto;
   padding-right: 4px;
-}
-
-.lastTrip {
-  display: grid;
-  grid-template-columns: 96px minmax(0, 1fr);
-  gap: 14px;
-  align-items: center;
-  padding: 10px;
-  border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--border));
-  border-radius: 18px;
-  background: var(--surface);
-  box-shadow: 0 12px 28px var(--shadow);
-}
-
-.lastTripCover {
-  display: block;
-  overflow: hidden;
-  width: 96px;
-  height: 96px;
-  border-radius: 14px;
-}
-
-.lastTripEyebrow {
-  margin: 0 0 4px;
-  color: var(--accent);
-  font-size: 0.7rem;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
 }
 
 .journeyList {

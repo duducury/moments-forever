@@ -60,18 +60,53 @@ export function resolveLocationDisplayName(input: {
   const confirmed = Boolean(input.placeConfirmedByUser);
 
   if (confirmed && place && !isGenericLocationLabel(place)) {
-    return place;
+    return coarsenTravelLabel(place);
   }
 
   if (album && !isGenericLocationLabel(album)) {
-    return album;
+    return coarsenTravelLabel(album);
   }
 
   if (place && !isGenericLocationLabel(place)) {
-    return place;
+    return coarsenTravelLabel(place);
   }
 
-  if (album) return album;
-  if (place) return place;
+  if (album) return coarsenTravelLabel(album);
+  if (place) return coarsenTravelLabel(place);
   return `Lugar ${input.fallbackIndex ?? 1}`;
+}
+
+/** OSM villages that should display as the travel destination people recognize. */
+const TRAVEL_LABEL_ALIASES: Readonly<Record<string, string>> = {
+  "kesiman kertalangu": "Bali",
+  kesiman: "Bali",
+  "denpasar timur": "Bali",
+  denpasar: "Bali",
+};
+
+function foldLabelKey(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .toLowerCase()
+    .trim();
+}
+
+export function coarsenTravelLabel(label: string): string {
+  const cleaned = cleanLocationLabel(label);
+  const fullKey = foldLabelKey(cleaned);
+  if (TRAVEL_LABEL_ALIASES[fullKey]) return TRAVEL_LABEL_ALIASES[fullKey];
+  if (fullKey.includes("kesiman")) return "Bali";
+
+  const comma = cleaned.indexOf(",");
+  if (comma > 0) {
+    const localityKey = foldLabelKey(cleaned.slice(comma + 1));
+    const alias = TRAVEL_LABEL_ALIASES[localityKey];
+    if (alias) return alias;
+    if (localityKey.includes("kesiman")) return "Bali";
+    const countryKey = foldLabelKey(cleaned.slice(0, comma));
+    const countryAlias = TRAVEL_LABEL_ALIASES[countryKey];
+    if (countryAlias) return countryAlias;
+  }
+  return cleaned;
 }

@@ -50,6 +50,7 @@ import {
 } from "@/lib/photo-import/pending-import-files";
 import { uploadManyPhotoBlobsToR2 } from "@/lib/storage/upload-photo-to-r2";
 
+import { ImportDestination } from "./import-destination";
 import styles from "./photo-import.module.css";
 
 const CHUNK_SIZE = 8;
@@ -57,6 +58,7 @@ const PAGE_SIZE = 24;
 
 type Screen =
   | "start"
+  | "destination"
   | "analyzing"
   | "results"
   | "creating"
@@ -425,10 +427,12 @@ export function PhotoImport() {
   const router = useRouter();
   const { configured, loading: authLoading, user } = useAuth();
   const [stagedFiles] = useState(() => getStagedImportFilesForBoot());
-  const [screen, setScreen] = useState<Screen>(
-    stagedFiles != null ? "analyzing" : "start",
+  const [choiceFiles, setChoiceFiles] = useState<File[] | null>(
+    () => (stagedFiles && stagedFiles.length > 0 ? stagedFiles : null),
   );
-  const stagedBootDoneRef = useRef(false);
+  const [screen, setScreen] = useState<Screen>(
+    stagedFiles != null && stagedFiles.length > 0 ? "destination" : "start",
+  );
   const [photos, setPhotos] = useState<readonly LocalPhotoMetadata[]>([]);
   const [groups, setGroups] = useState<readonly PhotoImportGroup[]>([]);
   const [selection, setSelection] = useState<PhotoSelectionState>({
@@ -545,6 +549,7 @@ export function PhotoImport() {
 
   function reset(): void {
     clearSession();
+    setChoiceFiles(null);
     setScreen("start");
   }
 
@@ -812,16 +817,15 @@ export function PhotoImport() {
   function onFilesSelected(event: ChangeEvent<HTMLInputElement>): void {
     const chosen = [...(event.target.files ?? [])];
     event.target.value = "";
-    beginAnalysis(chosen);
+    if (chosen.length === 0) return;
+    setChoiceFiles(chosen);
+    setScreen("destination");
   }
 
-  useEffect(() => {
-    if (!stagedFiles || stagedBootDoneRef.current) return;
-    stagedBootDoneRef.current = true;
-    beginAnalysis(stagedFiles);
-    // Boot once from "Nova viagem" handoff; beginAnalysis is stable per render.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount handoff only
-  }, [stagedFiles]);
+  function startNewTripFromChoice(): void {
+    if (!choiceFiles || choiceFiles.length === 0) return;
+    beginAnalysis(choiceFiles);
+  }
 
   function createGroupFromReviewSelection(): void {
     const nextIndex = manualGroupCounterRef.current + 1;
@@ -906,6 +910,13 @@ export function PhotoImport() {
           </button>
         ) : null}
       </nav>
+
+      {screen === "destination" && choiceFiles && choiceFiles.length > 0 ? (
+        <ImportDestination
+          files={choiceFiles}
+          onNewTrip={startNewTripFromChoice}
+        />
+      ) : null}
 
       {screen === "start" ? (
         <section className={styles.intro}>

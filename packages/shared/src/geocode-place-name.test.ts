@@ -11,7 +11,23 @@ import {
   pickTravelPlaceName,
 } from "./geocode-place-name.ts";
 
-test("pickTravelPlaceName prefers island/city as País, Localidade", () => {
+test("pickTravelPlaceName prefers island over village neighborhoods", () => {
+  assert.equal(
+    pickTravelPlaceName({
+      name: "Kesiman Kertalangu",
+      addresstype: "village",
+      address: {
+        village: "Kesiman Kertalangu",
+        city_district: "Denpasar Timur",
+        city: "Denpasar",
+        island: "Bali",
+        state: "Bali",
+        country: "Indonesia",
+      },
+    }),
+    "Indonésia, Bali",
+  );
+
   assert.equal(
     pickTravelPlaceName({
       name: "Jl. Raya Toya Pakeh",

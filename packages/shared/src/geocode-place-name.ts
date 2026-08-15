@@ -8,23 +8,34 @@ import { isGenericLocationLabel } from "./location-name";
 /** ~110 m — enough to reuse labels for the same settlement cluster. */
 export const GEOCODE_CACHE_DECIMALS = 3;
 
-/** Locality keys preferred for a travel folder name (most specific first). */
+/** Locality keys preferred for a travel folder name (island/city before village). */
 const LOCALITY_KEYS = [
   "island",
   "archipelago",
   "city",
   "town",
   "municipality",
-  "village",
-  "hamlet",
-  "city_district",
-  "suburb",
   "county",
   "state_district",
   "region",
   "state",
   "province",
+  "village",
+  "hamlet",
+  "city_district",
+  "suburb",
 ] as const;
+
+const NEIGHBORHOOD_ADDRESS_TYPES = new Set([
+  "village",
+  "hamlet",
+  "city_district",
+  "suburb",
+  "neighbourhood",
+  "neighborhood",
+  "quarter",
+  "residential",
+]);
 
 const PREFERRED_ADDRESS_TYPES = new Set([
   "island",
@@ -213,7 +224,24 @@ function pickLocality(
 ): string | null {
   const addressType = result.addresstype?.trim().toLowerCase() ?? "";
 
-  if (PREFERRED_ADDRESS_TYPES.has(addressType)) {
+  // Village/suburb names (Kesiman Kertalangu) are too specific for a trip folder.
+  // Prefer island/city from the address when Nominatim's primary type is a neighborhood.
+  if (address && NEIGHBORHOOD_ADDRESS_TYPES.has(addressType)) {
+    for (const key of LOCALITY_KEYS) {
+      if (
+        key === "village" ||
+        key === "hamlet" ||
+        key === "city_district" ||
+        key === "suburb"
+      ) {
+        continue;
+      }
+      const candidate = sanitizePart(address[key]);
+      if (candidate) return candidate;
+    }
+  }
+
+  if (PREFERRED_ADDRESS_TYPES.has(addressType) && !NEIGHBORHOOD_ADDRESS_TYPES.has(addressType)) {
     const fromType = sanitizePart(result.name);
     if (fromType) return fromType;
   }

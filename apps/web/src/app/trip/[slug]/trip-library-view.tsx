@@ -5,7 +5,6 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 
 import {
   canApplySuggestedPlaceName,
-  isGenericLocationLabel,
 } from "@moments-forever/shared";
 
 import { useLocalPhotoObjectUrl } from "@/lib/local-photos/use-local-photo-urls";
@@ -112,7 +111,6 @@ export function TripLibraryView({
     const label = album.placeName ?? album.name;
     return (
       Boolean(album.placeId) &&
-      isGenericLocationLabel(label) &&
       canApplySuggestedPlaceName({
         name: label,
         confirmedByUser: album.placeConfirmedByUser,

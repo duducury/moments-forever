@@ -414,6 +414,41 @@ export function AlbumFolderView({
     }
   }
 
+  async function deletePhoto(photoId: string) {
+    setBusy(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/photos/${photoId}`, {
+        method: "DELETE",
+      });
+      const payload = (await response.json()) as { readonly error?: string };
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Não foi possível excluir a foto.");
+      }
+      await deleteLocalPhotoBlob(photoId);
+      const remaining = albumPhotos.filter((photo) => photo.id !== photoId);
+      setPhotos((current) => current.filter((photo) => photo.id !== photoId));
+      setSelectedIds((current) => {
+        const next = new Set(current);
+        next.delete(photoId);
+        return next;
+      });
+      if (remaining.length === 0) {
+        setLightboxId(null);
+      } else {
+        const index = albumPhotos.findIndex((photo) => photo.id === photoId);
+        const next =
+          remaining[Math.min(index, remaining.length - 1)] ?? remaining[0];
+        setLightboxId(next?.id ?? null);
+      }
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Falha ao excluir foto.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function removeLocationFromPhoto(photoId: string) {
     if (!confirmRemovePhotoLocation(1)) return;
     setBusy(true);
@@ -822,9 +857,11 @@ export function AlbumFolderView({
       {lightboxId ? (
         <PhotoLightbox
           albumLabel={album.displayName}
+          canDelete={isOwner}
           canRemoveLocation={isOwner}
           experienceTitle={experience.title}
           onClose={() => setLightboxId(null)}
+          onDelete={isOwner ? (photoId) => deletePhoto(photoId) : undefined}
           onRemoveLocation={
             isOwner ? (photoId) => removeLocationFromPhoto(photoId) : undefined
           }
@@ -851,6 +888,7 @@ export function AlbumFolderView({
           albums={albums}
           defaultAlbumId={albumId}
           experienceId={experience.id}
+          lockToAlbum
           onClose={() => setAddPhotosOpen(false)}
         />
       ) : null}

@@ -64,13 +64,14 @@ function escapeHtmlAttribute(value: string): string {
 }
 
 function clusterLocationLabel(photos: readonly TripPhoto[]): string | null {
-  const labels = photos
-    .map((photo) => photo.locationLabel)
-    .filter((label): label is string => Boolean(label));
-  if (labels.length === 0) return null;
-  const first = labels[0] ?? null;
-  if (!first) return null;
-  return labels.every((label) => label === first) ? first : first;
+  const unique: string[] = [];
+  for (const photo of photos) {
+    const label = photo.locationLabel?.trim();
+    if (!label || unique.includes(label)) continue;
+    unique.push(label);
+  }
+  if (unique.length === 0) return null;
+  return unique.slice(0, 3).join(" · ");
 }
 
 function dominantAlbumId(photos: readonly TripPhoto[]): string | null {

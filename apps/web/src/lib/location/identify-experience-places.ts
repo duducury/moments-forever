@@ -116,7 +116,13 @@ export async function identifyExperiencePlaces(
 
       for (const moment of moments.data ?? []) {
         const title = (moment.title as string | null) ?? "";
-        if (title && !isGenericLocationLabel(title)) continue;
+        if (
+          title &&
+          !isGenericLocationLabel(title) &&
+          Boolean(place.confirmed_by_user)
+        ) {
+          continue;
+        }
 
         await supabase
           .from("moments")

@@ -50,6 +50,87 @@
   line-height: 1.65;
 }
 
+.destination {
+  display: flex;
+  width: min(100%, 680px);
+  min-height: calc(100vh - 92px);
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  margin: 0 auto;
+  padding: 24px 0 56px;
+  gap: 16px;
+}
+
+.destination h1 {
+  margin: 8px 0 0;
+  font-size: clamp(1.6rem, 6vw, 2.2rem);
+}
+
+.destinationList {
+  display: grid;
+  gap: 8px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.destinationAlbum {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+
+.destinationAlbum strong {
+  font-size: 1rem;
+}
+
+.destinationAlbum span {
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.destinationAlbum:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.destinationNew {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px dashed var(--border);
+  border-radius: 16px;
+}
+
+.destinationLabel {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.destinationNew select,
+.destinationNew input {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+}
+
 .fileButton {
   margin-top: 30px;
 }

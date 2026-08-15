@@ -84,7 +84,7 @@ Após o agrupamento por GPS, o servidor consulta o Nominatim/OSM **uma vez por
 lugar/cluster** (nunca por foto). Somente latitude/longitude são enviados.
 
 - Política: máx. 1 req/s, User-Agent identificando o app, cache agressivo.
-- Resultado útil (ilha/cidade/município) grava em `places.name` se
+- Resultado útil (ilha/cidade/município — não vilarejo OSM) grava em `places.name` se
   `canApplySuggestedPlaceName` permitir.
 - Falha/timeout/429 não quebra o import; permanece o fallback `Lugar N`
   (legado: `Local N` ainda é tratado como genérico).

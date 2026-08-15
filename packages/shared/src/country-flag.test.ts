@@ -44,6 +44,14 @@ test("countryCodeFromPlaceLabel accepts short trip names", () => {
   assert.equal(countryCodeFromPlaceLabel("indonesia"), "ID");
   assert.equal(countryCodeFromPlaceLabel("bali"), "ID");
   assert.equal(countryCodeFromPlaceLabel("emirados"), "AE");
+  assert.equal(countryCodeFromPlaceLabel("Jamaica"), "JM");
+  assert.equal(countryCodeFromPlaceLabel("jamaica"), "JM");
+  assert.equal(
+    countryCodeFromPlaceLabel("Jamaica, Montego Bay"),
+    "JM",
+  );
+  assert.equal(countryCodeFromPlaceLabel("Montego Bay, Jamaica"), "JM");
+  assert.equal(countryCodeFromPlaceLabel("Negril"), "JM");
 });
 
 test("countryFlagFromPlaceLabel still returns emoji when known", () => {

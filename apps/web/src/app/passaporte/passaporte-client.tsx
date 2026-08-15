@@ -45,6 +45,19 @@ function formatMonthYear(iso: string | null): string {
   }).format(new Date(iso));
 }
 
+function formatCountryYears(years: readonly string[]): string | null {
+  const nums = years
+    .map((year) => Number(year))
+    .filter((year) => Number.isFinite(year))
+    .sort((a, b) => a - b);
+  if (nums.length === 0) return null;
+  const first = nums[0];
+  const last = nums[nums.length - 1];
+  if (first === undefined || last === undefined) return null;
+  if (first === last) return String(first);
+  return `${first}–${last}`;
+}
+
 function stampYear(iso: string | null): string {
   if (!iso) return "";
   return String(new Date(iso).getUTCFullYear());
@@ -77,7 +90,6 @@ export function PassaporteClient({
   const [bookOpen, setBookOpen] = useState(true);
 
   const [achFilter, setAchFilter] = useState<"all" | "unlocked" | "locked">("all");
-  const lastTrip = passport.journey[0] ?? null;
 
   const selected = useMemo(
     () => passport.countries.find((country) => country.code === selectedCode) ?? null,
@@ -153,13 +165,6 @@ export function PassaporteClient({
         ) : null}
       </section>
 
-      <nav aria-label="Seções do passaporte" className={styles.jumpNav}>
-        <a href="#mundo-title">Mundo</a>
-        <a href="#book-title">Passaporte</a>
-        <a href="#journey-title">Jornada</a>
-        <a href="#ach-title">Conquistas</a>
-      </nav>
-
       <section aria-labelledby="mundo-title" className={styles.section}>
         <h2 className={styles.sectionTitle} id="mundo-title">
           Meu mundo
@@ -178,34 +183,21 @@ export function PassaporteClient({
         </div>
         {selected ? (
           <article className={styles.countryPanel}>
-            {selected.lastCoverPhotoId ? (
-              <ExperienceCoverThumb
-                className={styles.countryCover}
-                coverPhotoId={selected.lastCoverPhotoId}
-                fallbackClassName={styles.countryCoverFallback}
-                imageClassName={styles.countryCoverImg}
-                title={selected.name}
-                variant="thumbnail"
-              />
-            ) : null}
-            <div className={styles.countryCopy}>
-              <h3 className={styles.countryName}>
-                <CountryFlag code={selected.code} size={22} />
-                {selected.name}
-              </h3>
-              <p className={styles.countryMeta}>
-                {selected.tripCount} viagem{selected.tripCount === 1 ? "" : "ns"} ·{" "}
-                {selected.photoCount} foto{selected.photoCount === 1 ? "" : "s"}
-                {selected.lastVisitAt
+            <h3 className={styles.countryName}>
+              <CountryFlag code={selected.code} size={22} />
+              {selected.name}
+            </h3>
+            <p className={styles.countryMeta}>
+              {selected.tripCount}{" "}
+              {selected.tripCount === 1 ? "viagem" : "viagens"} ·{" "}
+              {selected.photoCount} foto{selected.photoCount === 1 ? "" : "s"}
+              {formatCountryYears(selected.years)
+                ? ` · ${formatCountryYears(selected.years)}`
+                : selected.lastVisitAt
                   ? ` · ${formatMonthYear(selected.lastVisitAt)}`
                   : ""}
-              </p>
-              {selected.years.length > 0 ? (
-                <p className={styles.cities}>{selected.years.join(" · ")}</p>
-              ) : null}
-              {selected.cities.length > 0 ? (
-                <p className={styles.cities}>{selected.cities.join(" · ")}</p>
-              ) : null}
+            </p>
+            {selected.albumHrefs.length > 0 ? (
               <div className={styles.albumLinks}>
                 {selected.albumHrefs.map((album) => (
                   <Link className={styles.albumChip} href={album.href} key={album.href}>
@@ -213,7 +205,7 @@ export function PassaporteClient({
                   </Link>
                 ))}
               </div>
-            </div>
+            ) : null}
           </article>
         ) : null}
       </section>
@@ -297,31 +289,6 @@ export function PassaporteClient({
         <h2 className={styles.sectionTitle} id="journey-title">
           Minha jornada
         </h2>
-        {lastTrip ? (
-          <Link className={styles.lastTrip} href={lastTrip.href}>
-            <ExperienceCoverThumb
-              className={styles.lastTripCover}
-              coverPhotoId={lastTrip.coverPhotoId}
-              fallbackClassName={styles.journeyCoverFallback}
-              imageClassName={styles.journeyCoverImg}
-              title={lastTrip.title}
-              variant="thumbnail"
-            />
-            <div>
-              <p className={styles.lastTripEyebrow}>Última viagem</p>
-              <p className={styles.journeyTitle}>
-                {lastTrip.countryCode ? (
-                  <CountryFlag code={lastTrip.countryCode} size={18} />
-                ) : null}
-                {lastTrip.title}
-              </p>
-              <p className={styles.journeyMeta}>
-                {formatRange(lastTrip.startsAt, lastTrip.endsAt)} · {lastTrip.photoCount} foto
-                {lastTrip.photoCount === 1 ? "" : "s"}
-              </p>
-            </div>
-          </Link>
-        ) : null}
         {journeyByYear.length === 0 ? (
           <p className={styles.empty}>Suas viagens aparecem aqui.</p>
         ) : (

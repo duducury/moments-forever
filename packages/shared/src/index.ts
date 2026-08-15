@@ -25,6 +25,7 @@ import {
 export {
   canApplySuggestedPlaceName,
   cleanLocationLabel,
+  coarsenTravelLabel,
   isGenericLocationLabel,
   resolveLocationDisplayName,
 } from "./location-name";

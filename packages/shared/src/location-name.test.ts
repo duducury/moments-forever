@@ -46,6 +46,25 @@ test("resolveLocationDisplayName uses suggested place when unconfirmed", () => {
   );
 });
 
+test("resolveLocationDisplayName maps OSM villages to the travel island", () => {
+  assert.equal(
+    resolveLocationDisplayName({
+      albumName: "Kesiman Kertalangu",
+      placeName: "Kesiman Kertalangu",
+      placeConfirmedByUser: false,
+    }),
+    "Bali",
+  );
+  assert.equal(
+    resolveLocationDisplayName({
+      albumName: "Indonésia, Kesiman Kertalangu",
+      placeName: "Indonésia, Kesiman Kertalangu",
+      placeConfirmedByUser: true,
+    }),
+    "Bali",
+  );
+});
+
 test("resolveLocationDisplayName uses renamed album over generic place", () => {
   assert.equal(
     resolveLocationDisplayName({

@@ -1,5 +1,6 @@
 import {
   countryCodeFromPlaceLabel,
+  coarsenTravelLabel,
   shortPlaceCaption,
   usStateCodeFromPlaceLabel,
 } from "@moments-forever/shared";
@@ -107,6 +108,7 @@ export interface PassportCountry {
   readonly lastCoverPhotoId: string | null;
   readonly years: readonly string[];
   readonly cities: readonly string[];
+  readonly stateCodes: readonly string[];
   readonly albumHrefs: readonly { readonly href: string; readonly title: string }[];
 }
 
@@ -281,6 +283,24 @@ function addRangeDays(
 }
 
 function cityFromPlace(place: OwnerPlaceCardItem): string | null {
+  const title = place.title.trim();
+  const usState = usStateCodeFromPlaceLabel(title);
+  if (usState) {
+    const parts = title
+      .split(",")
+      .map((part) => part.trim())
+      .filter(Boolean);
+    if (parts.length < 2) return null;
+    const locality = parts.slice(0, -1).join(", ");
+    if (
+      usStateCodeFromPlaceLabel(locality) === usState ||
+      locality.toUpperCase() === usState
+    ) {
+      return null;
+    }
+    return locality;
+  }
+
   const caption = shortPlaceCaption(place.title);
   const comma = place.title.indexOf(",");
   if (comma > 0) {
@@ -299,6 +319,19 @@ function cityFromPlace(place: OwnerPlaceCardItem): string | null {
     return null;
   }
   return caption.shortLabel;
+}
+
+/** Chip label without repeating "Texas, TX" or OSM village names. */
+function albumChipTitle(title: string): string {
+  const coarsened = coarsenTravelLabel(title);
+  const state = usStateCodeFromPlaceLabel(coarsened);
+  if (!state) return coarsened;
+  const parts = coarsened
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  if (parts.length < 2) return coarsened;
+  return parts.slice(0, -1).join(", ");
 }
 
 function countryName(code: string, fallbackLabel: string): string {
@@ -346,6 +379,7 @@ export function buildPassport(
       lastCoverPhotoId: string | null;
       years: Set<string>;
       cities: Set<string>;
+      stateCodes: string[];
       albums: { href: string; title: string }[];
     }
   >();
@@ -365,6 +399,7 @@ export function buildPassport(
       lastCoverPhotoId: null as string | null,
       years: new Set<string>(),
       cities: new Set<string>(),
+      stateCodes: [] as string[],
       albums: [] as { href: string; title: string }[],
     };
     current.tripCount += 1;
@@ -379,7 +414,11 @@ export function buildPassport(
     const year = visit ? new Date(visit).getUTCFullYear() : NaN;
     if (Number.isFinite(year)) current.years.add(String(year));
     if (city) current.cities.add(city);
-    current.albums.push({ href: item.href, title: item.title });
+    const stateCode = usStateCodeFromPlaceLabel(item.title);
+    if (stateCode && !current.stateCodes.includes(stateCode)) {
+      current.stateCodes.push(stateCode);
+    }
+    current.albums.push({ href: item.href, title: albumChipTitle(item.title) });
     byCountry.set(item.countryCode, current);
   }
 
@@ -393,6 +432,7 @@ export function buildPassport(
       lastCoverPhotoId: row.lastCoverPhotoId,
       years: [...row.years].sort((a, b) => b.localeCompare(a)),
       cities: [...row.cities],
+      stateCodes: row.stateCodes,
       albumHrefs: row.albums,
     }))
     .sort((a, b) => (b.lastVisitAt ?? "").localeCompare(a.lastVisitAt ?? ""));

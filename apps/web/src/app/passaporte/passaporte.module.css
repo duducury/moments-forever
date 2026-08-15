@@ -150,13 +150,6 @@
   gap: 12px;
 }
 
-.sectionHead {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
 .sectionTitle {
   margin: 0;
   scroll-margin-top: 18px;
@@ -228,23 +221,10 @@
   font-weight: 650;
 }
 
-.toggleBook {
-  min-height: 36px;
-  padding: 0 12px;
-  border: 0;
-  border-radius: 999px;
-  color: var(--accent);
-  background: transparent;
-  cursor: pointer;
-  font: inherit;
-  font-size: 0.86rem;
-  font-weight: 700;
-}
-
 .book {
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: minmax(82%, 1fr);
+  grid-auto-columns: minmax(86%, 1fr);
   gap: 12px;
   overflow-x: auto;
   padding-bottom: 6px;
@@ -252,26 +232,37 @@
   -webkit-overflow-scrolling: touch;
 }
 
-.book[data-open="false"] .bookPage:last-child {
-  opacity: 0.55;
-}
-
 .bookPage {
   scroll-snap-align: start;
-  min-height: 280px;
-  padding: 22px 20px;
+  position: relative;
+  min-height: 320px;
+  padding: 22px 20px 20px;
   border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--border));
-  border-radius: 8px 18px 18px 8px;
+  border-radius: 6px 16px 16px 6px;
   background:
-    radial-gradient(circle at 12% 10%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 42%),
-    linear-gradient(160deg, #1a1612 0%, #2a231c 55%, #171410 100%);
+    linear-gradient(90deg, rgb(0 0 0 / 22%) 0, transparent 14px),
+    radial-gradient(circle at 88% 12%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 36%),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 11px,
+      rgb(255 255 255 / 3%) 12px
+    ),
+    linear-gradient(160deg, #1c1713 0%, #2c241c 52%, #161310 100%);
   color: #f3efe8;
   box-shadow: 0 16px 36px rgb(0 0 0 / 28%);
 }
 
 html[data-resolved-theme="light"] .bookPage {
   background:
-    radial-gradient(circle at 12% 10%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 42%),
+    linear-gradient(90deg, rgb(80 50 20 / 12%) 0, transparent 14px),
+    radial-gradient(circle at 88% 12%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 36%),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 11px,
+      rgb(80 50 20 / 5%) 12px
+    ),
     linear-gradient(160deg, #f4ead8 0%, #e8d7bc 100%);
   color: #1a1612;
 }
@@ -286,35 +277,68 @@ html[data-resolved-theme="light"] .bookPage {
 }
 
 .bookHeading {
-  margin: 10px 0 18px;
+  margin: 8px 0 18px;
   font-family: Georgia, "Times New Roman", serif;
   font-size: 1.55rem;
   font-weight: 600;
 }
 
-.bookMeta {
+.bookId {
   display: grid;
-  gap: 12px;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 14px 16px;
+  align-items: start;
 }
 
-.bookMeta dt {
+.bookPhoto {
+  width: 96px;
+  height: 122px;
+  overflow: hidden;
+  border-radius: 6px;
+  border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  box-shadow: 0 8px 18px rgb(0 0 0 / 28%);
+}
+
+.bookPhoto > span {
+  width: 96px !important;
+  height: 122px !important;
+  border-radius: 6px !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.bookPhoto img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.bookMeta {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.bookMeta dt,
+.bookFooterMeta dt {
   color: color-mix(in srgb, currentColor 55%, transparent);
-  font-size: 0.72rem;
-  letter-spacing: 0.08em;
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
-.bookMeta dd {
+.bookMeta dd,
+.bookFooterMeta dd {
   margin: 2px 0 0;
-  font-size: 1.05rem;
-  font-weight: 650;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.12rem;
+  font-weight: 600;
 }
 
 .bookFlags {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-top: 18px;
 }
 
 .bookFlags .flag {
@@ -322,8 +346,17 @@ html[data-resolved-theme="light"] .bookPage {
   height: auto;
 }
 
+.bookFooterMeta {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  margin-top: 22px;
+  padding-top: 14px;
+  border-top: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
+}
+
 .stampsLabel {
-  margin: 0 0 12px;
+  margin: 0 0 16px;
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.12em;
@@ -334,29 +367,34 @@ html[data-resolved-theme="light"] .bookPage {
 .stamps {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  gap: 16px 12px;
+  justify-items: center;
 }
 
 .stamp {
   display: grid;
+  place-items: center;
   gap: 2px;
+  width: min(100%, 132px);
+  aspect-ratio: 1;
   padding: 12px 8px;
-  border: 2px dashed color-mix(in srgb, var(--accent) 70%, #fff);
-  border-radius: 8px;
+  border: 2px solid color-mix(in srgb, var(--accent) 78%, #fff);
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 5px color-mix(in srgb, var(--accent) 28%, transparent);
   color: inherit;
-  background: transparent;
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
   cursor: pointer;
-  transform: rotate(-3deg);
+  transform: rotate(-6deg);
   font: inherit;
   text-align: center;
 }
 
 .stamp[data-tone="2"] {
-  transform: rotate(4deg);
+  transform: rotate(5deg);
 }
 
 .stamp[data-tone="3"] {
-  transform: rotate(-6deg);
+  transform: rotate(-10deg);
 }
 
 .stampFlag {
@@ -372,16 +410,18 @@ html[data-resolved-theme="light"] .bookPage {
 }
 
 .stampName {
-  font-size: 0.72rem;
+  max-width: 92%;
+  font-size: 0.62rem;
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
+  line-height: 1.2;
 }
 
 .stampMark {
-  font-size: 0.68rem;
+  font-size: 0.62rem;
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--accent);
 }
@@ -800,6 +840,6 @@ html[data-resolved-theme="light"] .bookPage {
   }
 
   .stamps {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

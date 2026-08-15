@@ -1,6 +1,7 @@
 import { countryCodeFromPlaceLabel } from "@moments-forever/shared";
 
 import { AppBottomNav } from "@/components/app-bottom-nav";
+import { AppCreditFooter } from "@/components/app-credit-footer";
 import { AppWordmark } from "@/components/app-wordmark";
 import { AuthStatus } from "@/components/auth-status";
 import { NewTripButton } from "@/components/new-trip-button";
@@ -127,6 +128,10 @@ export function ProfileView({
           <ProfileMap photos={mapPhotos} />
         ) : null}
       </section>
+
+      <footer>
+        <AppCreditFooter />
+      </footer>
 
       <AppBottomNav
         homeHref={homeHref}

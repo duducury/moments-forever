@@ -87,7 +87,6 @@ export function PassaporteClient({
   const [selectedCode, setSelectedCode] = useState<string | null>(
     passport.countries[0]?.code ?? null,
   );
-  const [bookOpen, setBookOpen] = useState(true);
 
   const [achFilter, setAchFilter] = useState<"all" | "unlocked" | "locked">("all");
 
@@ -119,6 +118,14 @@ export function PassaporteClient({
   }, [achFilter, passport.achievements]);
 
   const visitedCodes = passport.countries.map((country) => country.code);
+  const stampPages = useMemo(() => {
+    const pages: (typeof passport.countries)[] = [];
+    const perPage = 4;
+    for (let index = 0; index < passport.countries.length; index += perPage) {
+      pages.push(passport.countries.slice(index, index + perPage));
+    }
+    return pages.length > 0 ? pages : [[]];
+  }, [passport.countries]);
 
   return (
     <div className={styles.page}>
@@ -211,77 +218,85 @@ export function PassaporteClient({
       </section>
 
       <section aria-labelledby="book-title" className={styles.section}>
-        <div className={styles.sectionHead}>
-          <h2 className={styles.sectionTitle} id="book-title">
-            Passaporte
-          </h2>
-          <button
-            className={styles.toggleBook}
-            onClick={() => setBookOpen((open) => !open)}
-            type="button"
-          >
-            {bookOpen ? "Fechar" : "Abrir"}
-          </button>
-        </div>
-        <div
-          className={styles.book}
-          data-open={bookOpen ? "true" : "false"}
-        >
-          <article className={styles.bookPage}>
+        <h2 className={styles.sectionTitle} id="book-title">
+          Passaporte
+        </h2>
+        <div className={styles.book}>
+          <article className={`${styles.bookPage} ${styles.bookIdPage}`}>
             <p className={styles.bookBrand}>Moments Forever</p>
             <h3 className={styles.bookHeading}>Travel Passport</h3>
-            <dl className={styles.bookMeta}>
-              <div>
-                <dt>Nome</dt>
-                <dd>{displayName}</dd>
+            <div className={styles.bookId}>
+              <div className={styles.bookPhoto}>
+                <ProfileAvatar
+                  avatarPhotoId={avatarPhotoId}
+                  displayName={displayName}
+                  ownerId={ownerId}
+                  remoteSrc={avatarRemoteSrc}
+                  size="md"
+                />
               </div>
+              <dl className={styles.bookMeta}>
+                <div>
+                  <dt>Nome</dt>
+                  <dd>{displayName}</dd>
+                </div>
+                {passport.countries.length > 0 ? (
+                  <div className={styles.bookFlags} aria-label="Países visitados">
+                    {passport.countries.map((country) => (
+                      <CountryFlag
+                        code={country.code}
+                        key={country.code}
+                        size={18}
+                      />
+                    ))}
+                  </div>
+                ) : null}
+              </dl>
+            </div>
+            <dl className={styles.bookFooterMeta}>
               <div>
-                <dt>Emitido</dt>
+                <dt>Emitido em</dt>
                 <dd>{formatIssued(passport.issuedAt)}</dd>
               </div>
               <div>
-                <dt>Países</dt>
+                <dt>Países visitados</dt>
                 <dd>{passport.countryCount}</dd>
               </div>
             </dl>
-            {passport.countries.length > 0 ? (
-              <div className={styles.bookFlags}>
-                {passport.countries.map((country) => (
-                  <CountryFlag
-                    code={country.code}
-                    key={country.code}
-                    size={18}
-                  />
-                ))}
-              </div>
-            ) : null}
           </article>
-          <article className={styles.bookPage}>
-            <p className={styles.stampsLabel}>Carimbos</p>
-            {passport.countries.length === 0 ? (
-              <p className={styles.empty}>Ainda sem carimbos.</p>
-            ) : (
-              <div className={styles.stamps}>
-                {passport.countries.map((country, index) => (
-                  <button
-                    className={styles.stamp}
-                    data-tone={String((index % 3) + 1)}
-                    key={country.code}
-                    onClick={() => setSelectedCode(country.code)}
-                    type="button"
-                  >
-                    <span className={styles.stampFlag}>
-                      <CountryFlag code={country.code} size={28} />
-                    </span>
-                    <span className={styles.stampName}>{country.name}</span>
-                    <span className={styles.stampMark}>
-                      {selectedStampLabel(country.tripCount, country.lastVisitAt)}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </article>
+          {stampPages.map((page, pageIndex) => (
+            <article className={styles.bookPage} key={`stamps-${pageIndex}`}>
+              <p className={styles.stampsLabel}>
+                {pageIndex === 0 ? "Vistos e carimbos" : `Página ${pageIndex + 1}`}
+              </p>
+              {page.length === 0 ? (
+                <p className={styles.empty}>Ainda sem carimbos.</p>
+              ) : (
+                <div className={styles.stamps}>
+                  {page.map((country, index) => (
+                    <button
+                      className={styles.stamp}
+                      data-tone={String(((pageIndex * 4 + index) % 3) + 1)}
+                      key={country.code}
+                      onClick={() => setSelectedCode(country.code)}
+                      type="button"
+                    >
+                      <span className={styles.stampFlag}>
+                        <CountryFlag code={country.code} size={28} />
+                      </span>
+                      <span className={styles.stampName}>{country.name}</span>
+                      <span className={styles.stampMark}>
+                        {selectedStampLabel(
+                          country.tripCount,
+                          country.lastVisitAt,
+                        )}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </article>
+          ))}
         </div>
       </section>
 

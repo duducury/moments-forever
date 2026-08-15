@@ -447,7 +447,6 @@ const SHORT_PLACE_LABELS: Readonly<Record<string, string>> = {
   negril: "Negril",
   "ocho rios": "Ocho Rios",
   ubud: "Ubud",
-  "nusa penida": "Nusa Penida",
   hawaii: "Havaí",
   havai: "Havaí",
   rio: "Rio",

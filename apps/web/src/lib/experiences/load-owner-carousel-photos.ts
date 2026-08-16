@@ -97,12 +97,21 @@ export async function loadOwnerCarouselPhotos(
   );
   const experienceIds = experiences.data.map((row) => row.id as string);
 
-  const albums = await supabase
-    .from("albums")
-    .select("id, name, source_moment_id")
-    .in("experience_id", experienceIds);
+  // Albums + photo rows in parallel — place labels resolve after albums.
+  const [albums, photos] = await Promise.all([
+    supabase
+      .from("albums")
+      .select("id, name, source_moment_id")
+      .in("experience_id", experienceIds),
+    supabase
+      .from("photos")
+      .select(
+        "id, experience_id, album_id, moment_id, position_in_album, position_in_moment, captured_at, width, height, exact_latitude, exact_longitude",
+      )
+      .in("experience_id", experienceIds),
+  ]);
 
-  if (albums.error) {
+  if (albums.error || photos.error || !photos.data?.length) {
     return [];
   }
 
@@ -171,17 +180,6 @@ export async function loadOwnerCarouselPhotos(
         placeConfirmedByUser: false,
       }),
     );
-  }
-
-  const photos = await supabase
-    .from("photos")
-    .select(
-      "id, experience_id, album_id, moment_id, position_in_album, position_in_moment, captured_at, width, height, exact_latitude, exact_longitude",
-    )
-    .in("experience_id", experienceIds);
-
-  if (photos.error || !photos.data?.length) {
-    return [];
   }
 
   const mapped: ProfileCarouselPhoto[] = [];

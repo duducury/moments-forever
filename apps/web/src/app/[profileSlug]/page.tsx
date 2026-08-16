@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 
 import { AppWordmark } from "@/components/app-wordmark";
-import { loadOwnerCarouselPhotos } from "@/lib/experiences/load-owner-carousel-photos";
-import { loadOwnerMapPhotos } from "@/lib/experiences/load-owner-map-photos";
 import { loadOwnerPlaceCards } from "@/lib/experiences/load-owner-place-cards";
 import {
   isReservedProfileSlug,
@@ -15,6 +14,8 @@ import { absoluteUrl } from "@/lib/site-url";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import { ProfileView } from "../perfil/profile-view";
+import { ProfileCarouselSection } from "./profile-carousel-section";
+import { ProfileMapSection } from "./profile-map-section";
 
 export const dynamic = "force-dynamic";
 
@@ -105,23 +106,23 @@ export default async function PublicProfilePage({
     );
   }
 
-  const profile = await lookupPublicProfile(supabase, profileSlug);
+  // Auth does not depend on the profile row — fetch together.
+  const [profile, userResult] = await Promise.all([
+    lookupPublicProfile(supabase, profileSlug),
+    supabase.auth.getUser(),
+  ]);
   if (!profile) {
     notFound();
   }
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = userResult.data.user;
   const isOwner = Boolean(user && user.id === profile.id);
 
-  const [result, mapPhotos, carouselPhotos] = await Promise.all([
-    loadOwnerPlaceCards(supabase, profile.id),
-    loadOwnerMapPhotos(supabase, profile.id),
-    loadOwnerCarouselPhotos(supabase, profile.id),
-  ]);
+  // Critical path: place cards only. Destaques + mapa stream below.
+  const result = await loadOwnerPlaceCards(supabase, profile.id);
 
   const displayName = profile.displayName?.trim() || profile.profileSlug;
+  const hasPlaces = (result.places?.length ?? 0) > 0;
 
   return (
     <ProfileView
@@ -132,14 +133,26 @@ export default async function PublicProfilePage({
           : null
       }
       bio={profile.bio}
-      carouselPhotos={carouselPhotos}
+      carouselSlot={
+        hasPlaces ? (
+          <Suspense fallback={null}>
+            <ProfileCarouselSection ownerId={profile.id} />
+          </Suspense>
+        ) : null
+      }
       displayName={displayName}
       homeHref={publicProfilePath(profile.profileSlug)}
       isOwner={isOwner}
       loadError={
         result.error ? "Não foi possível carregar as viagens deste perfil." : null
       }
-      mapPhotos={mapPhotos}
+      mapSlot={
+        hasPlaces ? (
+          <Suspense fallback={null}>
+            <ProfileMapSection ownerId={profile.id} />
+          </Suspense>
+        ) : null
+      }
       ownerId={profile.id}
       places={result.places ?? []}
     />

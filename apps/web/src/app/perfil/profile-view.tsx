@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import { countryCodeFromPlaceLabel } from "@moments-forever/shared";
 
 import { AppBottomNav } from "@/components/app-bottom-nav";
@@ -6,15 +8,11 @@ import { AppWordmark } from "@/components/app-wordmark";
 import { AuthStatus } from "@/components/auth-status";
 import { NewTripButton } from "@/components/new-trip-button";
 import { R2UploadWarningBanner } from "@/components/r2-upload-warning-banner";
-import type { TripPhoto } from "@/app/trip/[slug]/album-types";
-import type { ProfileCarouselPhoto } from "@/lib/experiences/load-owner-carousel-photos";
 import type { OwnerPlaceCardItem } from "@/lib/experiences/load-owner-place-cards";
 import { profilePath } from "@/lib/routes/app-routes";
 
 import styles from "./perfil.module.css";
-import { ProfileCarousel } from "./profile-carousel";
 import { ProfileHeader } from "./profile-header";
-import { ProfileMap } from "./profile-map";
 import { ProfilePlacesSection } from "./profile-places-section";
 
 export function ProfileView({
@@ -25,10 +23,10 @@ export function ProfileView({
   avatarRemoteSrc = null,
   isOwner,
   places,
-  mapPhotos,
-  carouselPhotos,
   loadError,
   homeHref = profilePath(),
+  carouselSlot = null,
+  mapSlot = null,
 }: {
   readonly ownerId: string;
   readonly displayName: string;
@@ -37,11 +35,13 @@ export function ProfileView({
   readonly avatarRemoteSrc?: string | null;
   readonly isOwner: boolean;
   readonly places: readonly OwnerPlaceCardItem[];
-  readonly mapPhotos: readonly TripPhoto[];
-  readonly carouselPhotos: readonly ProfileCarouselPhoto[];
   readonly loadError: string | null;
   /** Canonical profile URL for bottom-nav Início (public slug when known). */
   readonly homeHref?: string;
+  /** Streamed Destaques — kept out of the critical place-grid payload. */
+  readonly carouselSlot?: ReactNode;
+  /** Streamed bottom map — GPS + MapLibre must not block Início. */
+  readonly mapSlot?: ReactNode;
 }) {
   const totalPhotos = places.reduce((sum, item) => sum + item.photoCount, 0);
   const visitedCountryCodes = (() => {
@@ -97,9 +97,7 @@ export function ProfileView({
           </p>
         ) : null}
 
-        {!loadError && places.length > 0 ? (
-          <ProfileCarousel photos={carouselPhotos} />
-        ) : null}
+        {!loadError && places.length > 0 ? carouselSlot : null}
 
         {!loadError && places.length === 0 ? (
           <div className={styles.empty} data-reveal>
@@ -124,9 +122,7 @@ export function ProfileView({
           />
         ) : null}
 
-        {!loadError && places.length > 0 ? (
-          <ProfileMap photos={mapPhotos} />
-        ) : null}
+        {!loadError && places.length > 0 ? mapSlot : null}
       </section>
 
       <footer>

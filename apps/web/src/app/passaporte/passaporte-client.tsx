@@ -687,6 +687,13 @@ function JourneyWavyBridge({
   readonly side: "into-paper" | "into-page";
 }) {
   const filterId = `journey-wave-${useId().replace(/:/g, "")}`;
+  // Dark page color forms the soft edge. Paths extend past the clipped side
+  // so vertical blur only softens the wavy boundary — never a straight cut.
+  const path =
+    side === "into-paper"
+      ? "M0 -90h1440V76c-170 22-340-18-520-6-200 14-330 32-510 20S240 96 100 110C45 118 18 108 0 104V-90Z"
+      : "M0 72c170-22 340 18 520 6 200-14 330-32 510-20S1200 72 1340 58C1395 50 1422 56 1440 60V270H0V72Z";
+
   return (
     <div aria-hidden="true" className={className} data-side={side}>
       <svg
@@ -698,21 +705,16 @@ function JourneyWavyBridge({
           <filter
             colorInterpolationFilters="sRGB"
             filterUnits="userSpaceOnUse"
-            height="220"
+            height="400"
             id={filterId}
             width="1520"
             x="-40"
-            y="-20"
+            y="-120"
           >
-            {/* Vertical blur softens the wavy edge without horizontal banding. */}
-            <feGaussianBlur in="SourceGraphic" stdDeviation="0 16" />
+            <feGaussianBlur in="SourceGraphic" stdDeviation="0 18" />
           </filter>
         </defs>
-        <path
-          d="M0 0h1440v78c-170 20-330-16-510-6-200 12-320 30-500 20S250 92 110 104C50 112 20 104 0 100V0Z"
-          fill="var(--journey-fade-ink)"
-          filter={`url(#${filterId})`}
-        />
+        <path d={path} fill="var(--journey-fade-ink)" filter={`url(#${filterId})`} />
       </svg>
     </div>
   );

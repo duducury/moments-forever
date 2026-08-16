@@ -216,7 +216,7 @@ export function PassaporteClient({
   }, [achFilter, passport.achievements]);
 
   const visitedCodes = passport.countries.map((country) => country.code);
-  const exploreLine = worldExploreLine(visitedCodes.length);
+  const exploreCopy = worldExploreCopy(visitedCodes.length);
   const stampPages = useMemo(() => {
     const pages: PassportData["countries"][] = [];
     const perPage = 2;
@@ -358,6 +358,22 @@ export function PassaporteClient({
         <h2 className={styles.sectionTitle} id="mundo-title">
           Meu mundo
         </h2>
+        {exploreCopy ? (
+          <p className={styles.worldExplore}>
+            <span className={styles.worldExploreLead}>
+              Você conhece{" "}
+              <em className={styles.worldExplorePct}>{exploreCopy.known}%</em>{" "}
+              do mundo.
+            </span>
+            <span className={styles.worldExploreRest}>
+              Os outros {exploreCopy.remaining}% ainda estão esperando para ser
+              vividos.
+            </span>
+            <span aria-hidden="true" className={styles.worldExploreStar}>
+              ★
+            </span>
+          </p>
+        ) : null}
         <div className={styles.worldCard}>
           {visitedCodes.length > 0 ? (
             <DeferredPassportWorldMap
@@ -370,14 +386,6 @@ export function PassaporteClient({
             </p>
           )}
         </div>
-        {exploreLine ? (
-          <p className={styles.worldExplore}>
-            <span className={styles.worldExploreText}>{exploreLine}</span>
-            <span aria-hidden="true" className={styles.worldExploreStar}>
-              ★
-            </span>
-          </p>
-        ) : null}
         {selected ? (
           <article className={styles.countryPanel}>
             <h3 className={styles.countryName}>

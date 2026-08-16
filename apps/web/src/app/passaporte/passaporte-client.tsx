@@ -520,15 +520,7 @@ export function PassaporteClient({
         className={styles.journeySection}
         data-reveal
       >
-        <div aria-hidden="true" className={styles.journeyTransitionTop}>
-          <svg
-            className={styles.journeyWaveSvg}
-            preserveAspectRatio="none"
-            viewBox="0 0 1440 72"
-          >
-            <path d="M0 28c160 18 300-16 460-10 180 7 260 30 420 28 140-2 260-24 360-28 70-3 140 4 200 12v42H0V28Z" />
-          </svg>
-        </div>
+        <JourneyWavyBridge className={styles.journeyTransitionTop} side="into-paper" />
 
         <div className={styles.journeyBody}>
           <h2 className={styles.journeyTitleHeading} id="journey-title">
@@ -586,15 +578,7 @@ export function PassaporteClient({
           )}
         </div>
 
-        <div aria-hidden="true" className={styles.journeyTransitionBottom}>
-          <svg
-            className={styles.journeyWaveSvg}
-            preserveAspectRatio="none"
-            viewBox="0 0 1440 72"
-          >
-            <path d="M0 0h1440v34c-60 8-130 15-200 12-100-4-220-26-360-28-160-2-240 21-420 28-160 6-300-28-460-10V0Z" />
-          </svg>
-        </div>
+        <JourneyWavyBridge className={styles.journeyTransitionBottom} side="into-page" />
       </section>
 
       <section aria-labelledby="ach-title" className={styles.section} data-reveal>
@@ -694,6 +678,39 @@ export function PassaporteClient({
     </div>
   );
 }
+
+function JourneyWavyBridge({
+  className,
+  side,
+}: {
+  readonly className: string;
+  readonly side: "into-paper" | "into-page";
+}) {
+  return (
+    <div aria-hidden="true" className={className} data-side={side}>
+      {JOURNEY_WAVE_LAYERS.map((path, index) => (
+        <svg
+          className={styles.waveLayer}
+          data-step={index + 1}
+          key={path}
+          preserveAspectRatio="none"
+          viewBox="0 0 1440 160"
+        >
+          <path d={path} />
+        </svg>
+      ))}
+    </div>
+  );
+}
+
+/** Soft undulating dissolve — each layer reaches further with lower opacity. */
+const JOURNEY_WAVE_LAYERS = [
+  "M0 0h1440v46c-130 12-270-10-420-4-170 7-270 20-430 16S300 42 170 50C90 56 40 52 0 48V0Z",
+  "M0 0h1440v68c-150 14-290-12-450-4-180 9-290 24-450 18S280 64 150 74C80 80 30 76 0 70V0Z",
+  "M0 0h1440v92c-140 10-300-14-460-4-190 12-300 28-460 20S270 88 140 98C70 104 28 98 0 94V0Z",
+  "M0 0h1440v116c-160 12-310-10-470-2-200 10-310 26-470 18S260 112 130 122C70 128 24 122 0 116V0Z",
+  "M0 0h1440v138c-150 10-320-12-480-2-200 11-320 24-480 16S250 134 120 142C60 146 22 140 0 136V0Z",
+] as const;
 
 function CountryFlag({
   code,

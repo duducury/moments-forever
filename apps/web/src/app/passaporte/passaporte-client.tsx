@@ -686,32 +686,32 @@ function JourneyWavyBridge({
   readonly className: string;
   readonly side: "into-paper" | "into-page";
 }) {
-  const gradientId = useId().replace(/:/g, "");
+  const filterId = `journey-wave-${useId().replace(/:/g, "")}`;
   return (
     <div aria-hidden="true" className={className} data-side={side}>
       <svg
         className={styles.journeyWaveSvg}
         preserveAspectRatio="none"
-        viewBox="0 0 1440 160"
+        viewBox="0 0 1440 180"
       >
         <defs>
-          <linearGradient
-            gradientUnits="userSpaceOnUse"
-            id={gradientId}
-            x1="0"
-            x2="0"
-            y1="0"
-            y2="160"
+          <filter
+            colorInterpolationFilters="sRGB"
+            filterUnits="userSpaceOnUse"
+            height="220"
+            id={filterId}
+            width="1520"
+            x="-40"
+            y="-20"
           >
-            <stop offset="0%" stopColor="var(--journey-fade-ink)" stopOpacity="1" />
-            <stop offset="42%" stopColor="var(--journey-fade-ink)" stopOpacity="0.72" />
-            <stop offset="72%" stopColor="var(--journey-fade-ink)" stopOpacity="0.28" />
-            <stop offset="100%" stopColor="var(--journey-fade-ink)" stopOpacity="0" />
-          </linearGradient>
+            {/* Vertical blur softens the wavy edge without horizontal banding. */}
+            <feGaussianBlur in="SourceGraphic" stdDeviation="0 16" />
+          </filter>
         </defs>
         <path
-          d="M0 0h1440v96c-160 18-320-14-480-6-190 10-300 28-460 20S280 96 140 108C70 116 28 110 0 104V0Z"
-          fill={`url(#${gradientId})`}
+          d="M0 0h1440v78c-170 20-330-16-510-6-200 12-320 30-500 20S250 92 110 104C50 112 20 104 0 100V0Z"
+          fill="var(--journey-fade-ink)"
+          filter={`url(#${filterId})`}
         />
       </svg>
     </div>

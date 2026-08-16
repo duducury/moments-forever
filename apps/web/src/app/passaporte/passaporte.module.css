@@ -660,12 +660,13 @@
   z-index: 1;
   display: block;
   width: 100%;
-  height: clamp(112px, 24vw, 168px);
+  height: clamp(120px, 26vw, 180px);
   pointer-events: none;
-  overflow: hidden;
+  /* Let the soft blur bleed; the section still clips sideways. */
+  overflow: visible;
 }
 
-/* Into paper: page color fades out through one wavy shape. */
+/* Into paper: page color fades out through one soft wavy edge. */
 .journeyTransitionTop {
   --journey-fade-ink: var(--background);
   margin-top: -1px;
@@ -673,7 +674,7 @@
   color: var(--background);
 }
 
-/* Into page: cream fades out through one wavy shape. */
+/* Into page: cream fades out through one soft wavy edge. */
 .journeyTransitionBottom {
   --journey-fade-ink: var(--journey-paper);
   margin-bottom: -1px;
@@ -686,6 +687,7 @@
   width: 100%;
   height: 100%;
   color: inherit;
+  overflow: visible;
 }
 
 .journeyBody {

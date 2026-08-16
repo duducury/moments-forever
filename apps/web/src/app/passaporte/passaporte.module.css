@@ -291,55 +291,102 @@
 }
 
 .worldExplore {
-  position: relative;
   display: grid;
-  gap: 8px;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 14px 16px;
+  align-items: center;
   margin: 0;
-  padding: 16px 18px 15px;
+  padding: 18px 18px 16px;
   border-bottom: 1px solid rgb(243 239 232 / 8%);
   background:
     linear-gradient(
-      180deg,
-      color-mix(in srgb, #1a1f2a 88%, #d08a6e) 0%,
-      #12161e 100%
+      165deg,
+      color-mix(in srgb, #1c2230 82%, #d08a6e) 0%,
+      #10141c 58%,
+      #0d1016 100%
     );
   color: #f3efe8;
-  font-family: Georgia, "Times New Roman", serif;
-  line-height: 1.35;
 }
 
-.worldExploreLead {
-  padding-right: 1.2em;
-  color: #f3efe8;
-  font-size: clamp(1.12rem, 4vw, 1.38rem);
-  font-style: normal;
-  font-weight: 500;
-  letter-spacing: -0.01em;
+.worldExploreStat {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  min-width: 4.4rem;
+  padding: 2px 4px 0 0;
 }
 
 .worldExplorePct {
-  color: #e0a489;
+  display: flex;
+  align-items: flex-start;
+  color: #f3efe8;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(2.35rem, 9vw, 3.1rem);
   font-style: normal;
-  font-weight: 700;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.04em;
+  line-height: 0.92;
+}
+
+.worldExplorePct small {
+  margin-top: 0.28em;
+  margin-left: 0.06em;
+  color: #e0a489;
+  font-size: 0.42em;
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1;
+}
+
+.worldExploreStar {
+  margin-top: 6px;
+  color: #e0a489;
+  font-size: 0.78rem;
+  line-height: 1;
+  letter-spacing: 0.12em;
+}
+
+.worldExploreCopy {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding-top: 2px;
+}
+
+.worldExploreLead {
+  margin: 0;
+  color: #f3efe8;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.02rem, 3.6vw, 1.18rem);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
 }
 
 .worldExploreRest {
-  max-width: 36ch;
-  color: rgb(243 239 232 / 72%);
-  font-size: clamp(0.92rem, 3.2vw, 1.02rem);
+  margin: 0;
+  max-width: 28ch;
+  color: rgb(243 239 232 / 68%);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(0.88rem, 3.1vw, 0.98rem);
   font-style: italic;
   line-height: 1.45;
 }
 
-.worldExploreStar {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  color: #e0a489;
-  font-size: 0.95rem;
-  line-height: 1;
-  opacity: 0.95;
+@media (min-width: 720px) {
+  .worldExplore {
+    gap: 18px 22px;
+    padding: 20px 22px 18px;
+  }
+
+  .worldExploreStat {
+    min-width: 5.2rem;
+  }
+
+  .worldExploreRest {
+    max-width: 34ch;
+  }
 }
 
 .countryPanel {

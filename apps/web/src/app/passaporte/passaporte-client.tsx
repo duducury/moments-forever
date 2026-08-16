@@ -416,20 +416,27 @@ export function PassaporteClient({
         </h2>
         <div className={styles.worldCard}>
           {exploreCopy ? (
-            <p className={styles.worldExplore}>
-              <span className={styles.worldExploreLead}>
-                Você conhece{" "}
-                <em className={styles.worldExplorePct}>{exploreCopy.known}%</em>{" "}
-                do mundo.
-              </span>
-              <span className={styles.worldExploreRest}>
-                Os outros {exploreCopy.remaining}% ainda estão esperando para ser
-                vividos.
-              </span>
-              <span aria-hidden="true" className={styles.worldExploreStar}>
-                ★
-              </span>
-            </p>
+            <div
+              aria-label={`Você conhece ${exploreCopy.known}% do mundo. Os outros ${exploreCopy.remaining}% ainda estão esperando para ser vividos.`}
+              className={styles.worldExplore}
+            >
+              <div aria-hidden="true" className={styles.worldExploreStat}>
+                <span className={styles.worldExplorePct}>
+                  {exploreCopy.known}
+                  <small>%</small>
+                </span>
+                <span className={styles.worldExploreStar}>★</span>
+              </div>
+              <div aria-hidden="true" className={styles.worldExploreCopy}>
+                <p className={styles.worldExploreLead}>
+                  Você conhece esta parte do mundo.
+                </p>
+                <p className={styles.worldExploreRest}>
+                  Os outros {exploreCopy.remaining}% ainda estão esperando para
+                  ser vividos.
+                </p>
+              </div>
+            </div>
           ) : null}
           <div className={styles.worldMapFrame}>
             {visitedCodes.length > 0 ? (

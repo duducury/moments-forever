@@ -36,7 +36,7 @@ Fluxo principal de administração: “Adicionar fotos”, selecionar, analisar 
 
 ## Performance percebida
 
-A capa e primeiras thumbnails têm prioridade. Grid usa carregamento virtualizado e imagens responsivas. Tela cheia pré-carrega somente fotos vizinhas. Mapa só busca dados do viewport e nível de zoom.
+A capa e primeiras thumbnails têm prioridade. Grid usa carregamento virtualizado e imagens responsivas. Tela cheia pré-carrega somente fotos vizinhas. Mapa só busca dados do viewport e nível de zoom. Na página de álbum, o HTML crítico (capa + galeria) não espera o bloco “Veja também”; MapLibre do mapa em destaque entra após idle para não competir com as primeiras fotos.
 
 ## Conteúdo e estados
 

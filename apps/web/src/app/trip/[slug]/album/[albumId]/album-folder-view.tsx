@@ -2,7 +2,12 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 
 import {
   countryCodeFromName,
@@ -10,10 +15,8 @@ import {
   usStateCodeFromPlaceLabel,
 } from "@moments-forever/shared";
 
-import { SeeAlsoPlaces } from "@/app/perfil/see-also-places";
 import { AppBottomNav } from "@/components/app-bottom-nav";
 import { ExperienceCoverThumb } from "@/components/experience-cover-thumb";
-import type { OwnerPlaceCardItem } from "@/lib/experiences/load-owner-place-cards";
 import {
   deleteLocalPhotoBlob,
   deleteLocalPhotoBlobs,
@@ -57,7 +60,8 @@ interface Props {
   readonly photos: readonly TripPhoto[];
   readonly albumId: string;
   readonly isOwner?: boolean;
-  readonly relatedPlaces?: readonly OwnerPlaceCardItem[];
+  /** Streamed “Veja também” — kept out of the critical album payload. */
+  readonly relatedPlacesSlot?: ReactNode;
   /** Public profile home (/{nome}) for logo + breadcrumb. */
   readonly profileHomeHref?: string | null;
   /** Open this photo in the lightbox on mount (e.g. from Destaques). */
@@ -66,13 +70,51 @@ interface Props {
   readonly initialPrivacyMode?: boolean;
 }
 
+/** Lets hero + gallery paint before MapLibre JS/CSS compete for the phone. */
+function DeferredAlbumMap(
+  props: Parameters<typeof TripMap>[0],
+) {
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const start = () => {
+      if (!cancelled) setReady(true);
+    };
+
+    if (typeof window.requestIdleCallback === "function") {
+      const idleId = window.requestIdleCallback(start, { timeout: 900 });
+      return () => {
+        cancelled = true;
+        window.cancelIdleCallback(idleId);
+      };
+    }
+
+    const timer = window.setTimeout(start, 180);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, []);
+
+  if (!ready) {
+    return (
+      <div aria-hidden className={styles.mapEmptyFeatured}>
+        <p>Carregando mapa…</p>
+      </div>
+    );
+  }
+
+  return <TripMap {...props} />;
+}
+
 export function AlbumFolderView({
   experience,
   albums: initialAlbums,
   photos: initialPhotos,
   albumId,
   isOwner = false,
-  relatedPlaces = [],
+  relatedPlacesSlot = null,
   profileHomeHref = null,
   initialPhotoId = null,
   initialPrivacyMode = false,
@@ -618,7 +660,7 @@ export function AlbumFolderView({
             className={styles.albumMapCard}
             id="mapa"
           >
-            <TripMap
+            <DeferredAlbumMap
               albumLabel={album.displayName}
               currentAlbumId={albumId}
               emptyHint="Fotos sem GPS continuam na galeria abaixo."
@@ -927,7 +969,7 @@ export function AlbumFolderView({
         </section>
       </div>
 
-      <SeeAlsoPlaces places={relatedPlaces} />
+      {relatedPlacesSlot}
 
       {lightboxId ? (
         <PhotoLightbox

@@ -1,10 +1,10 @@
 import Link from "next/link";
+import { Suspense } from "react";
 
 import { AppWordmark } from "@/components/app-wordmark";
 import { AuthStatus } from "@/components/auth-status";
 import { ProfileHomeProvider } from "@/components/profile-home";
 import { AlbumFolderView } from "@/app/trip/[slug]/album/[albumId]/album-folder-view";
-import { loadOwnerPlaceCards } from "@/lib/experiences/load-owner-place-cards";
 import { loadTripPageData } from "@/lib/experiences/load-trip-page-data";
 import {
   getOwnerProfileSlug,
@@ -12,6 +12,8 @@ import {
 } from "@/lib/profile/profile-slug";
 import { profilePath } from "@/lib/routes/app-routes";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+
+import { AlbumRelatedPlaces } from "./album-related-places";
 
 /** Unified album view — edit controls only when current user owns the experience. */
 export default async function ProfileTripAlbumPage({
@@ -48,7 +50,11 @@ export default async function ProfileTripAlbumPage({
     );
   }
 
-  const data = await loadTripPageData(supabase, slug);
+  // Auth does not depend on trip data — fetch in parallel with the album payload.
+  const [data, userResult] = await Promise.all([
+    loadTripPageData(supabase, slug),
+    supabase.auth.getUser(),
+  ]);
   if (!data) {
     return (
       <main className="page-shell">
@@ -87,18 +93,8 @@ export default async function ProfileTripAlbumPage({
     );
   }
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = userResult.data.user;
   const isOwner = Boolean(user && user.id === data.experience.ownerId);
-
-  const placesResult = await loadOwnerPlaceCards(
-    supabase,
-    data.experience.ownerId,
-  );
-  const relatedPlaces = (placesResult.places ?? []).filter(
-    (place) => place.albumId !== albumId,
-  );
 
   const page = (
     <main className="page-shell" data-bottom-nav="true">
@@ -115,7 +111,14 @@ export default async function ProfileTripAlbumPage({
         isOwner={isOwner}
         photos={data.photos}
         profileHomeHref={profileHomeHref}
-        relatedPlaces={relatedPlaces}
+        relatedPlacesSlot={
+          <Suspense fallback={null}>
+            <AlbumRelatedPlaces
+              excludeAlbumId={albumId}
+              ownerId={data.experience.ownerId}
+            />
+          </Suspense>
+        }
       />
     </main>
   );

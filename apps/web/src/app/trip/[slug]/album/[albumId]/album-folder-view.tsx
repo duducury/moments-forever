@@ -645,9 +645,7 @@ export function AlbumFolderView({
             data-has-story={story ? "true" : "false"}
             data-reveal
           >
-            <span aria-hidden="true" className={styles.albumAboutMark}>
-              “
-            </span>
+            <AboutWorldMark />
             <div className={styles.albumAboutCopy}>
               <p className={styles.albumAboutTitle}>Sobre essa viagem</p>
               {story ? (
@@ -1042,6 +1040,64 @@ export function AlbumFolderView({
         showCreate={isOwner}
       />
     </>
+  );
+}
+
+function AboutWorldMark() {
+  return (
+    <svg
+      aria-hidden="true"
+      className={styles.albumAboutWorld}
+      fill="none"
+      viewBox="0 0 640 240"
+    >
+      <ellipse
+        cx="320"
+        cy="122"
+        rx="268"
+        ry="96"
+        stroke="currentColor"
+        strokeDasharray="3 8"
+        strokeWidth="1.2"
+      />
+      <ellipse
+        cx="320"
+        cy="122"
+        rx="178"
+        ry="96"
+        stroke="currentColor"
+        strokeDasharray="2 10"
+        strokeWidth="1"
+      />
+      <path
+        d="M88 118c18-28 42-38 68-28 22 8 28 28 18 48-8 16-4 32 18 38 16 4 22 18 8 28-22 14-58 4-78-18-18-20-32-42-34-68Z"
+        fill="currentColor"
+        opacity="0.42"
+      />
+      <path
+        d="M268 72c28-18 58-14 78 6 14 14 38 10 52-6 18-20 48-16 62 8 12 20 8 42-10 54-22 16-18 40 6 50 16 8 14 24-4 30-28 10-62-2-78-24-18-24-48-22-70-4-20 16-46 8-54-14-10-26 2-52 18-60 8-4 10-22 0-40Z"
+        fill="currentColor"
+        opacity="0.38"
+      />
+      <path
+        d="M468 86c24-12 52-8 66 12 16 22 42 24 58 8 8-8 22-4 24 10 2 18-12 32-30 38-22 8-28 28-12 42 10 8 6 22-8 24-26 4-52-14-62-36-12-24-36-28-54-12-14 12-32 6-36-12-6-24 18-58 54-74Z"
+        fill="currentColor"
+        opacity="0.34"
+      />
+      <path
+        d="M96 168c120-86 250-102 448-42"
+        stroke="currentColor"
+        strokeDasharray="5 7"
+        strokeLinecap="round"
+        strokeWidth="1.6"
+      />
+      <g transform="translate(528 108) rotate(18)">
+        <path
+          d="M0 8 14 4 28-10l4 10 16 6-16 4-2 14-10-12-16 6Z"
+          fill="currentColor"
+        />
+      </g>
+    </svg>
   );
 }
 

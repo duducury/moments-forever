@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { useAuth } from "./auth-provider";
 import { NewTripButton } from "./new-trip-button";
 
 import styles from "./app-bottom-nav.module.css";
@@ -96,23 +95,18 @@ function MoreIcon() {
 
 /**
  * App tabs: Álbuns · Mapa · + · Passaporte · Mais
- * Floating pill on phone and a centered dock on desktop.
+ * Always show all five so Safari on iPhone matches the installed app,
+ * even before the client session hydrates.
  */
 export function AppBottomNav({
   homeHref,
   mapHref = "/mapa",
-  showCreate = false,
 }: {
   readonly homeHref: string;
   readonly mapHref?: string;
   readonly showCreate?: boolean;
 }) {
   const pathname = usePathname();
-  const { user } = useAuth();
-  const showMore = Boolean(user);
-  const showPassport = Boolean(user);
-  const slotCount =
-    2 + (showCreate ? 1 : 0) + (showPassport ? 1 : 0) + (showMore ? 1 : 0);
 
   const mapActive =
     pathname === "/mapa" ||
@@ -132,7 +126,7 @@ export function AppBottomNav({
 
   return (
     <nav aria-label="Navegação principal" className={styles.bar}>
-      <ul className={styles.list} data-slots={String(slotCount)}>
+      <ul className={styles.list}>
         <li className={styles.item}>
           <Link
             aria-current={homeActive ? "page" : undefined}
@@ -161,50 +155,44 @@ export function AppBottomNav({
           </Link>
         </li>
 
-        {showCreate ? (
-          <li className={styles.item}>
-            <span className={styles.createWrap}>
-              <NewTripButton className={styles.create}>
-                <span className={styles.icon}>
-                  <PlusIcon />
-                </span>
-                <span className={styles.label}>Nova viagem</span>
-              </NewTripButton>
+        <li className={styles.item}>
+          <span className={styles.createWrap}>
+            <NewTripButton className={styles.create}>
+              <span className={styles.icon}>
+                <PlusIcon />
+              </span>
+              <span className={styles.label}>Nova viagem</span>
+            </NewTripButton>
+          </span>
+        </li>
+
+        <li className={styles.item}>
+          <Link
+            aria-current={passportActive ? "page" : undefined}
+            className={styles.tab}
+            data-active={passportActive ? "true" : "false"}
+            href="/passaporte"
+          >
+            <span className={styles.icon}>
+              <PassportIcon />
             </span>
-          </li>
-        ) : null}
+            <span className={styles.label}>Passaporte</span>
+          </Link>
+        </li>
 
-        {showPassport ? (
-          <li className={styles.item}>
-            <Link
-              aria-current={passportActive ? "page" : undefined}
-              className={styles.tab}
-              data-active={passportActive ? "true" : "false"}
-              href="/passaporte"
-            >
-              <span className={styles.icon}>
-                <PassportIcon />
-              </span>
-              <span className={styles.label}>Passaporte</span>
-            </Link>
-          </li>
-        ) : null}
-
-        {showMore ? (
-          <li className={styles.item}>
-            <Link
-              aria-current={moreActive ? "page" : undefined}
-              className={styles.tab}
-              data-active={moreActive ? "true" : "false"}
-              href="/geral"
-            >
-              <span className={styles.icon}>
-                <MoreIcon />
-              </span>
-              <span className={styles.label}>Mais</span>
-            </Link>
-          </li>
-        ) : null}
+        <li className={styles.item}>
+          <Link
+            aria-current={moreActive ? "page" : undefined}
+            className={styles.tab}
+            data-active={moreActive ? "true" : "false"}
+            href="/geral"
+          >
+            <span className={styles.icon}>
+              <MoreIcon />
+            </span>
+            <span className={styles.label}>Mais</span>
+          </Link>
+        </li>
       </ul>
     </nav>
   );

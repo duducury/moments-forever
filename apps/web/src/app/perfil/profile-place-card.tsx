@@ -21,12 +21,21 @@ function formatCardDate(
   startsAt: string | null,
   endsAt: string | null,
 ): string | null {
+  const format = (iso: string) =>
+    new Intl.DateTimeFormat("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    }).format(new Date(iso));
+
+  if (startsAt && endsAt) {
+    const start = format(startsAt);
+    const end = format(endsAt);
+    return start === end ? start : `${start} – ${end}`;
+  }
+
   const value = startsAt ?? endsAt;
-  if (!value) return null;
-  return new Intl.DateTimeFormat("pt-BR", {
-    month: "short",
-    year: "numeric",
-  }).format(new Date(value));
+  return value ? format(value) : null;
 }
 
 export function ProfilePlaceCard({
@@ -53,12 +62,7 @@ export function ProfilePlaceCard({
   const displayLabel = usStateCodeFromPlaceLabel(place.title)
     ? place.title.trim()
     : caption?.shortLabel?.trim() || place.title.trim();
-  const metaLine = [
-    formatCardDate(place.startsAt, place.endsAt),
-    `${place.photoCount} foto${place.photoCount === 1 ? "" : "s"}`,
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  const dateLabel = formatCardDate(place.startsAt, place.endsAt);
 
   const body = (
     <div className={styles.coverFrame}>
@@ -71,7 +75,7 @@ export function ProfilePlaceCard({
       />
       <span aria-hidden className={styles.coverFade} />
       <div className={styles.cardTitleBlock}>
-        <div className={styles.cardOverlayCopy}>
+        <div className={styles.cardFooterRow}>
           <p className={styles.cardCountryLine}>
             {countryCode ? (
               // eslint-disable-next-line @next/next/no-img-element -- small flag CDN asset
@@ -87,7 +91,9 @@ export function ProfilePlaceCard({
             ) : null}
             <span>{displayLabel}</span>
           </p>
-          {metaLine ? <p className={styles.cardMetaLine}>{metaLine}</p> : null}
+          {dateLabel ? (
+            <p className={styles.cardDate}>{dateLabel}</p>
+          ) : null}
         </div>
       </div>
     </div>

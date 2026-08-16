@@ -21,6 +21,7 @@ import {
   deleteLocalPhotoBlob,
   deleteLocalPhotoBlobs,
 } from "@/lib/local-photos/photo-blob-store";
+import { warmAndPreloadLocalPhotoFulls } from "@/lib/local-photos/local-photo-object-url-cache";
 import { useLocalPhotoObjectUrl } from "@/lib/local-photos/use-local-photo-urls";
 import { boundsFromGeoPoints } from "@/lib/map/cluster-photos";
 import {
@@ -180,6 +181,40 @@ export function AlbumFolderView({
     () => sortAlbumPhotos(albumPhotos, album?.coverPhotoId ?? null),
     [album?.coverPhotoId, albumPhotos],
   );
+
+  // Warm full-resolution pixels early so the lightbox opens sharp
+  // (no soft thumbnail flash). First batch immediate; rest when idle.
+  useEffect(() => {
+    if (carouselPhotos.length === 0) return;
+    const ids = carouselPhotos.map((photo) => photo.id);
+    const firstBatch = ids.slice(0, 10);
+    let cancelled = false;
+    let idleId: number | null = null;
+    let timer: number | null = null;
+
+    void warmAndPreloadLocalPhotoFulls(firstBatch);
+
+    const warmRest = () => {
+      if (cancelled) return;
+      const restBatch = ids.slice(firstBatch.length, 40);
+      if (restBatch.length === 0) return;
+      void warmAndPreloadLocalPhotoFulls(restBatch);
+    };
+
+    if (typeof window.requestIdleCallback === "function") {
+      idleId = window.requestIdleCallback(warmRest, { timeout: 2500 });
+    } else {
+      timer = window.setTimeout(warmRest, 600);
+    }
+
+    return () => {
+      cancelled = true;
+      if (idleId != null && typeof window.cancelIdleCallback === "function") {
+        window.cancelIdleCallback(idleId);
+      }
+      if (timer != null) window.clearTimeout(timer);
+    };
+  }, [carouselPhotos]);
 
   const period = useMemo(
     () => formatPhotoPeriod(albumPhotos),

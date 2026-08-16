@@ -92,8 +92,8 @@ async function ensurePhotoCached(photoId: string): Promise<void> {
         hydrateRecord(photoId, record);
         return;
       }
-      // No local pixels — point both variants at R2 immediately so the
-      // lightbox can paint the small thumbnail while full downloads.
+      // No local pixels — point both variants at R2 so grids get thumbs
+      // and the lightbox can fetch/decode full without waiting on IDB again.
       cacheRemoteUrls(photoId);
     } catch {
       cacheRemoteUrls(photoId);
@@ -137,6 +137,44 @@ export async function warmLocalPhotoObjectUrls(
       cacheRemoteUrls(id);
     }
   }
+}
+
+/** Decode an image URL into the browser cache (no DOM paint). */
+export function preloadDecodedImage(url: string): Promise<void> {
+  if (typeof window === "undefined" || !url) return Promise.resolve();
+  return new Promise((resolve) => {
+    const probe = new window.Image();
+    const done = () => resolve();
+    if (typeof probe.decode === "function") {
+      probe.src = url;
+      void probe.decode().then(done).catch(done);
+      return;
+    }
+    probe.onload = done;
+    probe.onerror = done;
+    probe.src = url;
+  });
+}
+
+/**
+ * Resolve full URLs (local blob or remote) and decode them so lightbox
+ * neighbors open sharp without a soft→sharp upgrade.
+ */
+export async function warmAndPreloadLocalPhotoFulls(
+  photoIds: readonly string[],
+): Promise<void> {
+  const uniqueIds = [...new Set(photoIds.filter(Boolean))];
+  if (uniqueIds.length === 0) return;
+
+  await warmLocalPhotoObjectUrls(uniqueIds);
+  await Promise.all(
+    uniqueIds.map(async (id) => {
+      const url =
+        urls.get(cacheKey(id, "full")) ??
+        (await getOrCreateLocalPhotoObjectUrl(id, "full"));
+      if (url) await preloadDecodedImage(url);
+    }),
+  );
 }
 
 /** Drop cached Object URLs for a photo (call when IndexedDB blob is deleted). */

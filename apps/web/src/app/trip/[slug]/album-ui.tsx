@@ -13,7 +13,7 @@ import { createPortal } from "react-dom";
 
 import { AppWordmark } from "@/components/app-wordmark";
 import { deleteLocalPhotoBlobs } from "@/lib/local-photos/photo-blob-store";
-import { warmLocalPhotoObjectUrls } from "@/lib/local-photos/local-photo-object-url-cache";
+import { warmAndPreloadLocalPhotoFulls } from "@/lib/local-photos/local-photo-object-url-cache";
 import { useLocalPhotoObjectUrl } from "@/lib/local-photos/use-local-photo-urls";
 
 import {
@@ -161,23 +161,21 @@ function LightboxSlideMedia({
   readonly photoId: string;
   readonly alt?: string;
 }) {
-  const thumbSrc = useLocalPhotoObjectUrl(photoId, "thumbnail");
+  // Sharp-first: never paint the soft thumbnail in the lightbox.
+  // Show a neutral shell until the full image is decoded.
   const fullSrc = useLocalPhotoObjectUrl(photoId, "full");
-  const [fullPainted, setFullPainted] = useState(false);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    setFullPainted(false);
+    setReady(false);
     if (!fullSrc) return;
 
-    // Local blob URLs are already on-device — mark ready after decode.
-    // Remote full URLs stay behind the thumb until the browser finishes loading
-    // (otherwise we block first paint on a large download).
     let alive = true;
     const probe = new window.Image();
-    probe.src = fullSrc;
     const mark = () => {
-      if (alive) setFullPainted(true);
+      if (alive) setReady(true);
     };
+    probe.src = fullSrc;
     if (typeof probe.decode === "function") {
       void probe.decode().then(mark).catch(mark);
     } else {
@@ -189,13 +187,15 @@ function LightboxSlideMedia({
     };
   }, [fullSrc, photoId]);
 
-  const preferFull = Boolean(
-    fullSrc && (fullPainted || fullSrc.startsWith("blob:")),
-  );
-  const displaySrc = preferFull
-    ? fullSrc
-    : (thumbSrc ?? fullSrc ?? null);
-  if (!displaySrc) return null;
+  if (!fullSrc || !ready) {
+    return (
+      <div
+        aria-busy="true"
+        aria-label="Carregando foto"
+        className={styles.lightboxImageShell}
+      />
+    );
+  }
 
   return (
     // eslint-disable-next-line @next/next/no-img-element
@@ -204,7 +204,7 @@ function LightboxSlideMedia({
       className={styles.lightboxImage}
       decoding="async"
       draggable={false}
-      src={displaySrc}
+      src={fullSrc}
     />
   );
 }
@@ -215,11 +215,11 @@ function useLightboxNeighborIds(
 ): readonly (string | null)[] {
   return useMemo(() => {
     if (photos.length < 2 || index < 0) {
-      return [null, null, null, null];
+      return [null, null, null, null, null, null];
     }
     const at = (offset: number) =>
       photos[(index + offset + photos.length) % photos.length]?.id ?? null;
-    return [at(-2), at(-1), at(1), at(2)];
+    return [at(-3), at(-2), at(-1), at(1), at(2), at(3)];
   }, [photos, index]);
 }
 
@@ -248,17 +248,21 @@ export function PhotoLightbox({
 }) {
   const index = photos.findIndex((photo) => photo.id === photoId);
   const photo = index >= 0 ? photos[index] : null;
-  const [farPrevId, neighborPrevId, neighborNextId, farNextId] =
-    useLightboxNeighborIds(photos, index);
-  const thumbSrc = useLocalPhotoObjectUrl(photo?.id, "thumbnail");
+  const [
+    farPrev2Id,
+    farPrevId,
+    neighborPrevId,
+    neighborNextId,
+    farNextId,
+    farNext2Id,
+  ] = useLightboxNeighborIds(photos, index);
   const fullSrc = useLocalPhotoObjectUrl(photo?.id, "full");
-  // Thumb first for neighbors (fast paint), then full.
-  useLocalPhotoObjectUrl(neighborPrevId, "thumbnail");
-  useLocalPhotoObjectUrl(neighborNextId, "thumbnail");
   useLocalPhotoObjectUrl(neighborPrevId, "full");
   useLocalPhotoObjectUrl(neighborNextId, "full");
   useLocalPhotoObjectUrl(farPrevId, "full");
   useLocalPhotoObjectUrl(farNextId, "full");
+  useLocalPhotoObjectUrl(farPrev2Id, "full");
+  useLocalPhotoObjectUrl(farNext2Id, "full");
 
   useEffect(() => {
     const ids = [
@@ -267,10 +271,20 @@ export function PhotoLightbox({
       neighborNextId,
       farPrevId,
       farNextId,
+      farPrev2Id,
+      farNext2Id,
     ].filter((id): id is string => Boolean(id));
     if (ids.length === 0) return;
-    void warmLocalPhotoObjectUrls(ids);
-  }, [photo?.id, neighborPrevId, neighborNextId, farPrevId, farNextId]);
+    void warmAndPreloadLocalPhotoFulls(ids);
+  }, [
+    photo?.id,
+    neighborPrevId,
+    neighborNextId,
+    farPrevId,
+    farNextId,
+    farPrev2Id,
+    farNext2Id,
+  ]);
 
   const [removingLocation, setRemovingLocation] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -480,7 +494,7 @@ export function PhotoLightbox({
         ) : null}
 
         <LightboxZoomStage
-          hasImage={Boolean(thumbSrc || fullSrc)}
+          hasImage={Boolean(fullSrc)}
           nextSlide={nextSlide}
           onDismiss={onClose}
           onDismissDrag={setDismissDragY}

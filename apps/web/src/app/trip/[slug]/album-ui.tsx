@@ -13,7 +13,11 @@ import { createPortal } from "react-dom";
 
 import { AppWordmark } from "@/components/app-wordmark";
 import { deleteLocalPhotoBlobs } from "@/lib/local-photos/photo-blob-store";
-import { warmLocalPhotoObjectUrls } from "@/lib/local-photos/local-photo-object-url-cache";
+import {
+  markLocalPhotoFullPreloaded,
+  prioritizeAlbumFullPrefetch,
+  warmLocalPhotoObjectUrls,
+} from "@/lib/local-photos/local-photo-object-url-cache";
 import { useLocalPhotoObjectUrl } from "@/lib/local-photos/use-local-photo-urls";
 
 import {
@@ -158,10 +162,15 @@ function LightboxSlideMedia({
   photoId,
   alt = "",
   priority = false,
+  load = true,
+  onReady,
 }: {
   readonly photoId: string;
   readonly alt?: string;
   readonly priority?: boolean;
+  /** When false, keep the shell and let the prefetch queue warm pixels. */
+  readonly load?: boolean;
+  readonly onReady?: () => void;
 }) {
   // Full quality only — no soft thumbnail. Mount the <img> as soon as the
   // URL is known so the download starts immediately; fade in once loaded.
@@ -173,7 +182,11 @@ function LightboxSlideMedia({
   }, [fullSrc, photoId]);
 
   const isLocalBlob = Boolean(fullSrc?.startsWith("blob:"));
-  const showImage = Boolean(fullSrc) && (isLocalBlob || loaded);
+  const showImage = Boolean(fullSrc) && load && (isLocalBlob || loaded);
+
+  useEffect(() => {
+    if (isLocalBlob && fullSrc && load) onReady?.();
+  }, [isLocalBlob, fullSrc, load, onReady]);
 
   return (
     <>
@@ -184,16 +197,24 @@ function LightboxSlideMedia({
           className={styles.lightboxImageShell}
         />
       ) : null}
-      {fullSrc ? (
+      {fullSrc && load ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           alt={alt}
           className={styles.lightboxImage}
           decoding={priority ? "sync" : "async"}
           draggable={false}
-          fetchPriority={priority ? "high" : "low"}
-          onError={() => setLoaded(true)}
-          onLoad={() => setLoaded(true)}
+          fetchPriority={priority ? "high" : "auto"}
+          onError={() => {
+            setLoaded(true);
+            markLocalPhotoFullPreloaded(photoId);
+            onReady?.();
+          }}
+          onLoad={() => {
+            setLoaded(true);
+            markLocalPhotoFullPreloaded(photoId);
+            onReady?.();
+          }}
           src={fullSrc}
           style={{ opacity: showImage ? 1 : 0 }}
         />
@@ -205,14 +226,14 @@ function LightboxSlideMedia({
 function useLightboxNeighborIds(
   photos: readonly TripPhoto[],
   index: number,
-): readonly [string | null, string | null] {
+): readonly [string | null, string | null, string | null, string | null] {
   return useMemo(() => {
     if (photos.length < 2 || index < 0) {
-      return [null, null];
+      return [null, null, null, null];
     }
     const at = (offset: number) =>
       photos[(index + offset + photos.length) % photos.length]?.id ?? null;
-    return [at(-1), at(1)];
+    return [at(-2), at(-1), at(1), at(2)];
   }, [photos, index]);
 }
 
@@ -241,23 +262,47 @@ export function PhotoLightbox({
 }) {
   const index = photos.findIndex((photo) => photo.id === photoId);
   const photo = index >= 0 ? photos[index] : null;
-  const [neighborPrevId, neighborNextId] = useLightboxNeighborIds(
-    photos,
-    index,
-  );
+  const [farPrevId, neighborPrevId, neighborNextId, farNextId] =
+    useLightboxNeighborIds(photos, index);
   const fullSrc = useLocalPhotoObjectUrl(photo?.id, "full");
-  // Resolve neighbor URLs so the slide track can start downloads, but do not
-  // decode-preload a wide window — that starved the open photo on mobile.
-  useLocalPhotoObjectUrl(neighborPrevId, "full");
-  useLocalPhotoObjectUrl(neighborNextId, "full");
+  const [currentReady, setCurrentReady] = useState(false);
 
   useEffect(() => {
-    const ids = [photo?.id, neighborPrevId, neighborNextId].filter(
-      (id): id is string => Boolean(id),
+    setCurrentReady(false);
+    // Give the open photo a short head start, then let neighbors attach too.
+    const timer = window.setTimeout(() => setCurrentReady(true), 120);
+    return () => window.clearTimeout(timer);
+  }, [photoId]);
+
+  // Resolve URLs for the visible track + one step further.
+  useLocalPhotoObjectUrl(neighborPrevId, "full");
+  useLocalPhotoObjectUrl(neighborNextId, "full");
+  useLocalPhotoObjectUrl(farPrevId, "full");
+  useLocalPhotoObjectUrl(farNextId, "full");
+
+  useEffect(() => {
+    const ids = photos.map((item) => item.id);
+    if (ids.length === 0 || index < 0) return;
+    // Folder-first queue: current, next, prev, then the rest of this album.
+    prioritizeAlbumFullPrefetch(ids, index);
+    void warmLocalPhotoObjectUrls(
+      [
+        photo?.id,
+        neighborPrevId,
+        neighborNextId,
+        farPrevId,
+        farNextId,
+      ].filter((id): id is string => Boolean(id)),
     );
-    if (ids.length === 0) return;
-    void warmLocalPhotoObjectUrls(ids);
-  }, [photo?.id, neighborPrevId, neighborNextId]);
+  }, [
+    photos,
+    index,
+    photo?.id,
+    neighborPrevId,
+    neighborNextId,
+    farPrevId,
+    farNextId,
+  ]);
 
   const [removingLocation, setRemovingLocation] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -309,16 +354,26 @@ export function PhotoLightbox({
   const prevSlide = useMemo(
     () =>
       neighborPrevId ? (
-        <LightboxSlideMedia key={neighborPrevId} photoId={neighborPrevId} />
+        <LightboxSlideMedia
+          key={neighborPrevId}
+          load={currentReady}
+          photoId={neighborPrevId}
+          priority
+        />
       ) : null,
-    [neighborPrevId],
+    [neighborPrevId, currentReady],
   );
   const nextSlide = useMemo(
     () =>
       neighborNextId ? (
-        <LightboxSlideMedia key={neighborNextId} photoId={neighborNextId} />
+        <LightboxSlideMedia
+          key={neighborNextId}
+          load={currentReady}
+          photoId={neighborNextId}
+          priority
+        />
       ) : null,
-    [neighborNextId],
+    [neighborNextId, currentReady],
   );
 
   if (!photo) return null;
@@ -485,6 +540,7 @@ export function PhotoLightbox({
           <LightboxSlideMedia
             alt={`Foto ${index + 1}`}
             key={currentPhoto.id}
+            onReady={() => setCurrentReady(true)}
             photoId={currentPhoto.id}
             priority
           />

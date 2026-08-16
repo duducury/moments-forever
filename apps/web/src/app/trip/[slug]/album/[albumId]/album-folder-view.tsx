@@ -21,6 +21,10 @@ import {
   deleteLocalPhotoBlob,
   deleteLocalPhotoBlobs,
 } from "@/lib/local-photos/photo-blob-store";
+import {
+  clearAlbumFullPrefetch,
+  prioritizeAlbumFullPrefetch,
+} from "@/lib/local-photos/local-photo-object-url-cache";
 import { useLocalPhotoObjectUrl } from "@/lib/local-photos/use-local-photo-urls";
 import { boundsFromGeoPoints } from "@/lib/map/cluster-photos";
 import {
@@ -180,6 +184,26 @@ export function AlbumFolderView({
     () => sortAlbumPhotos(albumPhotos, album?.coverPhotoId ?? null),
     [album?.coverPhotoId, albumPhotos],
   );
+
+  // Prefer this folder on the network: warm fulls in order, and when the
+  // lightbox is open jump the queue to current → next → previous.
+  useEffect(() => {
+    const ids = carouselPhotos.map((photo) => photo.id);
+    if (ids.length === 0) return;
+    const focusIndex = lightboxId
+      ? ids.findIndex((id) => id === lightboxId)
+      : -1;
+    prioritizeAlbumFullPrefetch(
+      ids,
+      focusIndex >= 0 ? focusIndex : null,
+    );
+  }, [carouselPhotos, lightboxId]);
+
+  useEffect(() => {
+    return () => {
+      clearAlbumFullPrefetch();
+    };
+  }, []);
 
   const period = useMemo(
     () => formatPhotoPeriod(albumPhotos),

@@ -604,24 +604,87 @@
   }
 }
 
-/* Soft tone band — breaks the page without a heavy card box. */
+/*
+ * Minha jornada — full-bleed cream environment with a soft wave
+ * transition out of the dark page. Scoped styles only; other sections untouched.
+ */
 .journeySection {
-  display: grid;
-  gap: 14px;
-  margin-inline: -4px;
-  padding: 20px 14px 18px;
-  border-radius: 22px;
-  background: color-mix(
-    in srgb,
-    var(--surface-secondary) 38%,
-    var(--background)
-  );
+  --journey-paper: #f5f1ea;
+  --journey-card: #fbf8f3;
+  --journey-ink: #1a1612;
+  --journey-muted: #5c554c;
+  --journey-line: rgb(26 22 18 / 9%);
+  --journey-shadow: rgb(42 32 22 / 7%);
+  --journey-accent: #8b3f28;
+
+  position: relative;
+  left: 50%;
+  width: 100vw;
+  max-width: 100vw;
+  margin-top: -6px;
+  margin-bottom: -6px;
+  margin-left: -50vw;
+  margin-right: -50vw;
+  overflow: hidden;
+  background: var(--journey-paper);
+  color: var(--journey-ink);
+  isolation: isolate;
 }
 
-.journeySection .journeyCard {
-  border-color: color-mix(in srgb, var(--border) 72%, transparent);
-  background: color-mix(in srgb, var(--surface) 82%, transparent);
-  box-shadow: none;
+.journeyWaveTop,
+.journeyWaveBottom {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: clamp(28px, 5.5vw, 44px);
+  line-height: 0;
+  pointer-events: none;
+}
+
+.journeyWaveTop {
+  margin-top: -1px;
+  color: var(--background);
+}
+
+.journeyWaveBottom {
+  margin-bottom: -1px;
+  color: var(--background);
+}
+
+.journeyWaveSvg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.journeyWaveSvg path {
+  fill: currentColor;
+}
+
+.journeyBody {
+  position: relative;
+  z-index: 0;
+  display: grid;
+  gap: 14px;
+  width: min(100% - 8px, 920px);
+  margin-inline: auto;
+  padding: 6px 16px 22px;
+  box-sizing: border-box;
+}
+
+.journeyTitleHeading {
+  margin: 0;
+  scroll-margin-top: 18px;
+  color: var(--journey-ink);
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.journeyEmpty {
+  margin: 0;
+  color: var(--journey-muted);
+  line-height: 1.45;
 }
 
 .yearBlock {
@@ -631,14 +694,14 @@
 
 .year {
   margin: 0;
-  color: var(--accent);
+  color: var(--journey-accent);
   font-family: Georgia, "Times New Roman", serif;
   font-size: 1.4rem;
 }
 
 .yearRecap {
   margin: -4px 0 0;
-  color: var(--muted);
+  color: var(--journey-muted);
   font-size: 0.82rem;
   font-weight: 600;
 }
@@ -663,10 +726,11 @@
   gap: 12px;
   align-items: center;
   padding: 8px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--journey-line);
   border-radius: 16px;
-  background: var(--surface);
-  box-shadow: 0 8px 20px var(--shadow);
+  background: var(--journey-card);
+  color: var(--journey-ink);
+  box-shadow: 0 3px 12px var(--journey-shadow);
 }
 
 .journeyMedia {
@@ -683,7 +747,7 @@
   width: 72px;
   height: 72px;
   border-radius: 12px;
-  background: var(--surface-secondary);
+  background: color-mix(in srgb, var(--journey-paper) 70%, #ddd4c6);
 }
 
 .journeyCoverImg {
@@ -697,6 +761,7 @@
   align-items: center;
   gap: 8px;
   margin: 0;
+  color: var(--journey-ink);
   font-weight: 700;
   line-height: 1.25;
 }
@@ -708,8 +773,20 @@
 
 .journeyMeta {
   margin: 4px 0 0;
-  color: var(--muted);
+  color: var(--journey-muted);
   font-size: 0.86rem;
+}
+
+@media (min-width: 720px) {
+  .journeyBody {
+    padding-inline: 20px;
+    padding-bottom: 28px;
+  }
+
+  .journeyWaveTop,
+  .journeyWaveBottom {
+    height: 40px;
+  }
 }
 
 .scoreboard {

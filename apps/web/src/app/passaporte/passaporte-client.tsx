@@ -520,58 +520,81 @@ export function PassaporteClient({
         className={styles.journeySection}
         data-reveal
       >
-        <h2 className={styles.sectionTitle} id="journey-title">
-          Minha jornada
-        </h2>
-        {journeyByYear.length === 0 ? (
-          <p className={styles.empty}>Suas viagens aparecem aqui.</p>
-        ) : (
-          <div className={styles.journeyScroll}>
-            {journeyByYear.map((group) => (
-              <div className={styles.yearBlock} key={group.year}>
-                <h3 className={styles.year}>{group.year}</h3>
-                <p className={styles.yearRecap}>
-                  {group.items.length} viagem{group.items.length === 1 ? "" : "ns"}
-                  {group.countries > 0
-                    ? ` · ${group.countries} país${group.countries === 1 ? "" : "es"}`
-                    : ""}{" "}
-                  · {group.photos} foto{group.photos === 1 ? "" : "s"}
-                </p>
-                <ul className={styles.journeyList}>
-                  {group.items.map((item) => (
-                    <li key={item.albumId}>
-                      <Link className={styles.journeyCard} href={item.href}>
-                        <span className={styles.journeyMedia}>
-                          <ExperienceCoverThumb
-                            className={styles.journeyCover}
-                            coverPhotoId={item.coverPhotoId}
-                            fallbackClassName={styles.journeyCoverFallback}
-                            imageClassName={styles.journeyCoverImg}
-                            title={item.title}
-                            variant="thumbnail"
-                          />
-                        </span>
-                        <div className={styles.journeyCopy}>
-                          <p className={styles.journeyTitle}>
-                            {item.countryCode ? (
-                              <CountryFlag code={item.countryCode} size={18} />
-                            ) : null}
-                            {item.title}
-                          </p>
-                          <p className={styles.journeyMeta}>
-                            {formatRange(item.startsAt, item.endsAt)} ·{" "}
-                            {item.photoCount} foto
-                            {item.photoCount === 1 ? "" : "s"}
-                          </p>
-                        </div>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-        )}
+        <div aria-hidden="true" className={styles.journeyWaveTop}>
+          <svg
+            className={styles.journeyWaveSvg}
+            preserveAspectRatio="none"
+            viewBox="0 0 1440 56"
+          >
+            <path d="M0 0h1440v24c-120 14-240 28-400 28-200 0-280-26-480-26S280 48 160 40C80 34 40 24 0 18V0Z" />
+          </svg>
+        </div>
+
+        <div className={styles.journeyBody}>
+          <h2 className={styles.journeyTitleHeading} id="journey-title">
+            Minha jornada
+          </h2>
+          {journeyByYear.length === 0 ? (
+            <p className={styles.journeyEmpty}>Suas viagens aparecem aqui.</p>
+          ) : (
+            <div className={styles.journeyScroll}>
+              {journeyByYear.map((group) => (
+                <div className={styles.yearBlock} key={group.year}>
+                  <h3 className={styles.year}>{group.year}</h3>
+                  <p className={styles.yearRecap}>
+                    {group.items.length} viagem
+                    {group.items.length === 1 ? "" : "ns"}
+                    {group.countries > 0
+                      ? ` · ${group.countries} país${group.countries === 1 ? "" : "es"}`
+                      : ""}{" "}
+                    · {group.photos} foto{group.photos === 1 ? "" : "s"}
+                  </p>
+                  <ul className={styles.journeyList}>
+                    {group.items.map((item) => (
+                      <li key={item.albumId}>
+                        <Link className={styles.journeyCard} href={item.href}>
+                          <span className={styles.journeyMedia}>
+                            <ExperienceCoverThumb
+                              className={styles.journeyCover}
+                              coverPhotoId={item.coverPhotoId}
+                              fallbackClassName={styles.journeyCoverFallback}
+                              imageClassName={styles.journeyCoverImg}
+                              title={item.title}
+                              variant="thumbnail"
+                            />
+                          </span>
+                          <div className={styles.journeyCopy}>
+                            <p className={styles.journeyTitle}>
+                              {item.countryCode ? (
+                                <CountryFlag code={item.countryCode} size={18} />
+                              ) : null}
+                              {item.title}
+                            </p>
+                            <p className={styles.journeyMeta}>
+                              {formatRange(item.startsAt, item.endsAt)} ·{" "}
+                              {item.photoCount} foto
+                              {item.photoCount === 1 ? "" : "s"}
+                            </p>
+                          </div>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div aria-hidden="true" className={styles.journeyWaveBottom}>
+          <svg
+            className={styles.journeyWaveSvg}
+            preserveAspectRatio="none"
+            viewBox="0 0 1440 56"
+          >
+            <path d="M0 32c120-12 240-26 400-26 200 0 280 26 480 26s280-32 400-26c80 4 120 14 160 20v30H0V32Z" />
+          </svg>
+        </div>
       </section>
 
       <section aria-labelledby="ach-title" className={styles.section} data-reveal>

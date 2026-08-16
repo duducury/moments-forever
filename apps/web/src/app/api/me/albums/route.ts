@@ -32,6 +32,8 @@ export async function GET() {
       experienceSlug: place.experienceSlug,
       experienceTitle: place.experienceTitle,
       title: place.title,
+      coverPhotoId: place.coverPhotoId,
+      countryCode: place.countryCode,
       photoCount: place.photoCount,
     })),
   });

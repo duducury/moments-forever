@@ -10,13 +10,16 @@ import { uploadManyPhotoBlobsToR2 } from "@/lib/storage/upload-photo-to-r2";
 export async function createTripAlbum(
   experienceId: string,
   name: string,
+  description?: string,
 ): Promise<string> {
+  const story = description?.trim() ?? "";
   const response = await fetch(`/api/experiences/${experienceId}/albums`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
       name,
       parent_album_id: null,
+      description: story.length > 0 ? story : null,
     }),
   });
   const payload = (await response.json()) as {

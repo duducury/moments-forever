@@ -390,6 +390,42 @@ export function TripBreadcrumb({
   );
 }
 
+function useLockPageScroll() {
+  useEffect(() => {
+    const html = document.documentElement;
+    const body = document.body;
+    const scrollY = window.scrollY;
+    const previous = {
+      htmlOverflow: html.style.overflow,
+      htmlOverscroll: html.style.overscrollBehavior,
+      bodyOverflow: body.style.overflow,
+      bodyOverscroll: body.style.overscrollBehavior,
+      bodyPosition: body.style.position,
+      bodyTop: body.style.top,
+      bodyWidth: body.style.width,
+    };
+
+    html.style.overflow = "hidden";
+    html.style.overscrollBehavior = "none";
+    body.style.overflow = "hidden";
+    body.style.overscrollBehavior = "none";
+    body.style.position = "fixed";
+    body.style.top = `-${scrollY}px`;
+    body.style.width = "100%";
+
+    return () => {
+      html.style.overflow = previous.htmlOverflow;
+      html.style.overscrollBehavior = previous.htmlOverscroll;
+      body.style.overflow = previous.bodyOverflow;
+      body.style.overscrollBehavior = previous.bodyOverscroll;
+      body.style.position = previous.bodyPosition;
+      body.style.top = previous.bodyTop;
+      body.style.width = previous.bodyWidth;
+      window.scrollTo(0, scrollY);
+    };
+  }, []);
+}
+
 export function NameDialog({
   title,
   initialName,
@@ -407,6 +443,8 @@ export function NameDialog({
   readonly onClose: () => void;
   readonly onSubmit: (name: string) => Promise<void>;
 }) {
+  useLockPageScroll();
+
   return (
     <div
       aria-label={title}
@@ -471,6 +509,8 @@ export function StoryDialog({
   readonly onClose: () => void;
   readonly onSubmit: (story: string) => Promise<void>;
 }) {
+  useLockPageScroll();
+
   return (
     <div
       aria-label={title}
@@ -481,7 +521,7 @@ export function StoryDialog({
       }}
       role="dialog"
     >
-      <div className={styles.panelCard}>
+      <div className={`${styles.panelCard} ${styles.storyPanelCard}`}>
         <h2>{title}</h2>
         <form
           onSubmit={(event: FormEvent<HTMLFormElement>) => {
@@ -493,7 +533,7 @@ export function StoryDialog({
           <label htmlFor="album-story">Sobre essa viagem</label>
           <textarea
             autoFocus
-            className={styles.textarea}
+            className={`${styles.textarea} ${styles.storyTextarea}`}
             defaultValue={initialStory}
             id="album-story"
             maxLength={4000}

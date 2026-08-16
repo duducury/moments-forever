@@ -61,19 +61,64 @@
   font-size: clamp(1.6rem, 6vw, 2.2rem);
 }
 
+.destinationNew {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+}
+
+.destinationNew .destinationLabel {
+  margin: 0;
+}
+
+.destinationNew label {
+  margin-top: 4px;
+  font-size: 0.82rem;
+  font-weight: 650;
+}
+
+.destinationNew input,
+.destinationNew textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  color: inherit;
+  background: color-mix(in srgb, var(--surface) 88%, #fff);
+  font: inherit;
+}
+
+.destinationNew input {
+  min-height: 44px;
+}
+
+.destinationNew textarea {
+  min-height: 110px;
+  resize: vertical;
+}
+
+.destinationCreate {
+  width: 100%;
+  margin-top: 8px;
+}
+
 .destinationList {
   display: grid;
   gap: 8px;
-  margin: 8px 0 0;
+  margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .destinationAlbum {
-  display: grid;
-  gap: 4px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
   width: 100%;
-  padding: 14px 16px;
+  padding: 8px 12px 8px 8px;
   border: 1px solid var(--border);
   border-radius: 16px;
   background: var(--surface);
@@ -83,11 +128,55 @@
   font: inherit;
 }
 
-.destinationAlbum strong {
-  font-size: 1rem;
+.destinationCover,
+.destinationCoverFallback {
+  flex: 0 0 auto;
+  width: 72px;
+  height: 72px;
+  overflow: hidden;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface) 70%, #1a1a1a);
 }
 
-.destinationAlbum span {
+.destinationCoverImage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.destinationCoverFallback {
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.destinationAlbumCopy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.destinationAlbum strong {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: 1rem;
+  overflow-wrap: anywhere;
+}
+
+.destinationFlag {
+  flex: 0 0 auto;
+  width: 20px;
+  height: auto;
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 12%);
+}
+
+.destinationAlbumCopy > span {
   color: var(--muted);
   font-size: 0.84rem;
 }
@@ -97,32 +186,13 @@
   cursor: wait;
 }
 
-.destinationNew {
-  display: grid;
-  gap: 8px;
-  padding: 14px 16px;
-  border: 1px dashed var(--border);
-  border-radius: 16px;
-}
-
 .destinationLabel {
-  margin: 0;
+  margin: 12px 0 0;
   font-size: 0.78rem;
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--accent);
-}
-
-.destinationNew select,
-.destinationNew input {
-  min-height: 44px;
-  padding: 0 12px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--surface);
-  color: inherit;
-  font: inherit;
 }
 
 .fileButton {

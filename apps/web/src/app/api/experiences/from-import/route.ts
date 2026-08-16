@@ -109,13 +109,23 @@ export async function POST(request: Request) {
       seedCache,
     });
 
+    const albumStory =
+      typeof (body as { albumStory?: unknown }).albumStory === "string"
+        ? (body as { albumStory: string }).albumStory
+        : "";
+
     const result = await createExperienceFromImport(enrichedDraft, supabase);
 
     const mode = organization?.mode ?? "separate";
     if (mode === "nested" && organization) {
       await applyNestedImportOrganization(supabase, result.id, organization);
     } else if (mode === "single" && organization?.rootName) {
-      await renameSingleRootAlbum(supabase, result.id, organization.rootName);
+      await renameSingleRootAlbum(
+        supabase,
+        result.id,
+        organization.rootName,
+        albumStory,
+      );
     }
 
     return NextResponse.json(result);

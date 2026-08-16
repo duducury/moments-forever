@@ -3,10 +3,12 @@
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
+import { ExperienceCoverThumb } from "@/components/experience-cover-thumb";
 import {
   createTripAlbum,
   uploadFilesToAlbum,
 } from "@/lib/photos/upload-files-to-album";
+import { countryCodeFromPlaceLabel } from "@moments-forever/shared";
 
 import type { TripAlbum } from "./album-types";
 import styles from "./trip.module.css";
@@ -43,15 +45,12 @@ export function AddPhotosPanel({
         ),
     [albums],
   );
-  const initialAlbumId =
-    defaultAlbumId && sortedAlbums.some((album) => album.id === defaultAlbumId)
-      ? defaultAlbumId
-      : (sortedAlbums.find((album) => album.parentAlbumId === null)?.id ??
-        sortedAlbums[0]?.id ??
-        NEW_ALBUM_VALUE);
 
-  const [albumId, setAlbumId] = useState(initialAlbumId);
+  const [albumId, setAlbumId] = useState(
+    lockToAlbum && defaultAlbumId ? defaultAlbumId : NEW_ALBUM_VALUE,
+  );
   const [newAlbumName, setNewAlbumName] = useState("");
+  const [newAlbumStory, setNewAlbumStory] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<string | null>(null);
@@ -76,9 +75,19 @@ export function AddPhotosPanel({
       const files = Array.from(fileList);
       let targetAlbumId = lockedAlbum?.id ?? (creatingNew ? "" : albumId);
       if (!targetAlbumId) {
-        const name = newAlbumName.trim() || "Novo álbum";
+        const name = newAlbumName.trim();
+        if (!name) {
+          setError("Escolha um nome para o álbum.");
+          setBusy(false);
+          setProgress(null);
+          return;
+        }
         setProgress("Criando álbum…");
-        targetAlbumId = await createTripAlbum(experienceId, name);
+        targetAlbumId = await createTripAlbum(
+          experienceId,
+          name,
+          newAlbumStory,
+        );
         setAlbumId(targetAlbumId);
       }
 
@@ -121,36 +130,77 @@ export function AddPhotosPanel({
         <p className={styles.sectionHint}>
           {lockedAlbum
             ? `As fotos entram em ${lockedAlbum.displayName}.`
-            : "Escolha várias fotos e coloque neste álbum ou crie um novo nesta viagem."}
+            : "Crie um álbum novo ou escolha um que já existe."}
         </p>
 
-        {lockedAlbum ? null : sortedAlbums.length > 0 ? (
-          <>
-            <label htmlFor="add-photos-album">Álbum de destino</label>
-            <select
+        {lockedAlbum ? null : (
+          <div className={styles.addPhotosPicker} role="listbox">
+            <button
+              aria-selected={creatingNew}
+              className={styles.addPhotosPick}
+              data-selected={creatingNew ? "true" : "false"}
               disabled={busy}
-              id="add-photos-album"
-              onChange={(event) => setAlbumId(event.target.value)}
-              value={albumId}
+              onClick={() => setAlbumId(NEW_ALBUM_VALUE)}
+              role="option"
+              type="button"
             >
-              {sortedAlbums.map((album) => (
-                <option key={album.id} value={album.id}>
-                  {album.displayName}
-                  {album.parentAlbumId ? " (subálbum)" : ""}
-                </option>
-              ))}
-              <option value={NEW_ALBUM_VALUE}>Criar novo álbum…</option>
-            </select>
-          </>
-        ) : (
-          <p className={styles.sectionHint}>
-            Ainda não há álbum nesta viagem. Dê um nome e as fotos entram nele.
-          </p>
+              <span className={styles.addPhotosPickNew} aria-hidden>
+                +
+              </span>
+              <span className={styles.addPhotosPickCopy}>
+                <strong>Criar novo álbum de viagem</strong>
+              </span>
+            </button>
+
+            {sortedAlbums.map((album) => {
+              const countryCode =
+                countryCodeFromPlaceLabel(album.displayName) ??
+                countryCodeFromPlaceLabel(album.placeName ?? "");
+              const selected = albumId === album.id;
+              return (
+                <button
+                  aria-selected={selected}
+                  className={styles.addPhotosPick}
+                  data-selected={selected ? "true" : "false"}
+                  disabled={busy}
+                  key={album.id}
+                  onClick={() => setAlbumId(album.id)}
+                  role="option"
+                  type="button"
+                >
+                  <ExperienceCoverThumb
+                    className={styles.addPhotosPickCover}
+                    coverPhotoId={album.coverPhotoId}
+                    fallbackClassName={styles.addPhotosPickCoverFallback}
+                    imageClassName={styles.addPhotosPickCoverImage}
+                    title={album.displayName}
+                    variant="thumbnail"
+                  />
+                  <span className={styles.addPhotosPickCopy}>
+                    <strong>
+                      {countryCode ? (
+                        // eslint-disable-next-line @next/next/no-img-element -- small flag CDN asset
+                        <img
+                          alt=""
+                          className={styles.addPhotosPickFlag}
+                          decoding="async"
+                          height={15}
+                          src={`https://flagcdn.com/w40/${countryCode.toLowerCase()}.png`}
+                          width={20}
+                        />
+                      ) : null}
+                      {album.displayName}
+                    </strong>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         )}
 
         {creatingNew ? (
           <>
-            <label htmlFor="add-photos-new-name">Nome do novo álbum</label>
+            <label htmlFor="add-photos-new-name">Nome do álbum</label>
             <input
               disabled={busy}
               id="add-photos-new-name"
@@ -158,14 +208,29 @@ export function AddPhotosPanel({
               placeholder="Jamaica, Paris…"
               value={newAlbumName}
             />
+            <label htmlFor="add-photos-new-story">Sobre essa viagem</label>
+            <textarea
+              className={styles.textarea}
+              disabled={busy}
+              id="add-photos-new-story"
+              maxLength={4000}
+              onChange={(event) => setNewAlbumStory(event.target.value)}
+              placeholder="O que essa viagem significou para você?"
+              rows={5}
+              value={newAlbumStory}
+            />
           </>
         ) : null}
 
         <label className={styles.addPhotosFileLabel} htmlFor="add-photos-files">
-          {busy ? "Adicionando…" : "Escolher fotos"}
+          {busy
+            ? "Adicionando…"
+            : creatingNew && !newAlbumName.trim()
+              ? "Dê um nome ao álbum"
+              : "Escolher fotos"}
           <input
             accept="image/*"
-            disabled={busy}
+            disabled={busy || (creatingNew && !newAlbumName.trim())}
             id="add-photos-files"
             multiple
             onChange={(event) => {

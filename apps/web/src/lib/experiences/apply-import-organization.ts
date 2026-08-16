@@ -96,9 +96,11 @@ export async function renameSingleRootAlbum(
   supabase: SupabaseClient,
   experienceId: string,
   rootName: string,
+  description?: string,
 ): Promise<void> {
   const name = rootName.trim();
-  if (!name) return;
+  const story = description?.trim() ?? "";
+  if (!name && !story) return;
 
   const roots = await supabase
     .from("albums")
@@ -111,11 +113,17 @@ export async function renameSingleRootAlbum(
   const albumId = roots.data?.[0]?.id as string | undefined;
   if (!albumId) return;
 
+  const patch: { name?: string; description?: string | null } = {};
+  if (name) patch.name = name;
+  if (story) patch.description = story;
+
   await supabase
     .from("albums")
-    .update({ name })
+    .update(patch)
     .eq("id", albumId)
     .eq("experience_id", experienceId);
+
+  if (!name) return;
 
   // Keep linked place name in sync when the moment still points at a place.
   const album = await supabase

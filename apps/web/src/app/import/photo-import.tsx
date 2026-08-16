@@ -448,6 +448,8 @@ export function PhotoImport() {
   const [errors, setErrors] = useState<readonly string[]>([]);
   const [persistError, setPersistError] = useState<string | null>(null);
   const [createdSlug, setCreatedSlug] = useState<string | null>(null);
+  const [newAlbumName, setNewAlbumName] = useState("");
+  const [newAlbumStory, setNewAlbumStory] = useState("");
   const [thumbnailUrls, setThumbnailUrls] = useState<
     ReadonlyMap<string, string>
   >(new Map());
@@ -550,6 +552,8 @@ export function PhotoImport() {
   function reset(): void {
     clearSession();
     setChoiceFiles(null);
+    setNewAlbumName("");
+    setNewAlbumStory("");
     setScreen("start");
   }
 
@@ -595,16 +599,18 @@ export function PhotoImport() {
     setScreen("creating");
 
     try {
-      const title = experienceTitlePreview;
+      const title = newAlbumName.trim() || experienceTitlePreview;
       const slug = suggestExperienceSlug(title);
-      // One place folder per GPS cluster. GPS on photos is never altered.
-      const rootName = suggestImportRootName(
-        groups,
-        selection.selectedIds,
-        title,
-      );
+      const useNamedAlbum = newAlbumName.trim().length > 0;
+      const rootName = useNamedAlbum
+        ? newAlbumName.trim()
+        : suggestImportRootName(
+            groups,
+            selection.selectedIds,
+            title,
+          );
       const draftGroups = groupsForOrganizationMode(
-        "separate",
+        useNamedAlbum ? "single" : "separate",
         groups,
         selection.selectedIds,
         rootName,
@@ -617,6 +623,7 @@ export function PhotoImport() {
         photos,
         groups: draftGroups,
         selectedIds: selection.selectedIds,
+        description: newAlbumStory.trim() || null,
       });
 
       if (draft.photos.length === 0 || draft.moments.length === 0) {
@@ -635,7 +642,17 @@ export function PhotoImport() {
       const response = await fetch("/api/experiences/from-import", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ draft }),
+        body: JSON.stringify({
+          draft,
+          albumStory: newAlbumStory.trim(),
+          organization: useNamedAlbum
+            ? {
+                mode: "single",
+                rootName,
+                children: [],
+              }
+            : undefined,
+        }),
       });
       const body = (await response.json()) as {
         readonly id?: string;
@@ -822,8 +839,13 @@ export function PhotoImport() {
     setScreen("destination");
   }
 
-  function startNewTripFromChoice(): void {
+  function startNewTripFromChoice(details?: {
+    readonly name: string;
+    readonly story: string;
+  }): void {
     if (!choiceFiles || choiceFiles.length === 0) return;
+    setNewAlbumName(details?.name.trim() ?? "");
+    setNewAlbumStory(details?.story.trim() ?? "");
     beginAnalysis(choiceFiles);
   }
 

@@ -642,8 +642,12 @@ export function AlbumFolderView({
           <section
             aria-label="Sobre essa viagem"
             className={styles.albumAboutCard}
+            data-has-story={story ? "true" : "false"}
             data-reveal
           >
+            <span aria-hidden="true" className={styles.albumAboutMark}>
+              “
+            </span>
             <div className={styles.albumAboutCopy}>
               <p className={styles.albumAboutTitle}>Sobre essa viagem</p>
               {story ? (

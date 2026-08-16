@@ -11,6 +11,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 
+import { AppWordmark } from "@/components/app-wordmark";
 import { deleteLocalPhotoBlobs } from "@/lib/local-photos/photo-blob-store";
 import { useLocalPhotoObjectUrl } from "@/lib/local-photos/use-local-photo-urls";
 
@@ -193,10 +194,24 @@ export function PhotoLightbox({
   const [removingLocation, setRemovingLocation] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [dismissDragY, setDismissDragY] = useState(0);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     setDismissDragY(0);
+    setMenuOpen(false);
   }, [photoId]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    function onPointerDown(event: PointerEvent) {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (target.closest(`.${styles.lightboxMenu}`)) return;
+      setMenuOpen(false);
+    }
+    window.addEventListener("pointerdown", onPointerDown);
+    return () => window.removeEventListener("pointerdown", onPointerDown);
+  }, [menuOpen]);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -238,19 +253,23 @@ export function PhotoLightbox({
   const placeLabel = currentPhoto.locationLabel?.trim() || null;
   const tripLabel = experienceTitle?.trim() || null;
   const folderLabel = albumLabel?.trim() || null;
-  const secondaryParts = [capturedLabel, tripLabel, folderLabel].filter(
-    (part): part is string => Boolean(part),
-  );
-  const hasGps =
-    currentPhoto.exactLatitude !== null &&
-    currentPhoto.exactLongitude !== null &&
-    Number.isFinite(currentPhoto.exactLatitude) &&
-    Number.isFinite(currentPhoto.exactLongitude);
+  // Prefer the trip/place name so the bottom never looks empty.
+  const locationHeadline =
+    placeLabel || folderLabel || tripLabel || "Momento";
+  const secondaryParts = [
+    capturedLabel,
+    placeLabel && folderLabel && placeLabel !== folderLabel ? folderLabel : null,
+    tripLabel && tripLabel !== locationHeadline ? tripLabel : null,
+    hasGpsHint(currentPhoto) ? "com localização" : null,
+  ].filter((part): part is string => Boolean(part));
   const showRemoveLocation =
-    canRemoveLocation && Boolean(onRemoveLocation) && hasGps;
+    canRemoveLocation && Boolean(onRemoveLocation) && hasGpsHint(currentPhoto);
+  const showOwnerMenu =
+    showRemoveLocation || (canDelete && Boolean(onDelete));
 
   async function handleRemoveLocation() {
     if (!onRemoveLocation || removingLocation || deleting) return;
+    setMenuOpen(false);
     setRemovingLocation(true);
     try {
       await onRemoveLocation(currentPhoto.id);
@@ -261,6 +280,7 @@ export function PhotoLightbox({
 
   async function handleDelete() {
     if (!onDelete || deleting) return;
+    setMenuOpen(false);
     if (
       !window.confirm(
         "Excluir esta foto? Esta ação não pode ser desfeita.",
@@ -292,15 +312,63 @@ export function PhotoLightbox({
         background: `rgb(8 8 8 / ${0.96 * lightboxOpacity})`,
       }}
     >
-      <button
-        aria-label="Fechar visualização"
-        className={styles.lightboxClose}
-        onClick={onClose}
+      <header
+        className={styles.lightboxTop}
         style={{ opacity: Math.max(0.2, 1 - dismissProgress) }}
-        type="button"
       >
-        ✕
-      </button>
+        <AppWordmark className={styles.lightboxBrand} />
+        <div className={styles.lightboxTopActions}>
+          {showOwnerMenu ? (
+            <div className={styles.lightboxMenu}>
+              <button
+                aria-expanded={menuOpen}
+                aria-haspopup="menu"
+                aria-label="Mais opções"
+                className={styles.lightboxMenuButton}
+                onClick={() => setMenuOpen((value) => !value)}
+                type="button"
+              >
+                ⋯
+              </button>
+              {menuOpen ? (
+                <div className={styles.lightboxMenuPanel} role="menu">
+                  {showRemoveLocation ? (
+                    <button
+                      disabled={removingLocation || deleting}
+                      onClick={() => void handleRemoveLocation()}
+                      role="menuitem"
+                      type="button"
+                    >
+                      {removingLocation
+                        ? "Removendo…"
+                        : "Remover localização"}
+                    </button>
+                  ) : null}
+                  {canDelete && onDelete ? (
+                    <button
+                      data-danger="true"
+                      disabled={deleting || removingLocation}
+                      onClick={() => void handleDelete()}
+                      role="menuitem"
+                      type="button"
+                    >
+                      {deleting ? "Excluindo…" : "Excluir foto"}
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+          <button
+            aria-label="Fechar visualização"
+            className={styles.lightboxClose}
+            onClick={onClose}
+            type="button"
+          >
+            ✕
+          </button>
+        </div>
+      </header>
 
       <div className={styles.lightboxStageWrap}>
         {photos.length > 1 ? (
@@ -376,43 +444,26 @@ export function PhotoLightbox({
             if (next) onSelect(next.id);
           }}
         />
-        {placeLabel ? (
-          <p className={styles.lightboxMetaLine}>{placeLabel}</p>
-        ) : null}
+        <p className={styles.lightboxMetaLine}>{locationHeadline}</p>
         {secondaryParts.length > 0 ? (
           <p className={styles.lightboxMetaSecondary}>
             {secondaryParts.join(" · ")}
           </p>
-        ) : null}
-        {showRemoveLocation || (canDelete && onDelete) ? (
-          <div className={styles.lightboxActions}>
-            {showRemoveLocation ? (
-              <button
-                className={styles.lightboxPrivacyButton}
-                disabled={removingLocation || deleting}
-                onClick={() => void handleRemoveLocation()}
-                type="button"
-              >
-                {removingLocation ? "Removendo…" : "Remover localização"}
-              </button>
-            ) : null}
-            {canDelete && onDelete ? (
-              <button
-                className={styles.lightboxDeleteButton}
-                disabled={deleting || removingLocation}
-                onClick={() => void handleDelete()}
-                type="button"
-              >
-                {deleting ? "Excluindo…" : "Excluir foto"}
-              </button>
-            ) : null}
-          </div>
         ) : null}
       </div>
     </div>
   );
 
   return createPortal(dialog, document.body);
+}
+
+function hasGpsHint(photo: TripPhoto): boolean {
+  return (
+    photo.exactLatitude !== null &&
+    photo.exactLongitude !== null &&
+    Number.isFinite(photo.exactLatitude) &&
+    Number.isFinite(photo.exactLongitude)
+  );
 }
 
 export function TripBreadcrumb({

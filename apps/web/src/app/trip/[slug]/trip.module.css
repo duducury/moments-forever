@@ -624,9 +624,9 @@
 }
 
 .lightboxClose {
-  position: absolute;
-  top: max(10px, env(safe-area-inset-top));
-  right: max(10px, env(safe-area-inset-right));
+  position: relative;
+  top: auto;
+  right: auto;
   z-index: 4;
   display: grid;
   place-items: center;
@@ -645,6 +645,122 @@
 
 .lightboxClose:hover {
   background: rgb(0 0 0 / 58%);
+}
+
+.lightboxTop {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding:
+    max(8px, env(safe-area-inset-top))
+    max(10px, env(safe-area-inset-right))
+    12px
+    max(10px, env(safe-area-inset-left));
+  background: linear-gradient(
+    180deg,
+    rgb(0 0 0 / 72%) 0%,
+    rgb(0 0 0 / 28%) 62%,
+    transparent 100%
+  );
+  pointer-events: none;
+}
+
+.lightboxTop > * {
+  pointer-events: auto;
+}
+
+.lightboxBrand {
+  width: 132px;
+  height: 48px;
+  flex: 0 0 auto;
+  overflow: hidden;
+  background-image: url("/brand/navlogo.png");
+  background-position: -29px -38px;
+  background-repeat: no-repeat;
+  background-size: 192px 128px;
+  text-indent: -9999px;
+  white-space: nowrap;
+}
+
+.lightboxTopActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lightboxMenu {
+  position: relative;
+}
+
+.lightboxMenuButton {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 999px;
+  padding: 0;
+  color: #f5f2ec;
+  background: rgb(0 0 0 / 42%);
+  cursor: pointer;
+  font-size: 1.35rem;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  backdrop-filter: blur(8px);
+}
+
+.lightboxMenuButton:hover {
+  background: rgb(0 0 0 / 58%);
+}
+
+.lightboxMenuPanel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 5;
+  display: grid;
+  min-width: 198px;
+  padding: 6px;
+  border: 1px solid rgb(245 242 236 / 14%);
+  border-radius: 14px;
+  background: rgb(18 18 18 / 94%);
+  box-shadow: 0 14px 32px rgb(0 0 0 / 45%);
+  backdrop-filter: blur(12px);
+}
+
+.lightboxMenuPanel button {
+  display: block;
+  width: 100%;
+  min-height: 42px;
+  border: 0;
+  border-radius: 10px;
+  padding: 0 12px;
+  color: #f5f2ec;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: left;
+}
+
+.lightboxMenuPanel button:hover {
+  background: rgb(255 255 255 / 8%);
+}
+
+.lightboxMenuPanel button:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.lightboxMenuPanel button[data-danger="true"] {
+  color: #ffd0d0;
 }
 
 .lightboxArrow {

@@ -605,8 +605,8 @@
 }
 
 /*
- * Minha jornada — full-bleed cream environment with a soft wave
- * transition out of the dark page. Scoped styles only; other sections untouched.
+ * Minha jornada — full-bleed cream environment with a soft fade
+ * from the dark page. Scoped styles only; other sections untouched.
  */
 .journeySection {
   --journey-paper: #f5f1ea;
@@ -621,8 +621,8 @@
   left: 50%;
   width: 100vw;
   max-width: 100vw;
-  margin-top: -6px;
-  margin-bottom: -6px;
+  margin-top: -10px;
+  margin-bottom: -10px;
   margin-left: -50vw;
   margin-right: -50vw;
   overflow: hidden;
@@ -631,45 +631,48 @@
   isolation: isolate;
 }
 
-.journeyWaveTop,
-.journeyWaveBottom {
+.journeyFadeTop,
+.journeyFadeBottom {
   position: relative;
   z-index: 1;
   display: block;
   width: 100%;
-  height: clamp(28px, 5.5vw, 44px);
-  line-height: 0;
+  height: clamp(64px, 14vw, 104px);
   pointer-events: none;
 }
 
-.journeyWaveTop {
+.journeyFadeTop {
   margin-top: -1px;
-  color: var(--background);
+  background: linear-gradient(
+    180deg,
+    var(--background) 0%,
+    color-mix(in srgb, var(--background) 82%, var(--journey-paper)) 22%,
+    color-mix(in srgb, var(--background) 48%, var(--journey-paper)) 52%,
+    color-mix(in srgb, var(--background) 18%, var(--journey-paper)) 78%,
+    var(--journey-paper) 100%
+  );
 }
 
-.journeyWaveBottom {
+.journeyFadeBottom {
   margin-bottom: -1px;
-  color: var(--background);
-}
-
-.journeyWaveSvg {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-
-.journeyWaveSvg path {
-  fill: currentColor;
+  background: linear-gradient(
+    180deg,
+    var(--journey-paper) 0%,
+    color-mix(in srgb, var(--background) 18%, var(--journey-paper)) 22%,
+    color-mix(in srgb, var(--background) 48%, var(--journey-paper)) 48%,
+    color-mix(in srgb, var(--background) 82%, var(--journey-paper)) 78%,
+    var(--background) 100%
+  );
 }
 
 .journeyBody {
   position: relative;
   z-index: 0;
   display: grid;
-  gap: 14px;
+  gap: 16px;
   width: min(100% - 8px, 920px);
   margin-inline: auto;
-  padding: 6px 16px 22px;
+  padding: 10px 16px 28px;
   box-sizing: border-box;
 }
 
@@ -677,7 +680,7 @@
   margin: 0;
   scroll-margin-top: 18px;
   color: var(--journey-ink);
-  font-size: 1.15rem;
+  font-size: 1.22rem;
   font-weight: 700;
 }
 
@@ -696,7 +699,7 @@
   margin: 0;
   color: var(--journey-accent);
   font-family: Georgia, "Times New Roman", serif;
-  font-size: 1.4rem;
+  font-size: 1.45rem;
 }
 
 .yearRecap {
@@ -708,8 +711,8 @@
 
 .journeyScroll {
   display: grid;
-  gap: 16px;
-  max-height: min(56vh, 460px);
+  gap: 18px;
+  max-height: min(68vh, 580px);
   overflow-y: auto;
   padding-right: 4px;
 }
@@ -779,13 +782,18 @@
 
 @media (min-width: 720px) {
   .journeyBody {
+    gap: 18px;
     padding-inline: 20px;
-    padding-bottom: 28px;
+    padding-bottom: 36px;
   }
 
-  .journeyWaveTop,
-  .journeyWaveBottom {
-    height: 40px;
+  .journeyFadeTop,
+  .journeyFadeBottom {
+    height: 96px;
+  }
+
+  .journeyScroll {
+    max-height: min(72vh, 640px);
   }
 }
 

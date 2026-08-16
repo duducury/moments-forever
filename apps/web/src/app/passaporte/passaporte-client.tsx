@@ -59,6 +59,24 @@ function formatCountryYears(years: readonly string[]): string | null {
   return `${first}–${last}`;
 }
 
+/** UN member states — yardstick for “% do mundo”. */
+const WORLD_COUNTRY_COUNT = 195;
+
+function worldKnownPercent(visitedCountryCount: number): number {
+  if (visitedCountryCount <= 0) return 0;
+  return Math.min(
+    100,
+    Math.max(1, Math.round((visitedCountryCount / WORLD_COUNTRY_COUNT) * 100)),
+  );
+}
+
+function worldExploreLine(visitedCountryCount: number): string | null {
+  const known = worldKnownPercent(visitedCountryCount);
+  if (known <= 0) return null;
+  const remaining = 100 - known;
+  return `Você conhece ${known}% do mundo. Os outros ${remaining}% ainda estão esperando para ser vividos.`;
+}
+
 function stampYear(iso: string | null): string {
   if (!iso) return "";
   return String(new Date(iso).getUTCFullYear());
@@ -197,6 +215,7 @@ export function PassaporteClient({
   }, [achFilter, passport.achievements]);
 
   const visitedCodes = passport.countries.map((country) => country.code);
+  const exploreLine = worldExploreLine(visitedCodes.length);
   const stampPages = useMemo(() => {
     const pages: PassportData["countries"][] = [];
     const perPage = 2;
@@ -350,6 +369,14 @@ export function PassaporteClient({
             </p>
           )}
         </div>
+        {exploreLine ? (
+          <p className={styles.worldExplore}>
+            <span className={styles.worldExploreText}>{exploreLine}</span>
+            <span aria-hidden="true" className={styles.worldExploreStar}>
+              ★
+            </span>
+          </p>
+        ) : null}
         {selected ? (
           <article className={styles.countryPanel}>
             <h3 className={styles.countryName}>

@@ -275,6 +275,32 @@
   height: 100%;
 }
 
+.worldExplore {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 4px 2px 0;
+  color: var(--muted);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.02rem;
+  font-style: italic;
+  line-height: 1.45;
+}
+
+.worldExploreText {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.worldExploreStar {
+  flex: 0 0 auto;
+  margin-top: 0.15em;
+  color: color-mix(in srgb, #c4a574 70%, var(--muted));
+  font-style: normal;
+  font-size: 0.92rem;
+  line-height: 1;
+}
+
 .countryPanel {
   display: grid;
   gap: 4px;

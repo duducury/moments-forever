@@ -423,8 +423,8 @@ export function PassaporteClient({
                 do mundo.
               </span>
               <span className={styles.worldExploreRest}>
-                Os outros {exploreCopy.remaining}% ainda estão esperando para ser
-                vividos.
+                Os outros {exploreCopy.remaining}% ainda estão esperando para
+                fazer parte da sua história.
               </span>
               <span aria-hidden="true" className={styles.worldExploreStar}>
                 ★

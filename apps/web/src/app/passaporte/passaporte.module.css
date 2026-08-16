@@ -449,8 +449,9 @@
 
 .bookStage[data-open="true"] {
   width: min(100%, 760px);
-  height: min(58vw, 400px);
-  min-height: 290px;
+  /* Stretch taller when open so the two pages don’t feel squat. */
+  height: min(88vw, 460px);
+  min-height: 360px;
 }
 
 .bookCover {

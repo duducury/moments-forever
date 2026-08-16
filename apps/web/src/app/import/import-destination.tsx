@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { ExperienceCoverThumb } from "@/components/experience-cover-thumb";
+import { useAuth } from "@/components/auth-provider";
+import { createNamedTripFromFiles } from "@/lib/photos/create-named-trip-from-files";
 import { uploadFilesToAlbum } from "@/lib/photos/upload-files-to-album";
 import { profileTripAlbumPath } from "@/lib/routes/app-routes";
 
@@ -30,6 +32,7 @@ export function ImportDestination({
   }) => void;
 }) {
   const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
   const [albums, setAlbums] = useState<readonly DestinationAlbum[] | null>(
     null,
   );
@@ -102,6 +105,46 @@ export function ImportDestination({
     }
   }
 
+  async function createNewAlbum() {
+    const name = newName.trim();
+    if (!name) {
+      setError("Escolha um nome para o álbum.");
+      return;
+    }
+    if (authLoading) {
+      setError("Aguarde a verificação da sessão.");
+      return;
+    }
+    if (!user) {
+      setError("Entre na sua conta para criar o álbum.");
+      return;
+    }
+
+    setBusy(true);
+    setError(null);
+    try {
+      const result = await createNamedTripFromFiles({
+        files,
+        name,
+        story: newStory,
+        ownerId: user.id,
+        onProgress: setProgress,
+      });
+      if (result.cloudWarning) {
+        setError(
+          `Álbum criado, mas o envio à nuvem falhou: ${result.cloudWarning}`,
+        );
+        return;
+      }
+      router.replace(profileTripAlbumPath(result.slug, result.albumId));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Falha ao criar o álbum.");
+    } finally {
+      setBusy(false);
+      setProgress(null);
+    }
+  }
+
   const count = files.length;
 
   return (
@@ -137,12 +180,10 @@ export function ImportDestination({
         <button
           className="button primary"
           disabled={busy || !newName.trim()}
-          onClick={() =>
-            onNewTrip({ name: newName.trim(), story: newStory.trim() })
-          }
+          onClick={() => void createNewAlbum()}
           type="button"
         >
-          Criar e continuar
+          Criar álbum
         </button>
       </div>
 

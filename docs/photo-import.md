@@ -103,6 +103,13 @@ lugares na mesma Experience.
 A UI resolve: nome confirmado → sugestão em `places.name` → fallback `Lugar N`.
 Renomear um álbum confirma o place ligado e não altera o GPS.
 
+### Destino na web (`/import`)
+
+Depois de escolher as fotos, criar um álbum novo ou adicionar a um álbum
+existente **encerra** o fluxo: não há etapa seguinte de juntar/organizar lugares.
+A revisão de grupos GPS permanece só no caminho completo de análise (ex.: primeira
+viagem sem álbuns ainda).
+
 ## Upload
 
 - Gerar derivados em fila limitada para não esgotar memória/bateria.

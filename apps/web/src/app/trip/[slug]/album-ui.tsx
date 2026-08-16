@@ -36,6 +36,54 @@ function formatLightboxCapturedAt(value: string | null): string | null {
   }).format(date);
 }
 
+/** Instagram-style dots — window around the active photo when the album is long. */
+function LightboxDots({
+  count,
+  index,
+  onSelectIndex,
+}: {
+  readonly count: number;
+  readonly index: number;
+  readonly onSelectIndex: (nextIndex: number) => void;
+}) {
+  if (count < 2) return null;
+
+  const maxVisible = 15;
+  let start = 0;
+  let end = count;
+  if (count > maxVisible) {
+    const half = Math.floor(maxVisible / 2);
+    start = Math.max(0, Math.min(index - half, count - maxVisible));
+    end = start + maxVisible;
+  }
+
+  const dots = [];
+  for (let i = start; i < end; i += 1) {
+    dots.push(i);
+  }
+
+  return (
+    <div
+      aria-label={`Foto ${index + 1} de ${count}`}
+      className={styles.lightboxDots}
+      role="tablist"
+    >
+      {dots.map((dotIndex) => (
+        <button
+          aria-current={dotIndex === index ? "true" : undefined}
+          aria-label={`Ir para foto ${dotIndex + 1}`}
+          className={styles.lightboxDot}
+          data-active={dotIndex === index ? "true" : "false"}
+          key={dotIndex}
+          onClick={() => onSelectIndex(dotIndex)}
+          role="tab"
+          type="button"
+        />
+      ))}
+    </div>
+  );
+}
+
 function AlbumCover({ photoId }: { readonly photoId: string | null }) {
   const src = useLocalPhotoObjectUrl(photoId, "thumbnail");
   return (
@@ -254,19 +302,19 @@ export function PhotoLightbox({
         ✕
       </button>
 
-      {photos.length > 1 ? (
-        <button
-          aria-label="Foto anterior"
-          className={`${styles.lightboxArrow} ${styles.lightboxArrowPrev}`}
-          onClick={() => go(-1)}
-          style={{ opacity: Math.max(0.15, 0.72 * (1 - dismissProgress)) }}
-          type="button"
-        >
-          ‹
-        </button>
-      ) : null}
-
       <div className={styles.lightboxStageWrap}>
+        {photos.length > 1 ? (
+          <button
+            aria-label="Foto anterior"
+            className={`${styles.lightboxArrow} ${styles.lightboxArrowPrev}`}
+            onClick={() => go(-1)}
+            style={{ opacity: Math.max(0.15, 0.72 * (1 - dismissProgress)) }}
+            type="button"
+          >
+            ‹
+          </button>
+        ) : null}
+
         <LightboxZoomStage
           hasImage={Boolean(thumbSrc || fullSrc)}
           onDismiss={onClose}
@@ -302,12 +350,32 @@ export function PhotoLightbox({
             />
           ) : null}
         </LightboxZoomStage>
+
+        {photos.length > 1 ? (
+          <button
+            aria-label="Próxima foto"
+            className={`${styles.lightboxArrow} ${styles.lightboxArrowNext}`}
+            onClick={() => go(1)}
+            style={{ opacity: Math.max(0.15, 0.72 * (1 - dismissProgress)) }}
+            type="button"
+          >
+            ›
+          </button>
+        ) : null}
       </div>
 
       <div
         className={styles.lightboxMeta}
         style={{ opacity: Math.max(0.15, 1 - dismissProgress) }}
       >
+        <LightboxDots
+          count={photos.length}
+          index={index}
+          onSelectIndex={(nextIndex) => {
+            const next = photos[nextIndex];
+            if (next) onSelect(next.id);
+          }}
+        />
         {placeLabel ? (
           <p className={styles.lightboxMetaLine}>{placeLabel}</p>
         ) : null}
@@ -316,10 +384,6 @@ export function PhotoLightbox({
             {secondaryParts.join(" · ")}
           </p>
         ) : null}
-        <p className={styles.lightboxMetaCount}>
-          {index + 1} / {photos.length}
-          {hasGps ? " · com localização" : ""}
-        </p>
         {showRemoveLocation || (canDelete && onDelete) ? (
           <div className={styles.lightboxActions}>
             {showRemoveLocation ? (
@@ -345,18 +409,6 @@ export function PhotoLightbox({
           </div>
         ) : null}
       </div>
-
-      {photos.length > 1 ? (
-        <button
-          aria-label="Próxima foto"
-          className={`${styles.lightboxArrow} ${styles.lightboxArrowNext}`}
-          onClick={() => go(1)}
-          style={{ opacity: Math.max(0.15, 0.72 * (1 - dismissProgress)) }}
-          type="button"
-        >
-          ›
-        </button>
-      ) : null}
     </div>
   );
 

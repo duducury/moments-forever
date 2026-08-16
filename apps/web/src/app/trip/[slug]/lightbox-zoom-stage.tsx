@@ -8,9 +8,11 @@ const MIN_SCALE = 1;
 const MAX_SCALE = 4;
 const DOUBLE_TAP_MS = 280;
 const DOUBLE_TAP_SCALE = 2.4;
-const AXIS_LOCK_PX = 12;
+const AXIS_LOCK_PX = 10;
 const DISMISS_DISTANCE_PX = 96;
 const DISMISS_VELOCITY = 0.55;
+const SWIPE_DISTANCE_PX = 40;
+const SWIPE_VELOCITY = 0.45;
 
 function distance(
   a: { readonly clientX: number; readonly clientY: number },
@@ -43,6 +45,7 @@ export function LightboxZoomStage({
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [dragY, setDragY] = useState(0);
+  const [dragX, setDragX] = useState(0);
   const pinchRef = useRef<{
     startDistance: number;
     startScale: number;
@@ -57,8 +60,10 @@ export function LightboxZoomStage({
     startX: number;
     startY: number;
     axis: "undecided" | "horizontal" | "vertical";
+    lastX: number;
     lastY: number;
     lastTime: number;
+    velocityX: number;
     velocityY: number;
   } | null>(null);
   const lastTapRef = useRef<{ time: number; x: number; y: number } | null>(
@@ -94,6 +99,7 @@ export function LightboxZoomStage({
     setScale(1);
     setOffset({ x: 0, y: 0 });
     setDragY(0);
+    setDragX(0);
     onDismissDragRef.current?.(0);
     pinchRef.current = null;
     panRef.current = null;
@@ -134,6 +140,7 @@ export function LightboxZoomStage({
         gestureRef.current = null;
         lastTapRef.current = null;
         setDismissDrag(0);
+        setDragX(0);
         return;
       }
 
@@ -154,8 +161,10 @@ export function LightboxZoomStage({
           startX: touch.clientX,
           startY: touch.clientY,
           axis: "undecided",
+          lastX: touch.clientX,
           lastY: touch.clientY,
           lastTime: now,
+          velocityX: 0,
           velocityY: 0,
         };
         panRef.current = null;
@@ -178,6 +187,7 @@ export function LightboxZoomStage({
         }
         gestureRef.current = null;
         setDismissDrag(0);
+        setDragX(0);
         return;
       }
       lastTapRef.current = {
@@ -228,22 +238,31 @@ export function LightboxZoomStage({
       if (gesture.axis === "undecided") {
         if (Math.hypot(dx, dy) < AXIS_LOCK_PX) return;
         gesture.axis =
-          Math.abs(dy) >= Math.abs(dx) ? "vertical" : "horizontal";
+          Math.abs(dy) >= Math.abs(dx) * 1.15 ? "vertical" : "horizontal";
       }
+
+      const now = Date.now();
+      const dt = Math.max(1, now - gesture.lastTime);
 
       if (gesture.axis === "vertical") {
         event.preventDefault();
-        const now = Date.now();
-        const dt = Math.max(1, now - gesture.lastTime);
         gesture.velocityY = (touch.clientY - gesture.lastY) / dt;
         gesture.lastY = touch.clientY;
         gesture.lastTime = now;
+        setDragX(0);
         setDismissDrag(dy);
         return;
       }
 
-      // Horizontal: keep tracking; commit on touchend (same as before).
-      event.preventDefault();
+      if (gesture.axis === "horizontal") {
+        event.preventDefault();
+        gesture.velocityX = (touch.clientX - gesture.lastX) / dt;
+        gesture.lastX = touch.clientX;
+        gesture.lastTime = now;
+        setDismissDrag(0);
+        // Rubber-band slightly past edges for a snappier Instagram feel.
+        setDragX(dx);
+      }
     }
 
     function onTouchEnd(event: TouchEvent) {
@@ -261,6 +280,7 @@ export function LightboxZoomStage({
       gestureRef.current = null;
       if (!gesture || scaleRef.current > 1.01) {
         setDismissDrag(0);
+        setDragX(0);
         return;
       }
 
@@ -275,17 +295,33 @@ export function LightboxZoomStage({
           return;
         }
         setDismissDrag(0);
+        setDragX(0);
         return;
       }
 
       if (gesture.axis === "horizontal" && onSwipeRef.current) {
         const endX = event.changedTouches[0]?.clientX ?? gesture.startX;
         const distanceX = endX - gesture.startX;
-        if (distanceX <= -48) onSwipeRef.current(1);
-        else if (distanceX >= 48) onSwipeRef.current(-1);
+        const shouldNext =
+          distanceX <= -SWIPE_DISTANCE_PX ||
+          gesture.velocityX <= -SWIPE_VELOCITY;
+        const shouldPrev =
+          distanceX >= SWIPE_DISTANCE_PX ||
+          gesture.velocityX >= SWIPE_VELOCITY;
+        if (shouldNext) {
+          setDragX(0);
+          onSwipeRef.current(1);
+          return;
+        }
+        if (shouldPrev) {
+          setDragX(0);
+          onSwipeRef.current(-1);
+          return;
+        }
       }
 
       setDismissDrag(0);
+      setDragX(0);
     }
 
     el.addEventListener("touchstart", onTouchStart, { passive: true });
@@ -301,12 +337,14 @@ export function LightboxZoomStage({
   }, []);
 
   const dismissing = Math.abs(dragY) > 0.5;
+  const swiping = Math.abs(dragX) > 0.5;
 
   return (
     <div
       className={styles.lightboxStage}
       data-dismissing={dismissing ? "true" : "false"}
       data-has-image={hasImage ? "true" : "false"}
+      data-swiping={swiping ? "true" : "false"}
       data-tone={tone}
       data-zoomed={scale > 1.01 ? "true" : "false"}
       ref={stageRef}
@@ -314,8 +352,12 @@ export function LightboxZoomStage({
       <div
         className={styles.lightboxZoomLayer}
         style={{
-          transform: `translate3d(${offset.x}px, ${offset.y + dragY}px, 0) scale(${scale})`,
-          transition: dismissing ? "none" : "transform 180ms ease-out",
+          transform: `translate3d(${offset.x + dragX}px, ${offset.y + dragY}px, 0) scale(${scale})`,
+          transition:
+            dismissing || swiping ? "none" : "transform 120ms ease-out",
+          opacity: swiping
+            ? Math.max(0.55, 1 - Math.abs(dragX) / 420)
+            : undefined,
         }}
       >
         {children}

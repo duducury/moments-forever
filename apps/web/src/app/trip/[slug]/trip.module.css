@@ -612,8 +612,7 @@
   position: fixed;
   inset: 0;
   z-index: var(--z-modal);
-  display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
+  display: block;
   width: 100%;
   height: 100%;
   max-height: 100dvh;
@@ -628,7 +627,7 @@
   position: absolute;
   top: max(10px, env(safe-area-inset-top));
   right: max(10px, env(safe-area-inset-right));
-  z-index: 3;
+  z-index: 4;
   display: grid;
   place-items: center;
   width: 44px;
@@ -680,7 +679,8 @@
 }
 
 .lightboxStageWrap {
-  position: relative;
+  position: absolute;
+  inset: 0;
   display: grid;
   min-height: 0;
   width: 100%;
@@ -717,6 +717,7 @@
   width: 100%;
   height: 100%;
   object-fit: contain;
+  object-position: center center;
   image-orientation: from-image;
   user-select: none;
   -webkit-user-drag: none;
@@ -728,18 +729,64 @@
 }
 
 .lightboxMeta {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
   z-index: 2;
   display: grid;
   gap: 4px;
+  justify-items: center;
   width: 100%;
-  padding: 12px 16px calc(14px + env(safe-area-inset-bottom));
+  padding: 28px 16px calc(14px + env(safe-area-inset-bottom));
   color: #f5f2ec;
-  background: linear-gradient(180deg, transparent, rgb(0 0 0 / 72%) 28%);
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgb(0 0 0 / 42%) 36%,
+    rgb(0 0 0 / 78%) 100%
+  );
   box-sizing: border-box;
+  text-align: center;
+  pointer-events: none;
+}
+
+.lightboxMeta > * {
+  pointer-events: auto;
+}
+
+.lightboxDots {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+  max-width: min(100%, 280px);
+  margin: 0 auto 8px;
+  padding: 0;
+}
+
+.lightboxDot {
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  border: 0;
+  border-radius: 999px;
+  padding: 0;
+  background: rgb(245 242 236 / 38%);
+  cursor: pointer;
+  transition: background 120ms ease, transform 120ms ease;
+}
+
+.lightboxDot[data-active="true"] {
+  background: #f5f2ec;
+  transform: scale(1.15);
 }
 
 .lightboxMetaLine {
   margin: 0;
+  max-width: 36ch;
   font-size: 0.95rem;
   font-weight: 600;
   line-height: 1.35;
@@ -748,6 +795,7 @@
 
 .lightboxMetaSecondary {
   margin: 0;
+  max-width: 40ch;
   color: rgb(245 242 236 / 78%);
   font-size: 0.82rem;
   font-weight: 500;
@@ -763,7 +811,7 @@
 }
 
 .lightboxPrivacyButton {
-  justify-self: start;
+  justify-self: center;
   min-height: 40px;
   margin-top: 0;
   border: 1px solid rgb(245 242 236 / 28%);
@@ -790,12 +838,13 @@
 .lightboxActions {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: 8px;
   margin-top: 8px;
 }
 
 .lightboxDeleteButton {
-  justify-self: start;
+  justify-self: center;
   min-height: 40px;
   margin-top: 0;
   margin-left: 0;
@@ -818,6 +867,13 @@
 .lightboxDeleteButton:disabled {
   opacity: 0.6;
   cursor: wait;
+}
+
+/* Phone: swipe + dots; arrows sit on the photo stage on larger screens. */
+@media (max-width: 719px) {
+  .lightboxArrow {
+    display: none;
+  }
 }
 
 .privacyPickBanner {
@@ -2866,7 +2922,13 @@
   }
 
   .lightboxMeta {
-    padding: 14px 22px 18px;
+    padding: 32px 22px calc(18px + env(safe-area-inset-bottom));
+  }
+
+  .lightboxDots {
+    max-width: 320px;
+    gap: 6px;
+    margin-bottom: 10px;
   }
 
   .mapOverlay {

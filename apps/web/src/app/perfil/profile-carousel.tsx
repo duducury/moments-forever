@@ -37,6 +37,7 @@ export function ProfileCarousel({
         <h2 className={styles.sectionTitle}>Destaques</h2>
       </div>
       <AlbumCarousel
+        autoPlayMs={5500}
         centerActionLabel="Abrir pasta desta viagem"
         getCaption={(photo) => {
           const caption = shortPlaceCaption(photo.locationLabel);

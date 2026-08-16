@@ -191,6 +191,7 @@ export function AlbumCarousel({
   getCaption,
   getCaptionText,
   centerActionLabel = "Abrir foto em destaque",
+  autoPlayMs = 0,
 }: {
   readonly photos: readonly TripPhoto[];
   readonly onOpen: (photoId: string) => void;
@@ -199,6 +200,8 @@ export function AlbumCarousel({
   readonly getCaption?: (photo: TripPhoto) => ReactNode;
   readonly getCaptionText?: (photo: TripPhoto) => string | null;
   readonly centerActionLabel?: string;
+  /** Auto-advance delay. 0 disables. Resets after any manual control. */
+  readonly autoPlayMs?: number;
 }) {
   const pointerStartXRef = useRef(0);
   const pointerStartYRef = useRef(0);
@@ -208,6 +211,8 @@ export function AlbumCarousel({
   const suppressClickRef = useRef(false);
   const pointerOnCenterRef = useRef(false);
   const settleFrameRef = useRef<number | null>(null);
+  const lastUserActionAtRef = useRef(0);
+  const ignoreClickUntilRef = useRef(0);
   const [activeIndex, setActiveIndex] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState(0);
@@ -231,6 +236,45 @@ export function AlbumCarousel({
     };
   }, []);
 
+  function markUserControl() {
+    lastUserActionAtRef.current = performance.now();
+    ignoreClickUntilRef.current = performance.now() + 450;
+  }
+
+  useEffect(() => {
+    if (autoPlayMs < 1 || count < 2) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      return;
+    }
+
+    let timer = 0;
+
+    function schedule(delay: number) {
+      timer = window.setTimeout(run, delay);
+    }
+
+    function run() {
+      if (
+        document.visibilityState === "hidden" ||
+        isDraggingRef.current ||
+        lockAxisRef.current === "x"
+      ) {
+        schedule(autoPlayMs);
+        return;
+      }
+      const remaining =
+        autoPlayMs - (performance.now() - lastUserActionAtRef.current);
+      if (remaining > 16) {
+        schedule(remaining);
+        return;
+      }
+      setActiveIndex((current) => wrapIndex(current + 1, count));
+    }
+
+    schedule(autoPlayMs);
+    return () => window.clearTimeout(timer);
+  }, [activeIndex, autoPlayMs, count]);
+
   useEffect(() => {
     if (count < 2) return;
 
@@ -247,10 +291,12 @@ export function AlbumCarousel({
       }
       if (event.key === "ArrowLeft") {
         event.preventDefault();
+        markUserControl();
         setActiveIndex((current) => wrapIndex(current - 1, count));
       }
       if (event.key === "ArrowRight") {
         event.preventDefault();
+        markUserControl();
         setActiveIndex((current) => wrapIndex(current + 1, count));
       }
     }
@@ -268,15 +314,18 @@ export function AlbumCarousel({
   }
 
   function goPrevious() {
+    markUserControl();
     setActiveIndex((current) => wrapIndex(current - 1, count));
   }
 
   function goNext() {
+    markUserControl();
     setActiveIndex((current) => wrapIndex(current + 1, count));
   }
 
   /** Commit index without springing the drag back first (avoids the “zuado” snap). */
   function commitIndex(nextIndex: number) {
+    markUserControl();
     if (settleFrameRef.current !== null) {
       cancelAnimationFrame(settleFrameRef.current);
       settleFrameRef.current = null;
@@ -300,6 +349,7 @@ export function AlbumCarousel({
 
   function handlePointerDown(event: ReactPointerEvent<HTMLDivElement>) {
     if (isCarouselControlTarget(event.target)) return;
+    markUserControl();
     if (settleFrameRef.current !== null) {
       cancelAnimationFrame(settleFrameRef.current);
       settleFrameRef.current = null;
@@ -513,7 +563,11 @@ export function AlbumCarousel({
                     className={styles.albumCarouselCardButton}
                     href={href}
                     onClick={(event) => {
-                      if (suppressClickRef.current || movedRef.current) {
+                      if (
+                        suppressClickRef.current ||
+                        movedRef.current ||
+                        performance.now() < ignoreClickUntilRef.current
+                      ) {
                         event.preventDefault();
                         suppressClickRef.current = false;
                         movedRef.current = false;
@@ -528,7 +582,11 @@ export function AlbumCarousel({
                     aria-label={label}
                     className={styles.albumCarouselCardButton}
                     onClick={() => {
-                      if (suppressClickRef.current || movedRef.current) {
+                      if (
+                        suppressClickRef.current ||
+                        movedRef.current ||
+                        performance.now() < ignoreClickUntilRef.current
+                      ) {
                         suppressClickRef.current = false;
                         movedRef.current = false;
                         return;
@@ -537,6 +595,7 @@ export function AlbumCarousel({
                         onOpen(photo.id);
                         return;
                       }
+                      markUserControl();
                       commitIndex(index);
                     }}
                     type="button"
@@ -564,7 +623,10 @@ export function AlbumCarousel({
               data-active={index === safeIndex ? "true" : "false"}
               data-carousel-control="true"
               key={photos[index]?.id ?? index}
-              onClick={() => commitIndex(index)}
+              onClick={() => {
+                markUserControl();
+                commitIndex(index);
+              }}
               role="tab"
               type="button"
             />

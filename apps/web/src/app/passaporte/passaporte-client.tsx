@@ -2,13 +2,14 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useRef, useState, type PointerEvent, type ReactNode } from "react";
 
 import { ProfileAvatar } from "@/app/perfil/profile-avatar";
 import { AppCreditFooter } from "@/components/app-credit-footer";
 import { ExperienceCoverThumb } from "@/components/experience-cover-thumb";
 import type { PassportData } from "@/lib/passport/build-passport";
 
+import { PageWatermark } from "./passport-page-watermark";
 import styles from "./passaporte.module.css";
 
 const PassportWorldMap = dynamic(
@@ -69,6 +70,86 @@ function selectedStampLabel(tripCount: number, lastVisitAt: string | null): stri
   return `Visitado · ${year}`;
 }
 
+function PassportCrest() {
+  return (
+    <svg aria-hidden="true" fill="none" viewBox="0 0 140 140">
+      <circle cx="70" cy="70" r="66" stroke="currentColor" strokeWidth="2.4" />
+      <circle cx="70" cy="70" r="58" stroke="currentColor" strokeOpacity="0.45" strokeWidth="1.2" />
+      <circle cx="70" cy="70" r="34" stroke="currentColor" strokeWidth="1.8" />
+      <ellipse cx="70" cy="70" rx="16" ry="34" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M36 70h68" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M40 54h60M40 86h60" stroke="currentColor" strokeOpacity="0.8" strokeWidth="1.2" />
+      <path
+        d="M70 36c8 8 14 20 14 34s-6 26-14 34c-8-8-14-20-14-34s6-26 14-34Z"
+        stroke="currentColor"
+        strokeWidth="1.3"
+      />
+      <path
+        d="M22 78c6-16 14-28 26-34M22 88c8 16 20 28 34 34"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="1.8"
+      />
+      <path
+        d="M18 70c4 2 7 8 8 16M28 64c5 4 8 12 8 20"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="1.5"
+      />
+      <path
+        d="M118 78c-6-16-14-28-26-34M118 88c-8 16-20 28-34 34"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="1.8"
+      />
+      <path
+        d="M122 70c-4 2-7 8-8 16M112 64c-5 4-8 12-8 20"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="1.5"
+      />
+      <circle cx="70" cy="22" r="2.2" fill="currentColor" />
+    </svg>
+  );
+}
+
+function StampSheet({
+  countries,
+  onSelect,
+}: {
+  readonly countries: PassportData["countries"];
+  readonly onSelect: (code: string) => void;
+}) {
+  return (
+    <>
+      <p className={styles.stampsLabel}>Carimbos</p>
+      {countries.length === 0 ? (
+        <p className={styles.empty}>Ainda sem carimbos.</p>
+      ) : (
+        <div className={styles.stamps}>
+          {countries.map((country, index) => (
+            <button
+              className={styles.stamp}
+              data-tone={String((index % 3) + 1)}
+              key={country.code}
+              onClick={() => onSelect(country.code)}
+              type="button"
+            >
+              <span className={styles.stampFlag}>
+                <CountryFlag code={country.code} size={22} />
+              </span>
+              <span className={styles.stampName}>{country.name}</span>
+              <span className={styles.stampMark}>
+                {selectedStampLabel(country.tripCount, country.lastVisitAt)}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
+
 export function PassaporteClient({
   ownerId,
   displayName,
@@ -119,13 +200,96 @@ export function PassaporteClient({
 
   const visitedCodes = passport.countries.map((country) => country.code);
   const stampPages = useMemo(() => {
-    const pages: (typeof passport.countries)[] = [];
-    const perPage = 4;
+    const pages: PassportData["countries"][] = [];
+    const perPage = 2;
     for (let index = 0; index < passport.countries.length; index += perPage) {
       pages.push(passport.countries.slice(index, index + perPage));
     }
     return pages.length > 0 ? pages : [[]];
   }, [passport.countries]);
+  const spreads = useMemo(() => {
+    const first = {
+      left: "id" as const,
+      right: stampPages[0] ?? [],
+    };
+    const rest: { left: PassportData["countries"]; right: PassportData["countries"] }[] =
+      [];
+    for (let index = 1; index < stampPages.length; index += 2) {
+      rest.push({
+        left: stampPages[index] ?? [],
+        right: stampPages[index + 1] ?? [],
+      });
+    }
+    return { first, rest };
+  }, [stampPages]);
+  const spreadCount = 1 + spreads.rest.length;
+  const [open, setOpen] = useState(false);
+  const [spread, setSpread] = useState(0);
+  const current =
+    spread === 0
+      ? spreads.first
+      : (spreads.rest[spread - 1] ?? spreads.first);
+  const dragRef = useRef<{
+    readonly x: number;
+    moved: boolean;
+  } | null>(null);
+  const ignoreStampClickRef = useRef(false);
+
+  function turnNext(): void {
+    if (!open) {
+      setOpen(true);
+      setSpread(0);
+      return;
+    }
+    setSpread((value) => Math.min(spreadCount - 1, value + 1));
+  }
+
+  function turnPrev(): void {
+    if (!open) return;
+    if (spread === 0) {
+      setOpen(false);
+      return;
+    }
+    setSpread((value) => Math.max(0, value - 1));
+  }
+
+  function onSelectCountry(code: string): void {
+    if (ignoreStampClickRef.current) {
+      ignoreStampClickRef.current = false;
+      return;
+    }
+    setSelectedCode(code);
+  }
+
+  function onBookPointerDown(event: PointerEvent<HTMLDivElement>): void {
+    dragRef.current = { x: event.clientX, moved: false };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function onBookPointerMove(event: PointerEvent<HTMLDivElement>): void {
+    const start = dragRef.current;
+    if (!start) return;
+    if (Math.abs(event.clientX - start.x) > 10) start.moved = true;
+  }
+
+  function onBookPointerUp(event: PointerEvent<HTMLDivElement>): void {
+    const start = dragRef.current;
+    dragRef.current = null;
+    if (!start) return;
+    const dx = event.clientX - start.x;
+    if (Math.abs(dx) > 46) {
+      ignoreStampClickRef.current = true;
+      if (dx < 0) turnNext();
+      else turnPrev();
+      return;
+    }
+    if (start.moved) return;
+    const target = event.target;
+    if (target instanceof Element && target.closest("button")) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    if (event.clientX >= rect.left + rect.width / 2) turnNext();
+    else turnPrev();
+  }
 
   return (
     <div className={styles.page}>
@@ -221,82 +385,133 @@ export function PassaporteClient({
         <h2 className={styles.sectionTitle} id="book-title">
           Passaporte
         </h2>
-        <div className={styles.book}>
-          <article className={`${styles.bookPage} ${styles.bookIdPage}`}>
-            <p className={styles.bookBrand}>Moments Forever</p>
-            <h3 className={styles.bookHeading}>Travel Passport</h3>
-            <div className={styles.bookId}>
-              <div className={styles.bookPhoto}>
-                <ProfileAvatar
-                  avatarPhotoId={avatarPhotoId}
-                  displayName={displayName}
-                  ownerId={ownerId}
-                  remoteSrc={avatarRemoteSrc}
-                  size="md"
-                />
-              </div>
-              <dl className={styles.bookMeta}>
-                <div>
-                  <dt>Nome</dt>
-                  <dd>{displayName}</dd>
-                </div>
-                {passport.countries.length > 0 ? (
-                  <div className={styles.bookFlags} aria-label="Países visitados">
-                    {passport.countries.map((country) => (
-                      <CountryFlag
-                        code={country.code}
-                        key={country.code}
-                        size={18}
+        <div
+          className={styles.bookStage}
+          data-open={open ? "true" : "false"}
+        >
+          <button
+            aria-label="Abrir passaporte"
+            className={styles.bookCover}
+            onClick={() => {
+              if (!open) {
+                setOpen(true);
+                setSpread(0);
+              }
+            }}
+            type="button"
+          >
+            <p className={styles.coverBrand}>Moments Forever</p>
+            <span aria-hidden="true" className={styles.coverCrest}>
+              <PassportCrest />
+            </span>
+            <h3 className={styles.coverTitle}>Passport</h3>
+            <p className={styles.coverHint}>Toque para abrir</p>
+          </button>
+
+          <div
+            className={styles.bookSpread}
+            onPointerDown={onBookPointerDown}
+            onPointerMove={onBookPointerMove}
+            onPointerUp={onBookPointerUp}
+            onPointerCancel={() => {
+              dragRef.current = null;
+            }}
+          >
+            <article className={`${styles.bookPage} ${styles.bookPageLeft}`}>
+              <PageWatermark />
+              {spread === 0 ? (
+                <>
+                  <p className={styles.bookBrand}>Moments Forever</p>
+                  <h3 className={styles.bookHeading}>Travel Passport</h3>
+                  <div className={styles.bookId}>
+                    <div className={styles.bookPhoto}>
+                      <ProfileAvatar
+                        avatarPhotoId={avatarPhotoId}
+                        displayName={displayName}
+                        ownerId={ownerId}
+                        remoteSrc={avatarRemoteSrc}
+                        size="lg"
                       />
-                    ))}
+                    </div>
+                    <dl className={styles.bookMeta}>
+                      <div>
+                        <dt>Nome</dt>
+                        <dd>{displayName}</dd>
+                      </div>
+                      {passport.countries.length > 0 ? (
+                        <div
+                          className={styles.bookFlags}
+                          aria-label="Países visitados"
+                        >
+                          {passport.countries.map((country) => (
+                            <CountryFlag
+                              code={country.code}
+                              key={country.code}
+                              size={16}
+                            />
+                          ))}
+                        </div>
+                      ) : null}
+                    </dl>
                   </div>
-                ) : null}
-              </dl>
-            </div>
-            <dl className={styles.bookFooterMeta}>
-              <div>
-                <dt>Emitido em</dt>
-                <dd>{formatIssued(passport.issuedAt)}</dd>
-              </div>
-              <div>
-                <dt>Países visitados</dt>
-                <dd>{passport.countryCount}</dd>
-              </div>
-            </dl>
-          </article>
-          {stampPages.map((page, pageIndex) => (
-            <article className={styles.bookPage} key={`stamps-${pageIndex}`}>
-              <p className={styles.stampsLabel}>
-                {pageIndex === 0 ? "Vistos e carimbos" : `Página ${pageIndex + 1}`}
-              </p>
-              {page.length === 0 ? (
-                <p className={styles.empty}>Ainda sem carimbos.</p>
+                  <dl className={styles.bookFooterMeta}>
+                    <div>
+                      <dt>Emitido em</dt>
+                      <dd>{formatIssued(passport.issuedAt)}</dd>
+                    </div>
+                    <div>
+                      <dt>Países</dt>
+                      <dd>{passport.countryCount}</dd>
+                    </div>
+                  </dl>
+                </>
               ) : (
-                <div className={styles.stamps}>
-                  {page.map((country, index) => (
-                    <button
-                      className={styles.stamp}
-                      data-tone={String(((pageIndex * 4 + index) % 3) + 1)}
-                      key={country.code}
-                      onClick={() => setSelectedCode(country.code)}
-                      type="button"
-                    >
-                      <span className={styles.stampFlag}>
-                        <CountryFlag code={country.code} size={28} />
-                      </span>
-                      <span className={styles.stampName}>{country.name}</span>
-                      <span className={styles.stampMark}>
-                        {selectedStampLabel(
-                          country.tripCount,
-                          country.lastVisitAt,
-                        )}
-                      </span>
-                    </button>
-                  ))}
-                </div>
+                <StampSheet
+                  countries={spreads.rest[spread - 1]?.left ?? []}
+                  onSelect={onSelectCountry}
+                />
               )}
             </article>
-          ))}
+            <div aria-hidden="true" className={styles.bookGutter} />
+            <article className={`${styles.bookPage} ${styles.bookPageRight}`}>
+              <PageWatermark />
+              <StampSheet
+                countries={current.right}
+                onSelect={onSelectCountry}
+              />
+            </article>
+          </div>
+        </div>
+        <div className={styles.bookNav}>
+          <button
+            className="button secondary"
+            disabled={!open}
+            onClick={() => {
+              if (spread === 0) {
+                setOpen(false);
+                return;
+              }
+              setSpread((value) => Math.max(0, value - 1));
+            }}
+            type="button"
+          >
+            {!open || spread === 0 ? "Fechar" : "Página anterior"}
+          </button>
+          <button
+            className="button primary"
+            disabled={open && spread >= spreadCount - 1}
+            onClick={() => {
+              if (!open) {
+                setOpen(true);
+                setSpread(0);
+                return;
+              }
+              setSpread((value) => Math.min(spreadCount - 1, value + 1));
+            }}
+            type="button"
+          >
+            {open ? "Virar página" : "Abrir"}
+          </button>
         </div>
       </section>
 

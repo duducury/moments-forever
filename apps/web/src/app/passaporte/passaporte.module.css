@@ -261,13 +261,28 @@
 }
 
 .worldCard {
+  display: grid;
   overflow: hidden;
-  height: min(48vw, 280px);
-  min-height: 200px;
-  border: 1px solid var(--border);
+  border: 1px solid color-mix(in srgb, #0d1016 82%, var(--border));
   border-radius: 18px;
   background: #0d1016;
   box-shadow: 0 12px 32px var(--shadow);
+}
+
+.worldMapFrame {
+  height: min(48vw, 280px);
+  min-height: 200px;
+  background: #0d1016;
+}
+
+.worldMapFrame .empty {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  margin: 0;
+  padding: 20px;
+  color: rgb(243 239 232 / 62%);
+  text-align: center;
 }
 
 .worldMap {
@@ -278,45 +293,53 @@
 .worldExplore {
   position: relative;
   display: grid;
-  gap: 6px;
-  margin: 2px 0 2px;
-  padding: 4px 2px 10px;
-  color: var(--text);
+  gap: 8px;
+  margin: 0;
+  padding: 16px 18px 15px;
+  border-bottom: 1px solid rgb(243 239 232 / 8%);
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, #1a1f2a 88%, #d08a6e) 0%,
+      #12161e 100%
+    );
+  color: #f3efe8;
   font-family: Georgia, "Times New Roman", serif;
   line-height: 1.35;
 }
 
 .worldExploreLead {
-  color: var(--text);
-  font-size: clamp(1.15rem, 4.2vw, 1.45rem);
+  padding-right: 1.2em;
+  color: #f3efe8;
+  font-size: clamp(1.12rem, 4vw, 1.38rem);
   font-style: normal;
   font-weight: 500;
   letter-spacing: -0.01em;
 }
 
 .worldExplorePct {
-  color: var(--accent);
+  color: #e0a489;
   font-style: normal;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
 .worldExploreRest {
-  max-width: 34ch;
-  color: color-mix(in srgb, var(--text) 72%, var(--muted));
-  font-size: clamp(0.95rem, 3.4vw, 1.08rem);
+  max-width: 36ch;
+  color: rgb(243 239 232 / 72%);
+  font-size: clamp(0.92rem, 3.2vw, 1.02rem);
   font-style: italic;
-  line-height: 1.4;
+  line-height: 1.45;
 }
 
 .worldExploreStar {
   position: absolute;
-  top: 6px;
-  right: 2px;
-  color: color-mix(in srgb, var(--accent) 75%, #c4a574);
+  top: 16px;
+  right: 16px;
+  color: #e0a489;
   font-size: 0.95rem;
   line-height: 1;
-  opacity: 0.9;
+  opacity: 0.95;
 }
 
 .countryPanel {

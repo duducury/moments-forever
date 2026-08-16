@@ -414,33 +414,35 @@ export function PassaporteClient({
         <h2 className={styles.sectionTitle} id="mundo-title">
           Meu mundo
         </h2>
-        {exploreCopy ? (
-          <p className={styles.worldExplore}>
-            <span className={styles.worldExploreLead}>
-              Você conhece{" "}
-              <em className={styles.worldExplorePct}>{exploreCopy.known}%</em>{" "}
-              do mundo.
-            </span>
-            <span className={styles.worldExploreRest}>
-              Os outros {exploreCopy.remaining}% ainda estão esperando para ser
-              vividos.
-            </span>
-            <span aria-hidden="true" className={styles.worldExploreStar}>
-              ★
-            </span>
-          </p>
-        ) : null}
         <div className={styles.worldCard}>
-          {visitedCodes.length > 0 ? (
-            <DeferredPassportWorldMap
-              onSelectCountry={setSelectedCode}
-              visitedCodes={visitedCodes}
-            />
-          ) : (
-            <p className={styles.empty}>
-              Importe fotos com destino para ver seus países no mapa.
+          {exploreCopy ? (
+            <p className={styles.worldExplore}>
+              <span className={styles.worldExploreLead}>
+                Você conhece{" "}
+                <em className={styles.worldExplorePct}>{exploreCopy.known}%</em>{" "}
+                do mundo.
+              </span>
+              <span className={styles.worldExploreRest}>
+                Os outros {exploreCopy.remaining}% ainda estão esperando para ser
+                vividos.
+              </span>
+              <span aria-hidden="true" className={styles.worldExploreStar}>
+                ★
+              </span>
             </p>
-          )}
+          ) : null}
+          <div className={styles.worldMapFrame}>
+            {visitedCodes.length > 0 ? (
+              <DeferredPassportWorldMap
+                onSelectCountry={setSelectedCode}
+                visitedCodes={visitedCodes}
+              />
+            ) : (
+              <p className={styles.empty}>
+                Importe fotos com destino para ver seus países no mapa.
+              </p>
+            )}
+          </div>
         </div>
         {selected ? (
           <article className={styles.countryPanel}>

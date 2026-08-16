@@ -604,6 +604,26 @@
   }
 }
 
+/* Soft tone band — breaks the page without a heavy card box. */
+.journeySection {
+  display: grid;
+  gap: 14px;
+  margin-inline: -4px;
+  padding: 20px 14px 18px;
+  border-radius: 22px;
+  background: color-mix(
+    in srgb,
+    var(--surface-secondary) 38%,
+    var(--background)
+  );
+}
+
+.journeySection .journeyCard {
+  border-color: color-mix(in srgb, var(--border) 72%, transparent);
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  box-shadow: none;
+}
+
 .yearBlock {
   display: grid;
   gap: 10px;

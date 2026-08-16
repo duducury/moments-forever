@@ -515,7 +515,11 @@ export function PassaporteClient({
         </div>
       </section>
 
-      <section aria-labelledby="journey-title" className={styles.section} data-reveal>
+      <section
+        aria-labelledby="journey-title"
+        className={styles.journeySection}
+        data-reveal
+      >
         <h2 className={styles.sectionTitle} id="journey-title">
           Minha jornada
         </h2>

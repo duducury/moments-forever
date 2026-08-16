@@ -24,13 +24,14 @@ import {
   confirmRemovePhotoLocation,
   removeLocationFromPhotos,
 } from "@/lib/privacy/remove-location";
-import { profilePath } from "@/lib/routes/app-routes";
+import { profilePath, profileTripPath } from "@/lib/routes/app-routes";
 
 import { AddPhotosPanel } from "../../add-photos-panel";
 import {
   AlbumGrid,
   LibraryShell,
   NameDialog,
+  StoryDialog,
   PhotoGallery,
   PhotoLightbox,
 } from "../../album-ui";
@@ -102,6 +103,8 @@ export function AlbumFolderView({
     return inAlbum ? initialPhotoId : null;
   });
   const [coverPickerOpen, setCoverPickerOpen] = useState(false);
+  const [storyOpen, setStoryOpen] = useState(false);
+  const [storyExpanded, setStoryExpanded] = useState(false);
   const [albumsSyncKey, setAlbumsSyncKey] = useState(initialAlbums);
   const [photosSyncKey, setPhotosSyncKey] = useState(initialPhotos);
 
@@ -250,6 +253,40 @@ export function AlbumFolderView({
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Falha ao renomear.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function saveStory(story: string) {
+    if (!album) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/albums/${album.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ description: story }),
+      });
+      const payload = (await response.json()) as {
+        readonly album?: { readonly id: string; readonly description: string | null };
+        readonly error?: string;
+      };
+      if (!response.ok || !payload.album) {
+        throw new Error(payload.error ?? "Não foi possível salvar a história.");
+      }
+      const nextStory = payload.album.description;
+      setAlbums((current) =>
+        current.map((item) =>
+          item.id === payload.album!.id
+            ? { ...item, description: nextStory }
+            : item,
+        ),
+      );
+      setStoryOpen(false);
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Falha ao salvar a história.");
     } finally {
       setBusy(false);
     }
@@ -489,6 +526,11 @@ export function AlbumFolderView({
   }
 
   const heroCoverId = album.coverPhotoId ?? carouselPhotos[0]?.id ?? null;
+  const story = album.description?.trim() ?? "";
+  const storyLong = story.length > 220;
+  const storyText =
+    storyLong && !storyExpanded ? `${story.slice(0, 220).trim()}…` : story;
+  const fullMapHref = `${profileTripPath(experience.slug)}#trip-mapa`;
 
   return (
     <>
@@ -497,7 +539,26 @@ export function AlbumFolderView({
       className={`${styles.page} ${styles.albumPage}`}
       header={
         <>
-          <header className={styles.albumHeroHeader} data-reveal>
+          {error ? (
+            <p className={styles.albumHeroError} role="alert">
+              {error}
+            </p>
+          ) : null}
+
+          {isOwner ? (
+            <PendingR2Sync
+              experienceId={experience.id}
+              photoIdsMissingStorage={photos
+                .filter((photo) => photo.hasPermanentStorage === false)
+                .map((photo) => photo.id)}
+            />
+          ) : null}
+        </>
+      }
+    >
+      <div className={styles.albumStory}>
+        <div className={styles.albumSplit} data-reveal>
+          <header className={styles.albumHeroHeader}>
             <div aria-hidden="true" className={styles.albumHeroMedia}>
               <ExperienceCoverThumb
                 coverPhotoId={heroCoverId}
@@ -552,35 +613,16 @@ export function AlbumFolderView({
             </div>
           </header>
 
-          {error ? (
-            <p className={styles.albumHeroError} role="alert">
-              {error}
-            </p>
-          ) : null}
-
-          {isOwner ? (
-            <PendingR2Sync
-              experienceId={experience.id}
-              photoIdsMissingStorage={photos
-                .filter((photo) => photo.hasPermanentStorage === false)
-                .map((photo) => photo.id)}
-            />
-          ) : null}
-        </>
-      }
-    >
-      <div className={styles.albumStory}>
-        {placeGpsCount > 0 ? (
           <section
             aria-label="Mapa do lugar"
-            className={styles.albumMapSection}
+            className={styles.albumMapCard}
             id="mapa"
           >
             <TripMap
               albumLabel={album.displayName}
               currentAlbumId={albumId}
               emptyHint="Fotos sem GPS continuam na galeria abaixo."
-              emptyTitle="Não encontramos localizações nas fotos deste lugar."
+              emptyTitle="Ainda não há localizações neste lugar."
               experienceSlug={experience.slug}
               experienceTitle={experience.title}
               focus={placeMapFocus}
@@ -588,6 +630,53 @@ export function AlbumFolderView({
               photos={albumPhotos}
               variant="featured"
             />
+            {placeGpsCount > 0 ? (
+              <Link className={styles.albumMapFullLink} href={fullMapHref}>
+                Ver mapa completo
+              </Link>
+            ) : null}
+          </section>
+        </div>
+
+        {isOwner || story ? (
+          <section
+            aria-label="Sobre essa viagem"
+            className={styles.albumAboutCard}
+            data-reveal
+          >
+            <div className={styles.albumAboutCopy}>
+              <p className={styles.albumAboutTitle}>Sobre essa viagem</p>
+              {story ? (
+                <>
+                  <p className={styles.albumAboutText}>{storyText}</p>
+                  {storyLong ? (
+                    <button
+                      className={styles.albumAboutMore}
+                      onClick={() => setStoryExpanded((value) => !value)}
+                      type="button"
+                    >
+                      {storyExpanded ? "Ler menos" : "Ler mais"}
+                    </button>
+                  ) : null}
+                </>
+              ) : (
+                <p className={styles.albumAboutEmpty}>
+                  Escreva o que essa viagem significou para você.
+                </p>
+              )}
+            </div>
+            {isOwner ? (
+              <button
+                className={styles.albumAboutEdit}
+                onClick={() => {
+                  setError(null);
+                  setStoryOpen(true);
+                }}
+                type="button"
+              >
+                {story ? "Editar história" : "Escrever história"}
+              </button>
+            ) : null}
           </section>
         ) : null}
 
@@ -658,23 +747,6 @@ export function AlbumFolderView({
               Excluir lugar
             </button>
           </div>
-        ) : null}
-
-        {album.description ||
-        (experience.primaryCity &&
-          experience.primaryCity !== album.displayName) ? (
-          <section
-            aria-label="Sobre o lugar"
-            className={styles.albumInfoSection}
-          >
-            {experience.primaryCity &&
-            experience.primaryCity !== album.displayName ? (
-              <p className={styles.albumInfoLine}>{experience.primaryCity}</p>
-            ) : null}
-            {album.description ? (
-              <p className={styles.albumInfoDescription}>{album.description}</p>
-            ) : null}
-          </section>
         ) : null}
 
         {foldersOpen || childAlbums.length > 0 ? (
@@ -881,6 +953,18 @@ export function AlbumFolderView({
           onClose={() => setRenameOpen(false)}
           onSubmit={renameAlbum}
           title="Renomear"
+        />
+      ) : null}
+
+      {storyOpen ? (
+        <StoryDialog
+          busy={busy}
+          confirmLabel="Salvar"
+          error={error}
+          initialStory={story}
+          onClose={() => setStoryOpen(false)}
+          onSubmit={saveStory}
+          title="Sobre essa viagem"
         />
       ) : null}
 

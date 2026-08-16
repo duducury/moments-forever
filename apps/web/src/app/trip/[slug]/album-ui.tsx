@@ -454,6 +454,73 @@ export function NameDialog({
   );
 }
 
+export function StoryDialog({
+  title,
+  initialStory,
+  confirmLabel,
+  busy,
+  error,
+  onClose,
+  onSubmit,
+}: {
+  readonly title: string;
+  readonly initialStory: string;
+  readonly confirmLabel: string;
+  readonly busy: boolean;
+  readonly error: string | null;
+  readonly onClose: () => void;
+  readonly onSubmit: (story: string) => Promise<void>;
+}) {
+  return (
+    <div
+      aria-label={title}
+      aria-modal="true"
+      className={styles.panel}
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+      role="dialog"
+    >
+      <div className={styles.panelCard}>
+        <h2>{title}</h2>
+        <form
+          onSubmit={(event: FormEvent<HTMLFormElement>) => {
+            event.preventDefault();
+            const data = new FormData(event.currentTarget);
+            void onSubmit(String(data.get("story") ?? ""));
+          }}
+        >
+          <label htmlFor="album-story">Sobre essa viagem</label>
+          <textarea
+            autoFocus
+            className={styles.textarea}
+            defaultValue={initialStory}
+            id="album-story"
+            maxLength={4000}
+            name="story"
+            placeholder="O que essa viagem significou para você?"
+            rows={7}
+          />
+          <div className={styles.panelActions}>
+            <button className="button primary" disabled={busy} type="submit">
+              {busy ? "Salvando…" : confirmLabel}
+            </button>
+            <button
+              className="button secondary"
+              disabled={busy}
+              onClick={onClose}
+              type="button"
+            >
+              Cancelar
+            </button>
+          </div>
+          {error ? <p className={styles.error}>{error}</p> : null}
+        </form>
+      </div>
+    </div>
+  );
+}
+
 function albumFromCreatePayload(album: {
   readonly id: string;
   readonly experience_id: string;

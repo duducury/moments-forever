@@ -13,6 +13,7 @@ import { createPortal } from "react-dom";
 
 import { AppWordmark } from "@/components/app-wordmark";
 import { deleteLocalPhotoBlobs } from "@/lib/local-photos/photo-blob-store";
+import { warmLocalPhotoObjectUrls } from "@/lib/local-photos/local-photo-object-url-cache";
 import { useLocalPhotoObjectUrl } from "@/lib/local-photos/use-local-photo-urls";
 
 import {
@@ -162,9 +163,38 @@ function LightboxSlideMedia({
 }) {
   const thumbSrc = useLocalPhotoObjectUrl(photoId, "thumbnail");
   const fullSrc = useLocalPhotoObjectUrl(photoId, "full");
-  // One layer only: full when ready, otherwise thumb. Stacking thumb+full
-  // made every swipe look soft and then sharpen.
-  const displaySrc = fullSrc ?? thumbSrc;
+  const [fullPainted, setFullPainted] = useState(false);
+
+  useEffect(() => {
+    setFullPainted(false);
+    if (!fullSrc) return;
+
+    // Local blob URLs are already on-device — mark ready after decode.
+    // Remote full URLs stay behind the thumb until the browser finishes loading
+    // (otherwise we block first paint on a large download).
+    let alive = true;
+    const probe = new window.Image();
+    probe.src = fullSrc;
+    const mark = () => {
+      if (alive) setFullPainted(true);
+    };
+    if (typeof probe.decode === "function") {
+      void probe.decode().then(mark).catch(mark);
+    } else {
+      probe.onload = mark;
+      probe.onerror = mark;
+    }
+    return () => {
+      alive = false;
+    };
+  }, [fullSrc, photoId]);
+
+  const preferFull = Boolean(
+    fullSrc && (fullPainted || fullSrc.startsWith("blob:")),
+  );
+  const displaySrc = preferFull
+    ? fullSrc
+    : (thumbSrc ?? fullSrc ?? null);
   if (!displaySrc) return null;
 
   return (
@@ -222,11 +252,26 @@ export function PhotoLightbox({
     useLightboxNeighborIds(photos, index);
   const thumbSrc = useLocalPhotoObjectUrl(photo?.id, "thumbnail");
   const fullSrc = useLocalPhotoObjectUrl(photo?.id, "full");
-  // Warm ±2 neighbors on the full variant so slides open sharp.
+  // Thumb first for neighbors (fast paint), then full.
+  useLocalPhotoObjectUrl(neighborPrevId, "thumbnail");
+  useLocalPhotoObjectUrl(neighborNextId, "thumbnail");
   useLocalPhotoObjectUrl(neighborPrevId, "full");
   useLocalPhotoObjectUrl(neighborNextId, "full");
   useLocalPhotoObjectUrl(farPrevId, "full");
   useLocalPhotoObjectUrl(farNextId, "full");
+
+  useEffect(() => {
+    const ids = [
+      photo?.id,
+      neighborPrevId,
+      neighborNextId,
+      farPrevId,
+      farNextId,
+    ].filter((id): id is string => Boolean(id));
+    if (ids.length === 0) return;
+    void warmLocalPhotoObjectUrls(ids);
+  }, [photo?.id, neighborPrevId, neighborNextId, farPrevId, farNextId]);
+
   const [removingLocation, setRemovingLocation] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [dismissDragY, setDismissDragY] = useState(0);

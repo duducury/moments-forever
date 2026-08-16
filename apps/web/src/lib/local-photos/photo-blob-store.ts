@@ -46,6 +46,25 @@ function openDb(): Promise<IDBDatabase> {
   });
 }
 
+/** Reuse one connection — opening/closing per photo was a lightbox bottleneck. */
+let sharedDbPromise: Promise<IDBDatabase> | null = null;
+
+function getDb(): Promise<IDBDatabase> {
+  if (!sharedDbPromise) {
+    sharedDbPromise = openDb().then((db) => {
+      db.onclose = () => {
+        sharedDbPromise = null;
+      };
+      db.onversionchange = () => {
+        db.close();
+        sharedDbPromise = null;
+      };
+      return db;
+    });
+  }
+  return sharedDbPromise;
+}
+
 function requestToPromise<T>(request: IDBRequest<T>): Promise<T> {
   return new Promise((resolve, reject) => {
     request.onsuccess = () => resolve(request.result);
@@ -88,44 +107,60 @@ export async function putLocalPhotoBlobs(
 ): Promise<void> {
   if (entries.length === 0) return;
 
-  const db = await openDb();
-  try {
-    const tx = db.transaction(STORE_NAME, "readwrite");
-    const store = tx.objectStore(STORE_NAME);
-    const updatedAt = Date.now();
+  const db = await getDb();
+  const tx = db.transaction(STORE_NAME, "readwrite");
+  const store = tx.objectStore(STORE_NAME);
+  const updatedAt = Date.now();
 
-    for (const entry of entries) {
-      const record: LocalPhotoBlobRecord = {
-        id: entry.id,
-        blob: entry.full,
-        thumbnail: entry.thumbnail ?? null,
-        updatedAt,
-      };
-      store.put(record);
-    }
-
-    await transactionDone(tx);
-  } finally {
-    db.close();
+  for (const entry of entries) {
+    const record: LocalPhotoBlobRecord = {
+      id: entry.id,
+      blob: entry.full,
+      thumbnail: entry.thumbnail ?? null,
+      updatedAt,
+    };
+    store.put(record);
   }
+
+  await transactionDone(tx);
 }
 
 export async function getLocalPhotoBlobRecord(
   id: string,
 ): Promise<LocalPhotoBlobRecord | null> {
-  const db = await openDb();
-  try {
-    const tx = db.transaction(STORE_NAME, "readonly");
-    const record = await requestToPromise(
-      tx.objectStore(STORE_NAME).get(id) as IDBRequest<
-        LocalPhotoBlobRecord | undefined
-      >,
-    );
-    await transactionDone(tx);
-    return record ?? null;
-  } finally {
-    db.close();
-  }
+  const db = await getDb();
+  const tx = db.transaction(STORE_NAME, "readonly");
+  const record = await requestToPromise(
+    tx.objectStore(STORE_NAME).get(id) as IDBRequest<
+      LocalPhotoBlobRecord | undefined
+    >,
+  );
+  await transactionDone(tx);
+  return record ?? null;
+}
+
+export async function getLocalPhotoBlobRecords(
+  ids: readonly string[],
+): Promise<Map<string, LocalPhotoBlobRecord>> {
+  const uniqueIds = [...new Set(ids.filter(Boolean))];
+  const result = new Map<string, LocalPhotoBlobRecord>();
+  if (uniqueIds.length === 0) return result;
+
+  const db = await getDb();
+  const tx = db.transaction(STORE_NAME, "readonly");
+  const store = tx.objectStore(STORE_NAME);
+
+  await Promise.all(
+    uniqueIds.map(async (id) => {
+      const record = await requestToPromise(
+        store.get(id) as IDBRequest<LocalPhotoBlobRecord | undefined>,
+      );
+      if (record) result.set(id, record);
+    }),
+  );
+
+  await transactionDone(tx);
+  return result;
 }
 
 export async function getLocalPhotoBlob(
@@ -140,43 +175,20 @@ export async function getLocalPhotoBlobs(
   ids: readonly string[],
   variant: LocalPhotoVariant = "full",
 ): Promise<Map<string, Blob>> {
-  const uniqueIds = [...new Set(ids.filter(Boolean))];
+  const records = await getLocalPhotoBlobRecords(ids);
   const result = new Map<string, Blob>();
-  if (uniqueIds.length === 0) return result;
-
-  const db = await openDb();
-  try {
-    const tx = db.transaction(STORE_NAME, "readonly");
-    const store = tx.objectStore(STORE_NAME);
-
-    await Promise.all(
-      uniqueIds.map(async (id) => {
-        const record = await requestToPromise(
-          store.get(id) as IDBRequest<LocalPhotoBlobRecord | undefined>,
-        );
-        const blob = pickBlob(record, variant);
-        if (blob) {
-          result.set(id, blob);
-        }
-      }),
-    );
-
-    await transactionDone(tx);
-    return result;
-  } finally {
-    db.close();
+  for (const [id, record] of records) {
+    const blob = pickBlob(record, variant);
+    if (blob) result.set(id, blob);
   }
+  return result;
 }
 
 export async function deleteLocalPhotoBlob(id: string): Promise<void> {
-  const db = await openDb();
-  try {
-    const tx = db.transaction(STORE_NAME, "readwrite");
-    tx.objectStore(STORE_NAME).delete(id);
-    await transactionDone(tx);
-  } finally {
-    db.close();
-  }
+  const db = await getDb();
+  const tx = db.transaction(STORE_NAME, "readwrite");
+  tx.objectStore(STORE_NAME).delete(id);
+  await transactionDone(tx);
   // Dynamic import avoids a circular dependency with the Object URL cache.
   const { forgetLocalPhotoObjectUrls } = await import(
     "./local-photo-object-url-cache"
@@ -190,17 +202,13 @@ export async function deleteLocalPhotoBlobs(
   const uniqueIds = [...new Set(ids.filter(Boolean))];
   if (uniqueIds.length === 0) return;
 
-  const db = await openDb();
-  try {
-    const tx = db.transaction(STORE_NAME, "readwrite");
-    const store = tx.objectStore(STORE_NAME);
-    for (const id of uniqueIds) {
-      store.delete(id);
-    }
-    await transactionDone(tx);
-  } finally {
-    db.close();
+  const db = await getDb();
+  const tx = db.transaction(STORE_NAME, "readwrite");
+  const store = tx.objectStore(STORE_NAME);
+  for (const id of uniqueIds) {
+    store.delete(id);
   }
+  await transactionDone(tx);
   const { forgetLocalPhotoObjectUrlsMany } = await import(
     "./local-photo-object-url-cache"
   );

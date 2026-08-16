@@ -13,7 +13,7 @@ import { createPortal } from "react-dom";
 
 import { AppWordmark } from "@/components/app-wordmark";
 import { deleteLocalPhotoBlobs } from "@/lib/local-photos/photo-blob-store";
-import { warmAndPreloadLocalPhotoFulls } from "@/lib/local-photos/local-photo-object-url-cache";
+import { warmLocalPhotoObjectUrls } from "@/lib/local-photos/local-photo-object-url-cache";
 import { useLocalPhotoObjectUrl } from "@/lib/local-photos/use-local-photo-urls";
 
 import {
@@ -157,69 +157,62 @@ function PhotoTile({
 function LightboxSlideMedia({
   photoId,
   alt = "",
+  priority = false,
 }: {
   readonly photoId: string;
   readonly alt?: string;
+  readonly priority?: boolean;
 }) {
-  // Sharp-first: never paint the soft thumbnail in the lightbox.
-  // Show a neutral shell until the full image is decoded.
+  // Full quality only — no soft thumbnail. Mount the <img> as soon as the
+  // URL is known so the download starts immediately; fade in once loaded.
   const fullSrc = useLocalPhotoObjectUrl(photoId, "full");
-  const [ready, setReady] = useState(false);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    setReady(false);
-    if (!fullSrc) return;
-
-    let alive = true;
-    const probe = new window.Image();
-    const mark = () => {
-      if (alive) setReady(true);
-    };
-    probe.src = fullSrc;
-    if (typeof probe.decode === "function") {
-      void probe.decode().then(mark).catch(mark);
-    } else {
-      probe.onload = mark;
-      probe.onerror = mark;
-    }
-    return () => {
-      alive = false;
-    };
+    setLoaded(false);
   }, [fullSrc, photoId]);
 
-  if (!fullSrc || !ready) {
-    return (
-      <div
-        aria-busy="true"
-        aria-label="Carregando foto"
-        className={styles.lightboxImageShell}
-      />
-    );
-  }
+  const isLocalBlob = Boolean(fullSrc?.startsWith("blob:"));
+  const showImage = Boolean(fullSrc) && (isLocalBlob || loaded);
 
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      alt={alt}
-      className={styles.lightboxImage}
-      decoding="async"
-      draggable={false}
-      src={fullSrc}
-    />
+    <>
+      {!showImage ? (
+        <div
+          aria-busy="true"
+          aria-label="Carregando foto"
+          className={styles.lightboxImageShell}
+        />
+      ) : null}
+      {fullSrc ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          alt={alt}
+          className={styles.lightboxImage}
+          decoding={priority ? "sync" : "async"}
+          draggable={false}
+          fetchPriority={priority ? "high" : "low"}
+          onError={() => setLoaded(true)}
+          onLoad={() => setLoaded(true)}
+          src={fullSrc}
+          style={{ opacity: showImage ? 1 : 0 }}
+        />
+      ) : null}
+    </>
   );
 }
 
 function useLightboxNeighborIds(
   photos: readonly TripPhoto[],
   index: number,
-): readonly (string | null)[] {
+): readonly [string | null, string | null] {
   return useMemo(() => {
     if (photos.length < 2 || index < 0) {
-      return [null, null, null, null, null, null];
+      return [null, null];
     }
     const at = (offset: number) =>
       photos[(index + offset + photos.length) % photos.length]?.id ?? null;
-    return [at(-3), at(-2), at(-1), at(1), at(2), at(3)];
+    return [at(-1), at(1)];
   }, [photos, index]);
 }
 
@@ -248,43 +241,23 @@ export function PhotoLightbox({
 }) {
   const index = photos.findIndex((photo) => photo.id === photoId);
   const photo = index >= 0 ? photos[index] : null;
-  const [
-    farPrev2Id,
-    farPrevId,
-    neighborPrevId,
-    neighborNextId,
-    farNextId,
-    farNext2Id,
-  ] = useLightboxNeighborIds(photos, index);
+  const [neighborPrevId, neighborNextId] = useLightboxNeighborIds(
+    photos,
+    index,
+  );
   const fullSrc = useLocalPhotoObjectUrl(photo?.id, "full");
+  // Resolve neighbor URLs so the slide track can start downloads, but do not
+  // decode-preload a wide window — that starved the open photo on mobile.
   useLocalPhotoObjectUrl(neighborPrevId, "full");
   useLocalPhotoObjectUrl(neighborNextId, "full");
-  useLocalPhotoObjectUrl(farPrevId, "full");
-  useLocalPhotoObjectUrl(farNextId, "full");
-  useLocalPhotoObjectUrl(farPrev2Id, "full");
-  useLocalPhotoObjectUrl(farNext2Id, "full");
 
   useEffect(() => {
-    const ids = [
-      photo?.id,
-      neighborPrevId,
-      neighborNextId,
-      farPrevId,
-      farNextId,
-      farPrev2Id,
-      farNext2Id,
-    ].filter((id): id is string => Boolean(id));
+    const ids = [photo?.id, neighborPrevId, neighborNextId].filter(
+      (id): id is string => Boolean(id),
+    );
     if (ids.length === 0) return;
-    void warmAndPreloadLocalPhotoFulls(ids);
-  }, [
-    photo?.id,
-    neighborPrevId,
-    neighborNextId,
-    farPrevId,
-    farNextId,
-    farPrev2Id,
-    farNext2Id,
-  ]);
+    void warmLocalPhotoObjectUrls(ids);
+  }, [photo?.id, neighborPrevId, neighborNextId]);
 
   const [removingLocation, setRemovingLocation] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -513,6 +486,7 @@ export function PhotoLightbox({
             alt={`Foto ${index + 1}`}
             key={currentPhoto.id}
             photoId={currentPhoto.id}
+            priority
           />
         </LightboxZoomStage>
 

@@ -1943,26 +1943,28 @@
   overflow: hidden;
   isolation: isolate;
   padding: 24px 22px 22px 24px;
-  border: 1px solid rgb(168 176 255 / 45%);
+  border: 1px solid color-mix(in srgb, var(--accent) 34%, var(--border));
   border-radius: 22px;
-  color: #eef1ff;
-  background: linear-gradient(165deg, #4a5bb8 0%, #6a55b8 52%, #4450a0 100%);
-  box-shadow: 0 14px 32px rgb(0 0 0 / 32%);
+  color: var(--text);
+  background:
+    linear-gradient(
+      160deg,
+      color-mix(in srgb, var(--surface) 72%, var(--accent)) 0%,
+      var(--surface) 100%
+    );
+  box-shadow: 0 12px 28px var(--shadow);
 }
 
 .albumAboutWorld {
   position: absolute;
   z-index: 1;
-  right: -4%;
-  top: 8%;
-  width: min(48%, 280px);
-  height: 92%;
+  right: 10px;
+  bottom: -18px;
+  width: 148px;
+  height: 148px;
   pointer-events: none;
-  color: rgb(255 255 255 / 14%);
-}
-
-:global(html[data-resolved-theme="light"]) .albumAboutWorld {
-  color: rgb(255 236 220 / 10%);
+  color: var(--accent);
+  opacity: 0.16;
 }
 
 .albumAboutCard::before {
@@ -1971,24 +1973,8 @@
   inset: 7px;
   z-index: 1;
   pointer-events: none;
-  border: 1px solid rgb(186 198 255 / 28%);
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
   border-radius: 16px;
-}
-
-:global(html[data-resolved-theme="light"]) .albumAboutCard {
-  border-color: #8b3f28;
-  color: #f7efe4;
-  background:
-    radial-gradient(90% 70% at 8% 0%, rgb(232 154 110 / 28%) 0%, transparent 48%),
-    linear-gradient(155deg, #6f3324 0%, #3d221c 55%, #2a1814 100%);
-  box-shadow:
-    0 0 0 1px rgb(255 200 170 / 16%) inset,
-    0 0 28px rgb(139 63 40 / 22%),
-    0 16px 36px rgb(42 32 22 / 22%);
-}
-
-:global(html[data-resolved-theme="light"]) .albumAboutCard::before {
-  border-color: rgb(247 239 228 / 22%);
 }
 
 .albumAboutCopy {
@@ -2000,38 +1986,26 @@
 
 .albumAboutTitle {
   margin: 0 0 10px;
-  color: #c4d4ff;
+  color: var(--accent);
   font-size: 0.7rem;
   font-weight: 800;
   letter-spacing: 0.18em;
   text-transform: uppercase;
 }
 
-:global(html[data-resolved-theme="light"]) .albumAboutTitle {
-  color: #f3c4b0;
-}
-
 .albumAboutText,
 .albumAboutEmpty {
   margin: 0;
   max-width: 42rem;
-  color: #f3f5ff;
+  color: var(--text);
   font-family: Georgia, "Times New Roman", serif;
   font-size: 1.18rem;
   line-height: 1.75;
 }
 
-:global(html[data-resolved-theme="light"]) .albumAboutText {
-  color: #f7efe4;
-}
-
 .albumAboutEmpty {
-  color: rgb(226 230 255 / 62%);
+  color: var(--muted);
   font-style: italic;
-}
-
-:global(html[data-resolved-theme="light"]) .albumAboutEmpty {
-  color: rgb(247 239 228 / 68%);
 }
 
 .albumAboutMore {
@@ -2039,16 +2013,12 @@
   margin-top: 12px;
   border: 0;
   padding: 0;
-  color: #b7c8ff;
+  color: var(--accent);
   background: none;
   cursor: pointer;
   font: inherit;
   font-size: 0.86rem;
   font-weight: 750;
-}
-
-:global(html[data-resolved-theme="light"]) .albumAboutMore {
-  color: #f3c4b0;
 }
 
 .albumAboutEdit {
@@ -2057,10 +2027,10 @@
   flex: 0 0 auto;
   min-height: 40px;
   padding: 0 14px;
-  border: 1px solid rgb(186 198 255 / 55%);
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--border));
   border-radius: 999px;
-  color: #eef1ff;
-  background: rgb(255 255 255 / 10%);
+  color: var(--accent);
+  background: color-mix(in srgb, var(--surface) 55%, transparent);
   cursor: pointer;
   font: inherit;
   font-size: 0.86rem;
@@ -2070,48 +2040,26 @@
     background 160ms ease;
 }
 
-:global(html[data-resolved-theme="light"]) .albumAboutEdit {
-  border-color: rgb(247 239 228 / 45%);
-  color: #f7efe4;
-  background: rgb(255 255 255 / 10%);
-}
-
 .albumAboutEdit:hover {
   transform: translateY(-1px);
-  background: rgb(255 255 255 / 20%);
-}
-
-:global(html[data-resolved-theme="light"]) .albumAboutEdit:hover {
-  background: rgb(255 255 255 / 18%);
+  background: color-mix(in srgb, var(--accent) 14%, var(--surface));
 }
 
 .storyPanelCard {
-  border: 1px solid rgb(168 176 255 / 45%);
-  background: linear-gradient(180deg, #4a5bb8 0%, #6a55b8 100%);
-  color: #eef1ff;
-}
-
-:global(html[data-resolved-theme="light"]) .storyPanelCard {
-  border: 1px solid #8b3f28;
-  background: linear-gradient(180deg, #fff6ea 0%, #f0e0cc 100%);
-  color: #2a2118;
+  border: 1px solid color-mix(in srgb, var(--accent) 32%, var(--border));
+  background: var(--surface);
+  color: var(--text);
 }
 
 .storyTextarea {
   min-height: 168px;
-  border: 1px solid rgb(186 198 255 / 35%);
+  border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--border));
   border-radius: 16px;
-  background: rgb(12 14 36 / 45%);
-  color: #f3f5ff;
+  background: color-mix(in srgb, var(--surface) 88%, var(--background));
+  color: var(--text);
   font-family: Georgia, "Times New Roman", serif;
   font-size: 1.05rem;
   line-height: 1.7;
-}
-
-:global(html[data-resolved-theme="light"]) .storyTextarea {
-  border: 1px solid rgb(139 63 40 / 28%);
-  background: #fffaf2;
-  color: #2c241c;
 }
 
 .albumStory {

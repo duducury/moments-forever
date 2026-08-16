@@ -276,29 +276,47 @@
 }
 
 .worldExplore {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  margin: 4px 2px 0;
-  color: var(--muted);
+  position: relative;
+  display: grid;
+  gap: 6px;
+  margin: 2px 0 2px;
+  padding: 4px 2px 10px;
+  color: var(--text);
   font-family: Georgia, "Times New Roman", serif;
-  font-size: 1.02rem;
-  font-style: italic;
-  line-height: 1.45;
+  line-height: 1.35;
 }
 
-.worldExploreText {
-  flex: 1 1 auto;
-  min-width: 0;
+.worldExploreLead {
+  color: var(--text);
+  font-size: clamp(1.15rem, 4.2vw, 1.45rem);
+  font-style: normal;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.worldExplorePct {
+  color: var(--accent);
+  font-style: normal;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.worldExploreRest {
+  max-width: 34ch;
+  color: color-mix(in srgb, var(--text) 72%, var(--muted));
+  font-size: clamp(0.95rem, 3.4vw, 1.08rem);
+  font-style: italic;
+  line-height: 1.4;
 }
 
 .worldExploreStar {
-  flex: 0 0 auto;
-  margin-top: 0.15em;
-  color: color-mix(in srgb, #c4a574 70%, var(--muted));
-  font-style: normal;
-  font-size: 0.92rem;
+  position: absolute;
+  top: 6px;
+  right: 2px;
+  color: color-mix(in srgb, var(--accent) 75%, #c4a574);
+  font-size: 0.95rem;
   line-height: 1;
+  opacity: 0.9;
 }
 
 .countryPanel {

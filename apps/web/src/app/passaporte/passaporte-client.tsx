@@ -70,11 +70,12 @@ function worldKnownPercent(visitedCountryCount: number): number {
   );
 }
 
-function worldExploreLine(visitedCountryCount: number): string | null {
+function worldExploreCopy(
+  visitedCountryCount: number,
+): { readonly known: number; readonly remaining: number } | null {
   const known = worldKnownPercent(visitedCountryCount);
   if (known <= 0) return null;
-  const remaining = 100 - known;
-  return `Você conhece ${known}% do mundo. Os outros ${remaining}% ainda estão esperando para ser vividos.`;
+  return { known, remaining: 100 - known };
 }
 
 function stampYear(iso: string | null): string {

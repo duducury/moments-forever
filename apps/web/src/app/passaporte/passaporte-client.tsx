@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useEffect, useId, useMemo, useRef, useState, type PointerEvent, type ReactNode } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type PointerEvent, type ReactNode, type RefObject } from "react";
 
 import { ProfileAvatar } from "@/app/perfil/profile-avatar";
 import { AppCreditFooter } from "@/components/app-credit-footer";
@@ -87,6 +87,60 @@ function selectedStampLabel(tripCount: number, lastVisitAt: string | null): stri
   const year = stampYear(lastVisitAt) || "—";
   if (tripCount > 1) return `${tripCount}x · ${year}`;
   return `Visitado · ${year}`;
+}
+
+/**
+ * When a nested scroller hits top/bottom, forward the gesture to the page
+ * so the user is not trapped inside Minha jornada (common on iOS).
+ */
+function useScrollChainToPage(
+  scrollerRef: RefObject<HTMLElement | null>,
+  enabled: boolean,
+) {
+  useEffect(() => {
+    const node = scrollerRef.current;
+    if (!node || !enabled) return;
+
+    const edge = 2;
+    const atTop = () => node.scrollTop <= edge;
+    const atBottom = () =>
+      node.scrollTop + node.clientHeight >= node.scrollHeight - edge;
+
+    const onWheel = (event: WheelEvent) => {
+      const down = event.deltaY > 0;
+      const up = event.deltaY < 0;
+      if ((down && atBottom()) || (up && atTop())) {
+        event.preventDefault();
+        window.scrollBy({ top: event.deltaY, left: 0, behavior: "auto" });
+      }
+    };
+
+    let lastY = 0;
+    const onTouchStart = (event: TouchEvent) => {
+      lastY = event.touches[0]?.clientY ?? 0;
+    };
+    const onTouchMove = (event: TouchEvent) => {
+      const y = event.touches[0]?.clientY ?? lastY;
+      const deltaY = lastY - y;
+      lastY = y;
+      if (Math.abs(deltaY) < 0.5) return;
+      const down = deltaY > 0;
+      const up = deltaY < 0;
+      if ((down && atBottom()) || (up && atTop())) {
+        if (event.cancelable) event.preventDefault();
+        window.scrollBy({ top: deltaY, left: 0, behavior: "auto" });
+      }
+    };
+
+    node.addEventListener("wheel", onWheel, { passive: false });
+    node.addEventListener("touchstart", onTouchStart, { passive: true });
+    node.addEventListener("touchmove", onTouchMove, { passive: false });
+    return () => {
+      node.removeEventListener("wheel", onWheel);
+      node.removeEventListener("touchstart", onTouchStart);
+      node.removeEventListener("touchmove", onTouchMove);
+    };
+  }, [scrollerRef, enabled]);
 }
 
 function PassportCrest() {
@@ -187,6 +241,7 @@ export function PassaporteClient({
   const [selectedCode, setSelectedCode] = useState<string | null>(null);
 
   const [achFilter, setAchFilter] = useState<"all" | "unlocked" | "locked">("all");
+  const journeyScrollRef = useRef<HTMLDivElement | null>(null);
 
   const selected = useMemo(
     () => passport.countries.find((country) => country.code === selectedCode) ?? null,
@@ -217,6 +272,7 @@ export function PassaporteClient({
 
   const visitedCodes = passport.countries.map((country) => country.code);
   const exploreCopy = worldExploreCopy(visitedCodes.length);
+  useScrollChainToPage(journeyScrollRef, journeyByYear.length > 0);
   const stampPages = useMemo(() => {
     const pages: PassportData["countries"][] = [];
     const perPage = 2;
@@ -563,7 +619,7 @@ export function PassaporteClient({
           {journeyByYear.length === 0 ? (
             <p className={styles.journeyEmpty}>Suas viagens aparecem aqui.</p>
           ) : (
-            <div className={styles.journeyScroll}>
+            <div className={styles.journeyScroll} ref={journeyScrollRef}>
               {journeyByYear.map((group) => (
                 <div className={styles.yearBlock} key={group.year}>
                   <h3 className={styles.year}>{group.year}</h3>

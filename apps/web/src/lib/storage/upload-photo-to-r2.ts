@@ -4,7 +4,7 @@
  * Uploads local photo blobs to private R2 via short-lived presigned PUT URLs.
  * Secrets never touch the browser — only the signed URL from our API.
  *
- * MVP: `full` is the display preview (~2048px JPEG), stored under the R2 key
+ * MVP: `full` is the display preview (~1600px JPEG), stored under the R2 key
  * variant `original` for backward-compatible object paths. Camera originals
  * are not uploaded. See docs/photo-storage.md.
  */

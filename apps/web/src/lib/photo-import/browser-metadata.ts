@@ -125,11 +125,11 @@ export interface BrowserThumbnail {
 /** Default edge for map/strip/grid thumbs — sharp enough on retina, still light. */
 export const DEFAULT_THUMBNAIL_EDGE = 640;
 
-/** MVP display/lightbox/cover asset — docs/photo-storage.md preview (~2048). */
-export const DEFAULT_PREVIEW_EDGE = 2048;
+/** MVP display/lightbox/cover asset — phone-first preview (docs/photo-storage.md). */
+export const DEFAULT_PREVIEW_EDGE = 1600;
 
 const DEFAULT_THUMBNAIL_QUALITY = 0.88;
-const DEFAULT_PREVIEW_QUALITY = 0.86;
+const DEFAULT_PREVIEW_QUALITY = 0.82;
 
 async function encodeJpegDerivative(
   bitmap: ImageBitmap,
@@ -150,7 +150,7 @@ async function encodeJpegDerivative(
 }
 
 /**
- * Decode once and produce MVP derivatives: thumbnail (~640) + preview (~2048).
+ * Decode once and produce MVP derivatives: thumbnail (~640) + preview (~1600).
  * Never returns the camera original — both outputs are JPEG re-encodes.
  */
 export async function createBrowserPhotoDerivatives(
@@ -227,7 +227,7 @@ export async function createBrowserThumbnail(
   }
 }
 
-/** Display asset for lightbox/covers — max edge ~2048 JPEG (MVP “full” / R2 original key). */
+/** Display asset for lightbox/covers — max edge ~1600 JPEG (MVP “full” / R2 original key). */
 export async function createBrowserPreview(
   file: Blob,
   maximumEdge = DEFAULT_PREVIEW_EDGE,

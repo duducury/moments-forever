@@ -15,6 +15,7 @@ import { AppWordmark } from "@/components/app-wordmark";
 import { deleteLocalPhotoBlobs } from "@/lib/local-photos/photo-blob-store";
 import {
   markLocalPhotoFullPreloaded,
+  prefetchLocalPhotoFullOnIntent,
   prioritizeAlbumFullPrefetch,
   warmLocalPhotoObjectUrls,
 } from "@/lib/local-photos/local-photo-object-url-cache";
@@ -151,6 +152,9 @@ function PhotoTile({
       aria-label={`Abrir foto ${order}`}
       className={styles.tileButton}
       onClick={onOpen}
+      onPointerDown={() => {
+        prefetchLocalPhotoFullOnIntent(photo.id);
+      }}
       type="button"
     >
       <ProgressiveTileMedia className={styles.squareTile} photoId={photo.id} />

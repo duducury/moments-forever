@@ -630,7 +630,7 @@ export function PhotoImport() {
         throw new Error("Nenhum momento/foto válido para persistir.");
       }
 
-      // MVP: store/upload derivatives only (preview ~2048 + thumb). Never the camera file.
+      // MVP: store/upload derivatives only (preview ~1600 + thumb). Never the camera file.
       const localBlobs = draft.photos.flatMap((photo) => {
         const thumbnail = thumbnailBlobsRef.current.get(photo.id) ?? null;
         const preview = previewBlobsRef.current.get(photo.id) ?? null;

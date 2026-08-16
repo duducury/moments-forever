@@ -5,11 +5,12 @@ import { useEffect, useState } from "react";
 import {
   getOrCreateLocalPhotoObjectUrl,
   peekLocalPhotoObjectUrl,
+  subscribeLocalPhotoUrlCache,
 } from "./local-photo-object-url-cache";
 import type { LocalPhotoVariant } from "./photo-blob-store";
 
 /**
- * Resolves IndexedDB photo blobs to Object URLs via a session cache.
+ * Resolves IndexedDB photo blobs / R2 signed URLs via a session cache.
  *
  * Reads the cache synchronously when warm (Soft Nav / Admin↔trip) so covers do
  * not flash empty. Never revokes on effect cleanup — that raced with async loads
@@ -26,8 +27,13 @@ export function useLocalPhotoObjectUrl(
   const [, setEpoch] = useState(0);
 
   useEffect(() => {
+    return subscribeLocalPhotoUrlCache(() => {
+      setEpoch((value) => value + 1);
+    });
+  }, []);
+
+  useEffect(() => {
     if (!photoId) return;
-    if (peekLocalPhotoObjectUrl(photoId, variant)) return;
 
     let alive = true;
     void getOrCreateLocalPhotoObjectUrl(photoId, variant).then((url) => {

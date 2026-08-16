@@ -7,12 +7,16 @@ O MVP guarda somente derivados adequados à experiência, nunca originais. As pr
 ## Variantes
 
 - **Thumbnail:** grids, clusters, mapa e previews pequenos; lado maior ~640 px (JPEG no dispositivo).
-- **Preview:** visualização normal/tela cheia e capas; lado maior inicialmente próximo de 2.048 px (JPEG no dispositivo).
+- **Preview:** visualização normal/tela cheia e capas; lado maior ~1.600 px (JPEG no dispositivo). Fotos mais antigas podem ainda estar em ~2.048 px até reprocessamento.
 - **Original:** proibido no fluxo do MVP; extensão futura premium com consentimento, cota, preço e retenção próprios.
 
 ### Compatibilidade de chave R2 (MVP)
 
-No bucket, o objeto sob a variante de caminho `original` **é o preview ~2048**, não o arquivo da câmera. O cliente continua pedindo `variant=full` / IndexedDB `full` para esse ativo. Renomear a chave na API (`preview`) fica como follow-up; fotos já enviadas antes desta regra podem ainda ser originais de câmera até reprocessamento.
+No bucket, o objeto sob a variante de caminho `original` **é o preview** (não o arquivo da câmera). O cliente continua pedindo `variant=full` / IndexedDB `full` para esse ativo. Renomear a chave na API (`preview`) fica como follow-up; fotos já enviadas antes desta regra podem ainda ser originais de câmera até reprocessamento.
+
+### Entrega rápida (cliente)
+
+O browser resolve URLs assinadas do R2 em lote (`POST /api/media/signed-urls`) e cacheia na sessão. O `<img>` baixa direto do R2; `/api/media/[id]` (redirect 302) fica como fallback. Não há upgrade soft→nítido no lightbox: só o preview completo.
 
 Formatos modernos podem ser negociados no web, mantendo fallback amplamente compatível. HEIC/RAW precisam de orientação, cor e conversão testadas. Metadados úteis vão ao banco; EXIF e GPS são removidos dos arquivos entregues.
 

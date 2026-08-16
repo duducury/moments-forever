@@ -1,65 +1,20 @@
 import { NextResponse } from "next/server";
 
-import { createPresignedGetUrl, getR2Config } from "@/lib/storage/r2";
+import {
+  assertR2Configured,
+  canReadPhoto,
+  createMemoizedPresignedGetUrl,
+  normalizeMediaVariant,
+  storageKeyForVariant,
+  type MediaVariant,
+} from "@/lib/media/photo-media-access";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-
-function normalizeVariant(raw: string | null): "original" | "thumbnail" {
-  // Client `full` / anything non-thumbnail maps to R2 key `original`, which in
-  // the MVP stores the ~2048px preview derivative (not the camera file).
-  if (raw === "thumbnail") return "thumbnail";
-  return "original";
-}
-
-async function canReadPhoto(
-  supabase: NonNullable<Awaited<ReturnType<typeof createSupabaseServerClient>>>,
-  photoId: string,
-  userId: string | null,
-): Promise<{
-  readonly storageKey: string | null;
-  readonly thumbnailStorageKey: string | null;
-} | null> {
-  const plain = await supabase
-    .from("photos")
-    .select("id, experience_id, storage_key, thumbnail_storage_key")
-    .eq("id", photoId)
-    .maybeSingle();
-  if (plain.error || !plain.data) return null;
-
-  const experience = await supabase
-    .from("experiences")
-    .select("id, owner_id")
-    .eq("id", plain.data.experience_id)
-    .maybeSingle();
-  if (experience.error || !experience.data) return null;
-
-  const keys = {
-    storageKey: (plain.data.storage_key as string | null) ?? null,
-    thumbnailStorageKey:
-      (plain.data.thumbnail_storage_key as string | null) ?? null,
-  };
-
-  if (userId && experience.data.owner_id === userId) {
-    return keys;
-  }
-
-  const owner = await supabase
-    .from("users")
-    .select("id, profile_slug")
-    .eq("id", experience.data.owner_id)
-    .maybeSingle();
-
-  if (owner.data?.profile_slug) {
-    return keys;
-  }
-
-  return null;
-}
 
 export async function GET(
   request: Request,
   context: { readonly params: Promise<{ readonly photoId: string }> },
 ) {
-  if (!getR2Config()) {
+  if (!assertR2Configured()) {
     return NextResponse.json(
       { error: "Armazenamento R2 não configurado." },
       { status: 503 },
@@ -85,11 +40,14 @@ export async function GET(
   }
 
   const url = new URL(request.url);
-  const variant = normalizeVariant(url.searchParams.get("variant"));
-  const key =
-    variant === "thumbnail"
-      ? (access.thumbnailStorageKey ?? access.storageKey)
-      : (access.storageKey ?? access.thumbnailStorageKey);
+  const clientVariant = (url.searchParams.get("variant") ?? "full") as
+    | MediaVariant
+    | "original";
+  const variant: MediaVariant =
+    clientVariant === "thumbnail" ? "thumbnail" : "full";
+  const key = storageKeyForVariant(access, variant);
+  // Keep normalize for defensive logging parity with older clients.
+  void normalizeMediaVariant(url.searchParams.get("variant"));
 
   if (!key) {
     return NextResponse.json(
@@ -99,11 +57,24 @@ export async function GET(
   }
 
   try {
-    const signedUrl = await createPresignedGetUrl({
-      key,
-      expiresInSeconds: 60 * 30,
-    });
-    return NextResponse.redirect(signedUrl, 302);
+    const signed = await createMemoizedPresignedGetUrl(key);
+    if (url.searchParams.get("json") === "1") {
+      return NextResponse.json(
+        {
+          url: signed.url,
+          expiresAt: signed.expiresAtMs,
+          variant,
+        },
+        {
+          headers: {
+            "Cache-Control": "private, max-age=60",
+          },
+        },
+      );
+    }
+    const response = NextResponse.redirect(signed.url, 302);
+    response.headers.set("Cache-Control", "private, max-age=60");
+    return response;
   } catch {
     return NextResponse.json(
       { error: "Não foi possível gerar acesso à foto." },

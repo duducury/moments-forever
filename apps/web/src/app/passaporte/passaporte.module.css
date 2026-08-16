@@ -627,7 +627,8 @@
   margin-bottom: 36px;
   margin-left: -50vw;
   margin-right: -50vw;
-  overflow: hidden;
+  overflow-x: clip;
+  overflow-y: visible;
   background: var(--journey-paper);
   color: var(--journey-ink);
   isolation: isolate;
@@ -819,7 +820,7 @@
 
   .journeyTransitionTop,
   .journeyTransitionBottom {
-    height: 156px;
+    height: 172px;
   }
 
   .journeyScroll {

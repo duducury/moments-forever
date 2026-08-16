@@ -32,7 +32,7 @@ export function ProfileCarousel({
   }
 
   return (
-    <section aria-label="Destaques" className={styles.carouselSection}>
+    <section aria-label="Destaques" className={styles.carouselSection} data-reveal>
       <div className={styles.mapHeader}>
         <h2 className={styles.sectionTitle}>Destaques</h2>
       </div>

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 
 import { AuthProvider } from "@/components/auth-provider";
+import { RevealOnScroll } from "@/components/reveal-on-scroll";
 import { ThemeProvider } from "@/components/theme-provider";
 import { getSiteUrl } from "@/lib/site-url";
 import { THEME_STORAGE_KEY } from "@/lib/theme/theme";
@@ -95,7 +96,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body>
         <ThemeProvider>
-          <AuthProvider>{children}</AuthProvider>
+          <AuthProvider>
+            <RevealOnScroll />
+            {children}
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

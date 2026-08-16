@@ -269,7 +269,7 @@ export function TripLibraryView({
             </div>
           </div>
 
-          <header className={styles.hero}>
+          <header className={styles.hero} data-reveal>
             <div
               aria-hidden="true"
               className={styles.heroVisual}
@@ -308,6 +308,7 @@ export function TripLibraryView({
         <section
           aria-label="Mapa da viagem"
           className={styles.albumMapSection}
+          data-reveal
           id="trip-mapa"
         >
           <div className={styles.albumMapSectionHeader}>
@@ -369,6 +370,7 @@ export function TripLibraryView({
         <section
           aria-label="Fotos da viagem"
           className={styles.albumSection}
+          data-reveal
           id="trip-fotos"
         >
           <div className={styles.albumSectionHeader}>

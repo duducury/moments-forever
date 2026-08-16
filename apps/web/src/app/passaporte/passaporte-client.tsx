@@ -293,7 +293,7 @@ export function PassaporteClient({
 
   return (
     <div className={styles.page}>
-      <header className={styles.identity}>
+      <header className={styles.identity} data-reveal>
         <ProfileAvatar
           avatarPhotoId={avatarPhotoId}
           displayName={displayName}
@@ -319,8 +319,8 @@ export function PassaporteClient({
         </div>
       </header>
 
-      <section aria-label="Estatísticas" className={styles.statsPanel}>
-        <ul className={styles.statsRow}>
+      <section aria-label="Estatísticas" className={styles.statsPanel} data-reveal>
+        <ul className={styles.statsRow} data-reveal-stagger>
           <StatItem icon={<GlobeIcon />} label="Países visitados" value={passport.countryCount} />
           <StatItem icon={<CityIcon />} label="Cidades visitadas" value={passport.cityCount} />
           <StatItem icon={<TripIcon />} label="Viagens" value={passport.tripCount} />
@@ -336,7 +336,7 @@ export function PassaporteClient({
         ) : null}
       </section>
 
-      <section aria-labelledby="mundo-title" className={styles.section}>
+      <section aria-labelledby="mundo-title" className={styles.section} data-reveal>
         <h2 className={styles.sectionTitle} id="mundo-title">
           Meu mundo
         </h2>
@@ -381,7 +381,7 @@ export function PassaporteClient({
         ) : null}
       </section>
 
-      <section aria-labelledby="book-title" className={styles.section}>
+      <section aria-labelledby="book-title" className={styles.section} data-reveal>
         <h2 className={styles.sectionTitle} id="book-title">
           Passaporte
         </h2>
@@ -515,7 +515,7 @@ export function PassaporteClient({
         </div>
       </section>
 
-      <section aria-labelledby="journey-title" className={styles.section}>
+      <section aria-labelledby="journey-title" className={styles.section} data-reveal>
         <h2 className={styles.sectionTitle} id="journey-title">
           Minha jornada
         </h2>
@@ -570,7 +570,7 @@ export function PassaporteClient({
         )}
       </section>
 
-      <section aria-labelledby="ach-title" className={styles.section}>
+      <section aria-labelledby="ach-title" className={styles.section} data-reveal>
         <h2 className={styles.sectionTitle} id="ach-title">
           Conquistas
         </h2>
@@ -626,7 +626,7 @@ export function PassaporteClient({
           {visibleAchievements.length === 0 ? (
             <p className={styles.empty}>Nenhuma conquista neste filtro.</p>
           ) : (
-          <ul className={styles.achievements}>
+          <ul className={styles.achievements} data-reveal-stagger>
             {visibleAchievements.map((item) => (
               <li
                 className={styles.achievement}

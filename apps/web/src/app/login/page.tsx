@@ -17,7 +17,7 @@ export default function LoginPage() {
           </Link>
         </div>
       </nav>
-      <section className="narrow">
+      <section className="narrow" data-reveal>
         <p className="eyebrow">Sua coleção privada</p>
         <h1>Entre para guardar o que importa.</h1>
         <p className="lead">

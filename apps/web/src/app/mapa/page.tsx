@@ -22,7 +22,7 @@ export default async function OwnerMapPage() {
   if (!supabase) {
     return (
       <main className={styles.page}>
-        <header className={styles.top}>
+        <header className={styles.top} data-reveal>
           <div className={styles.titleBlock}>
             <p className={styles.eyebrow}>Mapa</p>
             <h1 className={styles.title}>Indisponível</h1>
@@ -54,7 +54,7 @@ export default async function OwnerMapPage() {
 
   return (
     <main className={styles.page} data-bottom-nav="true">
-      <header className={styles.top}>
+      <header className={styles.top} data-reveal>
         <div className={styles.titleBlock}>
           <p className={styles.eyebrow}>Mapa</p>
           <h1 className={styles.title}>

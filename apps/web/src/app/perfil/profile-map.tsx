@@ -16,6 +16,7 @@ export function ProfileMap({
     <section
       aria-label="Mapa das suas fotos"
       className={styles.mapSection}
+      data-reveal
       id="mapa"
     >
       <div className={styles.mapHeader}>

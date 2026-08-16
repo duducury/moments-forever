@@ -13,7 +13,7 @@ export function SeeAlsoPlaces({
   if (places.length === 0) return null;
 
   return (
-    <section aria-label="Outras viagens" className={styles.seeAlso}>
+    <section aria-label="Outras viagens" className={styles.seeAlso} data-reveal>
       <h2 className={styles.seeAlsoTitle}>
         Veja também a minha viagem para:
       </h2>

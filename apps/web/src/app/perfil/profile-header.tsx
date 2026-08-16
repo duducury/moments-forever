@@ -79,7 +79,7 @@ export function ProfileHeader({
 
   return (
     <>
-      <header className={styles.profileHeader}>
+      <header className={styles.profileHeader} data-reveal>
         <ProfileAvatar
           avatarPhotoId={avatarPhotoId}
           displayName={displayName}
@@ -126,7 +126,7 @@ export function ProfileHeader({
           <p className={styles.profileBio}>{bioText}</p>
         </div>
 
-        <ul className={styles.profileStats}>
+        <ul className={styles.profileStats} data-reveal-stagger>
           <li>
             <StatIcon kind="trip" />
             <span>

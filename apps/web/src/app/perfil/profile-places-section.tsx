@@ -141,6 +141,7 @@ export function ProfilePlacesSection({
     <section
       aria-label="Viagens"
       className={styles.tripsSection}
+      data-reveal
       id="viagens"
     >
       <div className={styles.sectionHeading}>
@@ -194,7 +195,11 @@ export function ProfilePlacesSection({
         </p>
       ) : null}
 
-      <ul className={styles.grid} data-reorder={editing ? "true" : "false"}>
+      <ul
+        className={styles.grid}
+        data-reorder={editing ? "true" : "false"}
+        data-reveal-stagger
+      >
         {items.map((place) => (
           <li
             className={styles.reorderItem}

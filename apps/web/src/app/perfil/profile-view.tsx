@@ -102,7 +102,7 @@ export function ProfileView({
         ) : null}
 
         {!loadError && places.length === 0 ? (
-          <div className={styles.empty}>
+          <div className={styles.empty} data-reveal>
             {isOwner ? (
               <>
                 <p>Você ainda não tem viagens neste perfil.</p>

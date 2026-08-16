@@ -497,7 +497,7 @@ export function AlbumFolderView({
       className={`${styles.page} ${styles.albumPage}`}
       header={
         <>
-          <header className={styles.albumHeroHeader}>
+          <header className={styles.albumHeroHeader} data-reveal>
             <div aria-hidden="true" className={styles.albumHeroMedia}>
               <ExperienceCoverThumb
                 coverPhotoId={heroCoverId}
@@ -722,6 +722,7 @@ export function AlbumFolderView({
         <section
           aria-label="Fotos do álbum"
           className={styles.albumPhotosSection}
+          data-reveal
         >
           <div className={styles.albumSectionHeader}>
             <h2 className={styles.sectionTitle}>Fotos</h2>

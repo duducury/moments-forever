@@ -31,7 +31,7 @@ export function GeralSettingsClient() {
   }
 
   return (
-    <section className={styles.page}>
+    <section className={styles.page} data-reveal>
       <header className={styles.header}>
         <p className={styles.eyebrow}>Conta</p>
         <h1 className={styles.title}>Geral</h1>

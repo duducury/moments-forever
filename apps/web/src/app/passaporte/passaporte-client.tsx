@@ -520,7 +520,15 @@ export function PassaporteClient({
         className={styles.journeySection}
         data-reveal
       >
-        <div aria-hidden="true" className={styles.journeyFadeTop} />
+        <div aria-hidden="true" className={styles.journeyTransitionTop}>
+          <svg
+            className={styles.journeyWaveSvg}
+            preserveAspectRatio="none"
+            viewBox="0 0 1440 72"
+          >
+            <path d="M0 28c160 18 300-16 460-10 180 7 260 30 420 28 140-2 260-24 360-28 70-3 140 4 200 12v42H0V28Z" />
+          </svg>
+        </div>
 
         <div className={styles.journeyBody}>
           <h2 className={styles.journeyTitleHeading} id="journey-title">
@@ -578,7 +586,15 @@ export function PassaporteClient({
           )}
         </div>
 
-        <div aria-hidden="true" className={styles.journeyFadeBottom} />
+        <div aria-hidden="true" className={styles.journeyTransitionBottom}>
+          <svg
+            className={styles.journeyWaveSvg}
+            preserveAspectRatio="none"
+            viewBox="0 0 1440 72"
+          >
+            <path d="M0 0h1440v34c-60 8-130 15-200 12-100-4-220-26-360-28-160-2-240 21-420 28-160 6-300-28-460-10V0Z" />
+          </svg>
+        </div>
       </section>
 
       <section aria-labelledby="ach-title" className={styles.section} data-reveal>

@@ -605,7 +605,7 @@
 }
 
 /*
- * Minha jornada — full-bleed inverted band with a soft fade.
+ * Minha jornada — full-bleed inverted band with a soft fade + gentle wave.
  * Dark page → cream band; light page → dark band.
  * Scoped styles only; other sections untouched.
  */
@@ -623,8 +623,8 @@
   left: 50%;
   width: 100vw;
   max-width: 100vw;
-  margin-top: -10px;
-  margin-bottom: -10px;
+  margin-top: 36px;
+  margin-bottom: 36px;
   margin-left: -50vw;
   margin-right: -50vw;
   overflow: hidden;
@@ -654,38 +654,60 @@
   --journey-accent: #8b3f28;
 }
 
-.journeyFadeTop,
-.journeyFadeBottom {
+.journeyTransitionTop,
+.journeyTransitionBottom {
   position: relative;
   z-index: 1;
   display: block;
   width: 100%;
-  height: clamp(64px, 14vw, 104px);
+  height: clamp(100px, 22vw, 160px);
   pointer-events: none;
+  overflow: hidden;
 }
 
-.journeyFadeTop {
+.journeyTransitionTop {
   margin-top: -1px;
   background: linear-gradient(
     180deg,
     var(--background) 0%,
-    color-mix(in srgb, var(--background) 82%, var(--journey-paper)) 22%,
-    color-mix(in srgb, var(--background) 48%, var(--journey-paper)) 52%,
-    color-mix(in srgb, var(--background) 18%, var(--journey-paper)) 78%,
+    color-mix(in srgb, var(--background) 78%, var(--journey-paper)) 34%,
+    color-mix(in srgb, var(--background) 38%, var(--journey-paper)) 68%,
+    color-mix(in srgb, var(--background) 12%, var(--journey-paper)) 88%,
     var(--journey-paper) 100%
   );
 }
 
-.journeyFadeBottom {
+.journeyTransitionBottom {
   margin-bottom: -1px;
   background: linear-gradient(
     180deg,
     var(--journey-paper) 0%,
-    color-mix(in srgb, var(--background) 18%, var(--journey-paper)) 22%,
-    color-mix(in srgb, var(--background) 48%, var(--journey-paper)) 48%,
-    color-mix(in srgb, var(--background) 82%, var(--journey-paper)) 78%,
+    color-mix(in srgb, var(--background) 12%, var(--journey-paper)) 12%,
+    color-mix(in srgb, var(--background) 38%, var(--journey-paper)) 32%,
+    color-mix(in srgb, var(--background) 78%, var(--journey-paper)) 66%,
     var(--background) 100%
   );
+}
+
+.journeyWaveSvg {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: clamp(36px, 8vw, 56px);
+  display: block;
+  color: var(--journey-paper);
+}
+
+.journeyTransitionTop .journeyWaveSvg {
+  bottom: 0;
+}
+
+.journeyTransitionBottom .journeyWaveSvg {
+  top: 0;
+}
+
+.journeyWaveSvg path {
+  fill: currentColor;
 }
 
 .journeyBody {
@@ -695,7 +717,7 @@
   gap: 16px;
   width: min(100% - 8px, 920px);
   margin-inline: auto;
-  padding: 10px 16px 28px;
+  padding: 8px 16px 24px;
   box-sizing: border-box;
 }
 
@@ -804,15 +826,20 @@
 }
 
 @media (min-width: 720px) {
+  .journeySection {
+    margin-top: 48px;
+    margin-bottom: 48px;
+  }
+
   .journeyBody {
     gap: 18px;
     padding-inline: 20px;
-    padding-bottom: 36px;
+    padding-bottom: 32px;
   }
 
-  .journeyFadeTop,
-  .journeyFadeBottom {
-    height: 96px;
+  .journeyTransitionTop,
+  .journeyTransitionBottom {
+    height: 148px;
   }
 
   .journeyScroll {

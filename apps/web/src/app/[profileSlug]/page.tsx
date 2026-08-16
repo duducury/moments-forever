@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
 import { AppWordmark } from "@/components/app-wordmark";
+import { loadOwnerCarouselPhotos } from "@/lib/experiences/load-owner-carousel-photos";
 import { loadOwnerPlaceCards } from "@/lib/experiences/load-owner-place-cards";
 import {
   isReservedProfileSlug,
@@ -14,7 +15,6 @@ import { absoluteUrl } from "@/lib/site-url";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import { ProfileView } from "../perfil/profile-view";
-import { ProfileCarouselSection } from "./profile-carousel-section";
 import { ProfileMapSection } from "./profile-map-section";
 
 export const dynamic = "force-dynamic";
@@ -118,8 +118,12 @@ export default async function PublicProfilePage({
   const user = userResult.data.user;
   const isOwner = Boolean(user && user.id === profile.id);
 
-  // Critical path: place cards only. Destaques + mapa stream below.
-  const result = await loadOwnerPlaceCards(supabase, profile.id);
+  // Destaques + place cards together so the carousel is not a late pop-in.
+  // Bottom map still streams — it is below the fold.
+  const [result, carouselPhotos] = await Promise.all([
+    loadOwnerPlaceCards(supabase, profile.id),
+    loadOwnerCarouselPhotos(supabase, profile.id),
+  ]);
 
   const displayName = profile.displayName?.trim() || profile.profileSlug;
   const hasPlaces = (result.places?.length ?? 0) > 0;
@@ -133,13 +137,7 @@ export default async function PublicProfilePage({
           : null
       }
       bio={profile.bio}
-      carouselSlot={
-        hasPlaces ? (
-          <Suspense fallback={null}>
-            <ProfileCarouselSection ownerId={profile.id} />
-          </Suspense>
-        ) : null
-      }
+      carouselPhotos={carouselPhotos}
       displayName={displayName}
       homeHref={publicProfilePath(profile.profileSlug)}
       isOwner={isOwner}

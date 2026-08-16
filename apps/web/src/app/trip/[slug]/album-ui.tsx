@@ -162,30 +162,35 @@ function LightboxSlideMedia({
 }) {
   const thumbSrc = useLocalPhotoObjectUrl(photoId, "thumbnail");
   const fullSrc = useLocalPhotoObjectUrl(photoId, "full");
+  // One layer only: full when ready, otherwise thumb. Stacking thumb+full
+  // made every swipe look soft and then sharpen.
+  const displaySrc = fullSrc ?? thumbSrc;
+  if (!displaySrc) return null;
+
   return (
-    <>
-      {thumbSrc ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          alt=""
-          className={styles.lightboxImage}
-          decoding="async"
-          draggable={false}
-          src={thumbSrc}
-        />
-      ) : null}
-      {fullSrc ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          alt={alt}
-          className={`${styles.lightboxImage} ${styles.lightboxImageFull}`}
-          decoding="async"
-          draggable={false}
-          src={fullSrc}
-        />
-      ) : null}
-    </>
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      alt={alt}
+      className={styles.lightboxImage}
+      decoding="async"
+      draggable={false}
+      src={displaySrc}
+    />
   );
+}
+
+function useLightboxNeighborIds(
+  photos: readonly TripPhoto[],
+  index: number,
+): readonly (string | null)[] {
+  return useMemo(() => {
+    if (photos.length < 2 || index < 0) {
+      return [null, null, null, null];
+    }
+    const at = (offset: number) =>
+      photos[(index + offset + photos.length) % photos.length]?.id ?? null;
+    return [at(-2), at(-1), at(1), at(2)];
+  }, [photos, index]);
 }
 
 export function PhotoLightbox({
@@ -213,21 +218,15 @@ export function PhotoLightbox({
 }) {
   const index = photos.findIndex((photo) => photo.id === photoId);
   const photo = index >= 0 ? photos[index] : null;
-  const neighborPrevId =
-    photos.length > 1 && index >= 0
-      ? photos[(index - 1 + photos.length) % photos.length]?.id ?? null
-      : null;
-  const neighborNextId =
-    photos.length > 1 && index >= 0
-      ? photos[(index + 1) % photos.length]?.id ?? null
-      : null;
+  const [farPrevId, neighborPrevId, neighborNextId, farNextId] =
+    useLightboxNeighborIds(photos, index);
   const thumbSrc = useLocalPhotoObjectUrl(photo?.id, "thumbnail");
   const fullSrc = useLocalPhotoObjectUrl(photo?.id, "full");
-  // Warm neighbors for the slide track.
-  useLocalPhotoObjectUrl(neighborPrevId, "thumbnail");
+  // Warm ±2 neighbors on the full variant so slides open sharp.
   useLocalPhotoObjectUrl(neighborPrevId, "full");
-  useLocalPhotoObjectUrl(neighborNextId, "thumbnail");
   useLocalPhotoObjectUrl(neighborNextId, "full");
+  useLocalPhotoObjectUrl(farPrevId, "full");
+  useLocalPhotoObjectUrl(farNextId, "full");
   const [removingLocation, setRemovingLocation] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [dismissDragY, setDismissDragY] = useState(0);
@@ -278,14 +277,14 @@ export function PhotoLightbox({
   const prevSlide = useMemo(
     () =>
       neighborPrevId ? (
-        <LightboxSlideMedia photoId={neighborPrevId} />
+        <LightboxSlideMedia key={neighborPrevId} photoId={neighborPrevId} />
       ) : null,
     [neighborPrevId],
   );
   const nextSlide = useMemo(
     () =>
       neighborNextId ? (
-        <LightboxSlideMedia photoId={neighborNextId} />
+        <LightboxSlideMedia key={neighborNextId} photoId={neighborNextId} />
       ) : null,
     [neighborNextId],
   );
@@ -453,6 +452,7 @@ export function PhotoLightbox({
         >
           <LightboxSlideMedia
             alt={`Foto ${index + 1}`}
+            key={currentPhoto.id}
             photoId={currentPhoto.id}
           />
         </LightboxZoomStage>

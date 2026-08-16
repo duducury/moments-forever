@@ -531,7 +531,7 @@ export function PhotoLightbox({
         ) : null}
 
         <LightboxZoomStage
-          hasImage={Boolean(fullSrc)}
+          hasImage={true}
           nextSlide={nextSlide}
           onDismiss={onClose}
           onDismissDrag={setDismissDragY}

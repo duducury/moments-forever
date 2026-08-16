@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+  type TransitionEvent,
+} from "react";
 
 import styles from "./trip.module.css";
 
@@ -11,8 +17,9 @@ const DOUBLE_TAP_SCALE = 2.4;
 const AXIS_LOCK_PX = 10;
 const DISMISS_DISTANCE_PX = 96;
 const DISMISS_VELOCITY = 0.55;
-const SWIPE_DISTANCE_PX = 40;
-const SWIPE_VELOCITY = 0.45;
+const SWIPE_DISTANCE_PX = 48;
+const SWIPE_VELOCITY = 0.4;
+const SLIDE_MS = 280;
 
 function distance(
   a: { readonly clientX: number; readonly clientY: number },
@@ -28,6 +35,8 @@ export function LightboxZoomStage({
   hasImage,
   tone,
   children,
+  prevSlide = null,
+  nextSlide = null,
   onSwipe,
   onDismiss,
   onDismissDrag,
@@ -36,9 +45,10 @@ export function LightboxZoomStage({
   readonly hasImage: boolean;
   readonly tone: string;
   readonly children: ReactNode;
+  readonly prevSlide?: ReactNode;
+  readonly nextSlide?: ReactNode;
   readonly onSwipe?: (delta: -1 | 1) => void;
   readonly onDismiss?: () => void;
-  /** Vertical drag distance while dismissing (0 when idle). */
   readonly onDismissDrag?: (offsetY: number) => void;
 }) {
   const stageRef = useRef<HTMLDivElement | null>(null);
@@ -46,6 +56,7 @@ export function LightboxZoomStage({
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [dragY, setDragY] = useState(0);
   const [dragX, setDragX] = useState(0);
+  const [settle, setSettle] = useState(false);
   const pinchRef = useRef<{
     startDistance: number;
     startScale: number;
@@ -74,32 +85,45 @@ export function LightboxZoomStage({
   const onSwipeRef = useRef(onSwipe);
   const onDismissRef = useRef(onDismiss);
   const onDismissDragRef = useRef(onDismissDrag);
+  const pendingSwipeRef = useRef<-1 | 1 | null>(null);
+  const skipPhotoResetRef = useRef(false);
+  const canSlide = Boolean(onSwipe);
 
   useEffect(() => {
     scaleRef.current = scale;
   }, [scale]);
-
   useEffect(() => {
     offsetRef.current = offset;
   }, [offset]);
-
   useEffect(() => {
     onSwipeRef.current = onSwipe;
   }, [onSwipe]);
-
   useEffect(() => {
     onDismissRef.current = onDismiss;
   }, [onDismiss]);
-
   useEffect(() => {
     onDismissDragRef.current = onDismissDrag;
   }, [onDismissDrag]);
 
   useEffect(() => {
+    if (skipPhotoResetRef.current) {
+      skipPhotoResetRef.current = false;
+      setScale(1);
+      setOffset({ x: 0, y: 0 });
+      setDragY(0);
+      onDismissDragRef.current?.(0);
+      pinchRef.current = null;
+      panRef.current = null;
+      gestureRef.current = null;
+      lastTapRef.current = null;
+      return;
+    }
     setScale(1);
     setOffset({ x: 0, y: 0 });
     setDragY(0);
     setDragX(0);
+    setSettle(false);
+    pendingSwipeRef.current = null;
     onDismissDragRef.current?.(0);
     pinchRef.current = null;
     panRef.current = null;
@@ -123,11 +147,49 @@ export function LightboxZoomStage({
     onDismissDragRef.current?.(nextY);
   }
 
+  function stageWidth() {
+    return stageRef.current?.clientWidth || window.innerWidth || 1;
+  }
+
+  function commitSwipe(delta: -1 | 1) {
+    if (!onSwipeRef.current || pendingSwipeRef.current != null) return;
+    if (delta === 1 && nextSlide == null) {
+      setSettle(true);
+      setDragX(0);
+      return;
+    }
+    if (delta === -1 && prevSlide == null) {
+      setSettle(true);
+      setDragX(0);
+      return;
+    }
+    const width = stageWidth();
+    pendingSwipeRef.current = delta;
+    setSettle(true);
+    setDragX(delta === 1 ? -width : width);
+  }
+
+  function onTrackTransitionEnd(event: TransitionEvent<HTMLDivElement>) {
+    if (event.propertyName !== "transform") return;
+    const pending = pendingSwipeRef.current;
+    if (pending == null) {
+      setSettle(false);
+      return;
+    }
+    pendingSwipeRef.current = null;
+    skipPhotoResetRef.current = true;
+    setSettle(false);
+    setDragX(0);
+    onSwipeRef.current?.(pending);
+  }
+
   useEffect(() => {
     const el = stageRef.current;
     if (!el) return;
 
     function onTouchStart(event: TouchEvent) {
+      if (pendingSwipeRef.current != null) return;
+
       if (event.touches.length >= 2) {
         const a = event.touches[0];
         const b = event.touches[1];
@@ -141,11 +203,13 @@ export function LightboxZoomStage({
         lastTapRef.current = null;
         setDismissDrag(0);
         setDragX(0);
+        setSettle(false);
         return;
       }
 
       const touch = event.touches[0];
       if (!touch) return;
+      setSettle(false);
 
       if (scaleRef.current > 1.01) {
         panRef.current = {
@@ -198,6 +262,8 @@ export function LightboxZoomStage({
     }
 
     function onTouchMove(event: TouchEvent) {
+      if (pendingSwipeRef.current != null) return;
+
       if (event.touches.length >= 2) {
         event.preventDefault();
         const a = event.touches[0];
@@ -260,16 +326,17 @@ export function LightboxZoomStage({
         gesture.lastX = touch.clientX;
         gesture.lastTime = now;
         setDismissDrag(0);
-        // Rubber-band slightly past edges for a snappier Instagram feel.
-        setDragX(dx);
+        if (!canSlide) return;
+        let nextX = dx;
+        if (dx < 0 && nextSlide == null) nextX = dx * 0.2;
+        if (dx > 0 && prevSlide == null) nextX = dx * 0.2;
+        setDragX(nextX);
       }
     }
 
     function onTouchEnd(event: TouchEvent) {
       if (event.touches.length > 0) {
-        if (event.touches.length < 2) {
-          pinchRef.current = null;
-        }
+        if (event.touches.length < 2) pinchRef.current = null;
         return;
       }
 
@@ -278,9 +345,15 @@ export function LightboxZoomStage({
 
       const gesture = gestureRef.current;
       gestureRef.current = null;
-      if (!gesture || scaleRef.current > 1.01) {
-        setDismissDrag(0);
-        setDragX(0);
+      if (
+        !gesture ||
+        scaleRef.current > 1.01 ||
+        pendingSwipeRef.current != null
+      ) {
+        if (pendingSwipeRef.current == null) {
+          setDismissDrag(0);
+          setDragX(0);
+        }
         return;
       }
 
@@ -299,28 +372,29 @@ export function LightboxZoomStage({
         return;
       }
 
-      if (gesture.axis === "horizontal" && onSwipeRef.current) {
+      if (gesture.axis === "horizontal" && onSwipeRef.current && canSlide) {
         const endX = event.changedTouches[0]?.clientX ?? gesture.startX;
         const distanceX = endX - gesture.startX;
         const shouldNext =
-          distanceX <= -SWIPE_DISTANCE_PX ||
-          gesture.velocityX <= -SWIPE_VELOCITY;
+          (distanceX <= -SWIPE_DISTANCE_PX ||
+            gesture.velocityX <= -SWIPE_VELOCITY) &&
+          nextSlide != null;
         const shouldPrev =
-          distanceX >= SWIPE_DISTANCE_PX ||
-          gesture.velocityX >= SWIPE_VELOCITY;
+          (distanceX >= SWIPE_DISTANCE_PX ||
+            gesture.velocityX >= SWIPE_VELOCITY) &&
+          prevSlide != null;
         if (shouldNext) {
-          setDragX(0);
-          onSwipeRef.current(1);
+          commitSwipe(1);
           return;
         }
         if (shouldPrev) {
-          setDragX(0);
-          onSwipeRef.current(-1);
+          commitSwipe(-1);
           return;
         }
       }
 
       setDismissDrag(0);
+      setSettle(true);
       setDragX(0);
     }
 
@@ -334,34 +408,52 @@ export function LightboxZoomStage({
       el.removeEventListener("touchend", onTouchEnd);
       el.removeEventListener("touchcancel", onTouchEnd);
     };
-  }, []);
+  }, [canSlide, nextSlide, prevSlide]);
 
   const dismissing = Math.abs(dragY) > 0.5;
-  const swiping = Math.abs(dragX) > 0.5;
+  const useTrack = canSlide && scale <= 1.01;
 
   return (
     <div
       className={styles.lightboxStage}
       data-dismissing={dismissing ? "true" : "false"}
       data-has-image={hasImage ? "true" : "false"}
-      data-swiping={swiping ? "true" : "false"}
       data-tone={tone}
       data-zoomed={scale > 1.01 ? "true" : "false"}
       ref={stageRef}
     >
-      <div
-        className={styles.lightboxZoomLayer}
-        style={{
-          transform: `translate3d(${offset.x + dragX}px, ${offset.y + dragY}px, 0) scale(${scale})`,
-          transition:
-            dismissing || swiping ? "none" : "transform 120ms ease-out",
-          opacity: swiping
-            ? Math.max(0.55, 1 - Math.abs(dragX) / 420)
-            : undefined,
-        }}
-      >
-        {children}
-      </div>
+      {useTrack ? (
+        <div
+          className={styles.lightboxSlideTrack}
+          onTransitionEnd={onTrackTransitionEnd}
+          style={{
+            transform: `translate3d(calc(-33.333333% + ${dragX}px), ${dragY}px, 0)`,
+            transition: settle
+              ? `transform ${SLIDE_MS}ms cubic-bezier(0.22, 1, 0.36, 1)`
+              : "none",
+          }}
+        >
+          <div className={styles.lightboxSlide} data-slot="prev">
+            {prevSlide}
+          </div>
+          <div className={styles.lightboxSlide} data-slot="current">
+            {children}
+          </div>
+          <div className={styles.lightboxSlide} data-slot="next">
+            {nextSlide}
+          </div>
+        </div>
+      ) : (
+        <div
+          className={styles.lightboxZoomLayer}
+          style={{
+            transform: `translate3d(${offset.x}px, ${offset.y + dragY}px, 0) scale(${scale})`,
+            transition: dismissing ? "none" : "transform 120ms ease-out",
+          }}
+        >
+          {children}
+        </div>
+      )}
     </div>
   );
 }

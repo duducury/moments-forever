@@ -827,6 +827,22 @@
   will-change: transform;
 }
 
+.lightboxSlideTrack {
+  display: flex;
+  width: 300%;
+  height: 100%;
+  will-change: transform;
+}
+
+.lightboxSlide {
+  position: relative;
+  flex: 0 0 33.333333%;
+  width: 33.333333%;
+  height: 100%;
+  overflow: hidden;
+  background: #0a0a0a;
+}
+
 .lightboxImage {
   position: absolute;
   inset: 0;

@@ -153,6 +153,41 @@ function PhotoTile({
   );
 }
 
+function LightboxSlideMedia({
+  photoId,
+  alt = "",
+}: {
+  readonly photoId: string;
+  readonly alt?: string;
+}) {
+  const thumbSrc = useLocalPhotoObjectUrl(photoId, "thumbnail");
+  const fullSrc = useLocalPhotoObjectUrl(photoId, "full");
+  return (
+    <>
+      {thumbSrc ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          alt=""
+          className={styles.lightboxImage}
+          decoding="async"
+          draggable={false}
+          src={thumbSrc}
+        />
+      ) : null}
+      {fullSrc ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          alt={alt}
+          className={`${styles.lightboxImage} ${styles.lightboxImageFull}`}
+          decoding="async"
+          draggable={false}
+          src={fullSrc}
+        />
+      ) : null}
+    </>
+  );
+}
+
 export function PhotoLightbox({
   photos,
   photoId,
@@ -180,16 +215,18 @@ export function PhotoLightbox({
   const photo = index >= 0 ? photos[index] : null;
   const neighborPrevId =
     photos.length > 1 && index >= 0
-      ? photos[(index - 1 + photos.length) % photos.length]?.id
+      ? photos[(index - 1 + photos.length) % photos.length]?.id ?? null
       : null;
   const neighborNextId =
     photos.length > 1 && index >= 0
-      ? photos[(index + 1) % photos.length]?.id
+      ? photos[(index + 1) % photos.length]?.id ?? null
       : null;
   const thumbSrc = useLocalPhotoObjectUrl(photo?.id, "thumbnail");
   const fullSrc = useLocalPhotoObjectUrl(photo?.id, "full");
-  // Prefetch ±1 neighbors so swipe feels instant (same idea as album carousel).
+  // Warm neighbors for the slide track.
+  useLocalPhotoObjectUrl(neighborPrevId, "thumbnail");
   useLocalPhotoObjectUrl(neighborPrevId, "full");
+  useLocalPhotoObjectUrl(neighborNextId, "thumbnail");
   useLocalPhotoObjectUrl(neighborNextId, "full");
   const [removingLocation, setRemovingLocation] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -237,6 +274,21 @@ export function PhotoLightbox({
       document.body.style.overflow = previous;
     };
   }, []);
+
+  const prevSlide = useMemo(
+    () =>
+      neighborPrevId ? (
+        <LightboxSlideMedia photoId={neighborPrevId} />
+      ) : null,
+    [neighborPrevId],
+  );
+  const nextSlide = useMemo(
+    () =>
+      neighborNextId ? (
+        <LightboxSlideMedia photoId={neighborNextId} />
+      ) : null,
+    [neighborNextId],
+  );
 
   if (!photo) return null;
   if (typeof document === "undefined") return null;
@@ -385,6 +437,7 @@ export function PhotoLightbox({
 
         <LightboxZoomStage
           hasImage={Boolean(thumbSrc || fullSrc)}
+          nextSlide={nextSlide}
           onDismiss={onClose}
           onDismissDrag={setDismissDragY}
           onSwipe={
@@ -395,28 +448,13 @@ export function PhotoLightbox({
               : undefined
           }
           photoId={currentPhoto.id}
+          prevSlide={prevSlide}
           tone={toneFromId(currentPhoto.id)}
         >
-          {thumbSrc ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              alt=""
-              className={styles.lightboxImage}
-              decoding="async"
-              draggable={false}
-              src={thumbSrc}
-            />
-          ) : null}
-          {fullSrc ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              alt={`Foto ${index + 1}`}
-              className={`${styles.lightboxImage} ${styles.lightboxImageFull}`}
-              decoding="async"
-              draggable={false}
-              src={fullSrc}
-            />
-          ) : null}
+          <LightboxSlideMedia
+            alt={`Foto ${index + 1}`}
+            photoId={currentPhoto.id}
+          />
         </LightboxZoomStage>
 
         {photos.length > 1 ? (

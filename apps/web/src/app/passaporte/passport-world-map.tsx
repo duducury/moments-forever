@@ -86,11 +86,12 @@ export function PassportWorldMap({
           },
         ],
       },
-      center: [12, 18],
-      zoom: 1.15,
-      minZoom: 0.8,
+      center: [10, 20],
+      zoom: 0.85,
+      minZoom: 0.6,
       maxZoom: 6,
       attributionControl: { compact: true },
+      renderWorldCopies: false,
     });
 
     function paintVisited() {

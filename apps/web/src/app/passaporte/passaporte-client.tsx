@@ -165,9 +165,7 @@ export function PassaporteClient({
   readonly avatarRemoteSrc?: string | null;
   readonly passport: PassportData;
 }) {
-  const [selectedCode, setSelectedCode] = useState<string | null>(
-    passport.countries[0]?.code ?? null,
-  );
+  const [selectedCode, setSelectedCode] = useState<string | null>(null);
 
   const [achFilter, setAchFilter] = useState<"all" | "unlocked" | "locked">("all");
 

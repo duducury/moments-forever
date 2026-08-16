@@ -172,6 +172,7 @@ export function AppBottomNav({
             className={styles.tab}
             data-active={passportActive ? "true" : "false"}
             href="/passaporte"
+            prefetch
           >
             <span className={styles.icon}>
               <PassportIcon />

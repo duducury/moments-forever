@@ -29,6 +29,28 @@ export interface OwnerPlaceCardItem {
   readonly photoCount: number;
 }
 
+type PlaceLink = {
+  readonly name: string;
+  readonly confirmed: boolean;
+};
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object"
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function placeLinkFromEmbed(momentEmbed: unknown): PlaceLink | null {
+  const moment = asRecord(momentEmbed);
+  if (!moment) return null;
+  const place = asRecord(moment.place);
+  if (!place || typeof place.name !== "string") return null;
+  return {
+    name: place.name,
+    confirmed: Boolean(place.confirmed_by_user),
+  };
+}
+
 export async function loadOwnerPlaceCards(
   supabase: ServerSupabase,
   ownerId: string,
@@ -36,9 +58,10 @@ export async function loadOwnerPlaceCards(
   | { readonly places: readonly OwnerPlaceCardItem[]; readonly error: null }
   | { readonly places: null; readonly error: string }
 > {
+  // Stage 1: tiny experiences list (ids + labels only).
   const experiences = await supabase
     .from("experiences")
-    .select("id, slug, title, created_at")
+    .select("id, slug, title")
     .eq("owner_id", ownerId)
     .order("created_at", { ascending: false });
 
@@ -58,17 +81,29 @@ export async function loadOwnerPlaceCards(
       {
         slug: row.slug as string,
         title: row.title as string,
-        createdAt: row.created_at as string,
       },
     ]),
   );
 
-  // Albums + photo date/count stats in parallel (photos payload stays slim).
-  const [albums, photos] = await Promise.all([
+  // Stage 2: albums (+ nested place) and photo stats in parallel — 1 RT each.
+  const [albumsResult, photosResult] = await Promise.all([
     supabase
       .from("albums")
       .select(
-        "id, experience_id, name, cover_photo_id, position, source_moment_id, created_at",
+        `
+        id,
+        experience_id,
+        name,
+        cover_photo_id,
+        position,
+        source_moment_id,
+        moment:moments!albums_source_moment_fkey (
+          place:places (
+            name,
+            confirmed_by_user
+          )
+        )
+      `,
       )
       .in("experience_id", experienceIds)
       .is("parent_album_id", null)
@@ -79,69 +114,48 @@ export async function loadOwnerPlaceCards(
       .in("experience_id", experienceIds),
   ]);
 
-  if (albums.error) {
-    return { places: null, error: albums.error.message };
-  }
-  if (photos.error) {
-    return { places: null, error: photos.error.message };
+  // If the embed isn't available in this DB, fall back without place joins.
+  let albumRows = albumsResult.data ?? [];
+  let placeNameByMomentId = new Map<string, PlaceLink>();
+
+  if (albumsResult.error) {
+    const fallbackAlbums = await supabase
+      .from("albums")
+      .select(
+        "id, experience_id, name, cover_photo_id, position, source_moment_id",
+      )
+      .in("experience_id", experienceIds)
+      .is("parent_album_id", null)
+      .order("position", { ascending: true });
+
+    if (fallbackAlbums.error) {
+      return { places: null, error: fallbackAlbums.error.message };
+    }
+    albumRows = fallbackAlbums.data ?? [];
+    placeNameByMomentId = await loadPlaceNamesByMoment(
+      supabase,
+      albumRows.map((album) => album.source_moment_id as string | null),
+    );
+  } else {
+    for (const album of albumRows) {
+      const momentId = album.source_moment_id as string | null;
+      if (!momentId) continue;
+      const link = placeLinkFromEmbed(
+        Array.isArray(album.moment) ? album.moment[0] : album.moment,
+      );
+      if (link) placeNameByMomentId.set(momentId, link);
+    }
   }
 
-  const albumRows = albums.data ?? [];
-  const momentIds = [
-    ...new Set(
-      albumRows
-        .map((album) => album.source_moment_id as string | null)
-        .filter((id): id is string => Boolean(id)),
-    ),
-  ];
-
-  const placeNameByMomentId = new Map<
-    string,
-    { readonly name: string; readonly confirmed: boolean }
-  >();
-  if (momentIds.length > 0) {
-    const moments = await supabase
-      .from("moments")
-      .select("id, place_id")
-      .in("id", momentIds);
-    const placeIds = [
-      ...new Set(
-        (moments.data ?? [])
-          .map((moment) => moment.place_id as string | null)
-          .filter((id): id is string => Boolean(id)),
-      ),
-    ];
-    const placesById = new Map<
-      string,
-      { readonly name: string; readonly confirmed: boolean }
-    >();
-    if (placeIds.length > 0) {
-      const places = await supabase
-        .from("places")
-        .select("id, name, confirmed_by_user")
-        .in("id", placeIds);
-      for (const place of places.data ?? []) {
-        placesById.set(place.id as string, {
-          name: place.name as string,
-          confirmed: Boolean(place.confirmed_by_user),
-        });
-      }
-    }
-    for (const moment of moments.data ?? []) {
-      const placeId = moment.place_id as string | null;
-      if (!placeId) continue;
-      const place = placesById.get(placeId);
-      if (place) {
-        placeNameByMomentId.set(moment.id as string, place);
-      }
-    }
+  if (photosResult.error) {
+    return { places: null, error: photosResult.error.message };
   }
 
   const statsByAlbum = new Map<
     string,
     { count: number; startsAt: string | null; endsAt: string | null }
   >();
-  for (const photo of photos.data ?? []) {
+  for (const photo of photosResult.data ?? []) {
     const albumId = photo.album_id as string | null;
     if (!albumId) continue;
     const capturedAt = (photo.captured_at as string | null) ?? null;
@@ -174,7 +188,6 @@ export async function loadOwnerPlaceCards(
       placeName: linkedPlace?.name ?? null,
       placeConfirmedByUser: linkedPlace?.confirmed ?? false,
     });
-    // Prefer the visible title (user short names like "dubai") then geocoded place.
     const countryCode =
       countryCodeFromPlaceLabel(title) ??
       countryCodeFromPlaceLabel(linkedPlace?.name);
@@ -194,10 +207,52 @@ export async function loadOwnerPlaceCards(
     };
   });
 
-  // Most recent photo date first (not import/created order).
   places.sort((a, b) => comparePlaceRecency(a, b));
 
   return { places, error: null };
+}
+
+async function loadPlaceNamesByMoment(
+  supabase: ServerSupabase,
+  momentIdsRaw: readonly (string | null)[],
+): Promise<Map<string, PlaceLink>> {
+  const placeNameByMomentId = new Map<string, PlaceLink>();
+  const momentIds = [
+    ...new Set(momentIdsRaw.filter((id): id is string => Boolean(id))),
+  ];
+  if (momentIds.length === 0) return placeNameByMomentId;
+
+  const moments = await supabase
+    .from("moments")
+    .select("id, place_id")
+    .in("id", momentIds);
+  const placeIds = [
+    ...new Set(
+      (moments.data ?? [])
+        .map((moment) => moment.place_id as string | null)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ];
+  if (placeIds.length === 0) return placeNameByMomentId;
+
+  const places = await supabase
+    .from("places")
+    .select("id, name, confirmed_by_user")
+    .in("id", placeIds);
+  const placesById = new Map<string, PlaceLink>();
+  for (const place of places.data ?? []) {
+    placesById.set(place.id as string, {
+      name: place.name as string,
+      confirmed: Boolean(place.confirmed_by_user),
+    });
+  }
+  for (const moment of moments.data ?? []) {
+    const placeId = moment.place_id as string | null;
+    if (!placeId) continue;
+    const place = placesById.get(placeId);
+    if (place) placeNameByMomentId.set(moment.id as string, place);
+  }
+  return placeNameByMomentId;
 }
 
 export function comparePlaceRecency(

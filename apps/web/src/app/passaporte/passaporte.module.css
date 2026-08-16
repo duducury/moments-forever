@@ -6,6 +6,109 @@
   padding: 8px 4px 32px;
 }
 
+.loadingPage {
+  display: grid;
+  gap: 22px;
+  width: min(100%, 920px);
+  margin: 0 auto;
+  padding: 8px 4px 32px;
+}
+
+.loadingBrand {
+  color: var(--muted);
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.loadingIdentity {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.loadingAvatar {
+  flex: 0 0 auto;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--surface-secondary) 70%, var(--border));
+}
+
+.loadingCopy {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+  padding-top: 8px;
+}
+
+.loadingLine,
+.loadingPanel,
+.loadingMap,
+.loadingAvatar {
+  position: relative;
+  overflow: hidden;
+}
+
+.loadingLine::after,
+.loadingPanel::after,
+.loadingMap::after,
+.loadingAvatar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--surface) 55%, transparent),
+    transparent
+  );
+  animation: passportShimmer 1.2s ease-in-out infinite;
+}
+
+.loadingLine {
+  display: block;
+  height: 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-secondary) 75%, var(--border));
+}
+
+.loadingPanel {
+  height: 110px;
+  border-radius: 22px;
+  background: color-mix(in srgb, var(--surface-secondary) 70%, var(--border));
+}
+
+.loadingMap {
+  height: min(48vw, 240px);
+  min-height: 180px;
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--surface-secondary) 60%, #0d1016);
+}
+
+.loadingHint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+@keyframes passportShimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loadingLine::after,
+  .loadingPanel::after,
+  .loadingMap::after,
+  .loadingAvatar::after {
+    animation: none;
+  }
+}
+
 .page > footer {
   margin-top: -4px;
 }

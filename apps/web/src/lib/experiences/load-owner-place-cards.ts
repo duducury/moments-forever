@@ -34,6 +34,16 @@ type PlaceLink = {
   readonly confirmed: boolean;
 };
 
+type AlbumRow = {
+  readonly id: string;
+  readonly experience_id: string;
+  readonly name: string;
+  readonly cover_photo_id: string | null;
+  readonly position: number;
+  readonly source_moment_id: string | null;
+  readonly moment?: unknown;
+};
+
 function asRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object"
     ? (value as Record<string, unknown>)
@@ -48,6 +58,18 @@ function placeLinkFromEmbed(momentEmbed: unknown): PlaceLink | null {
   return {
     name: place.name,
     confirmed: Boolean(place.confirmed_by_user),
+  };
+}
+
+function toAlbumRow(row: Record<string, unknown>): AlbumRow {
+  return {
+    id: row.id as string,
+    experience_id: row.experience_id as string,
+    name: row.name as string,
+    cover_photo_id: (row.cover_photo_id as string | null) ?? null,
+    position: row.position as number,
+    source_moment_id: (row.source_moment_id as string | null) ?? null,
+    moment: row.moment,
   };
 }
 
@@ -115,7 +137,9 @@ export async function loadOwnerPlaceCards(
   ]);
 
   // If the embed isn't available in this DB, fall back without place joins.
-  let albumRows = albumsResult.data ?? [];
+  let albumRows: AlbumRow[] = (albumsResult.data ?? []).map((row) =>
+    toAlbumRow(row as Record<string, unknown>),
+  );
   let placeNameByMomentId = new Map<string, PlaceLink>();
 
   if (albumsResult.error) {
@@ -131,14 +155,16 @@ export async function loadOwnerPlaceCards(
     if (fallbackAlbums.error) {
       return { places: null, error: fallbackAlbums.error.message };
     }
-    albumRows = fallbackAlbums.data ?? [];
+    albumRows = (fallbackAlbums.data ?? []).map((row) =>
+      toAlbumRow(row as Record<string, unknown>),
+    );
     placeNameByMomentId = await loadPlaceNamesByMoment(
       supabase,
-      albumRows.map((album) => album.source_moment_id as string | null),
+      albumRows.map((album) => album.source_moment_id),
     );
   } else {
     for (const album of albumRows) {
-      const momentId = album.source_moment_id as string | null;
+      const momentId = album.source_moment_id;
       if (!momentId) continue;
       const link = placeLinkFromEmbed(
         Array.isArray(album.moment) ? album.moment[0] : album.moment,
@@ -177,14 +203,14 @@ export async function loadOwnerPlaceCards(
   }
 
   const places: OwnerPlaceCardItem[] = albumRows.map((album) => {
-    const experienceId = album.experience_id as string;
+    const experienceId = album.experience_id;
     const experience = experienceById.get(experienceId);
-    const stats = statsByAlbum.get(album.id as string);
-    const coverPhotoId = (album.cover_photo_id as string | null) ?? null;
-    const momentId = album.source_moment_id as string | null;
+    const stats = statsByAlbum.get(album.id);
+    const coverPhotoId = album.cover_photo_id;
+    const momentId = album.source_moment_id;
     const linkedPlace = momentId ? placeNameByMomentId.get(momentId) : null;
     const title = resolveLocationDisplayName({
-      albumName: album.name as string,
+      albumName: album.name,
       placeName: linkedPlace?.name ?? null,
       placeConfirmedByUser: linkedPlace?.confirmed ?? false,
     });
@@ -193,7 +219,7 @@ export async function loadOwnerPlaceCards(
       countryCodeFromPlaceLabel(linkedPlace?.name);
 
     return {
-      albumId: album.id as string,
+      albumId: album.id,
       experienceId,
       experienceSlug: experience?.slug ?? "",
       experienceTitle: experience?.title ?? title,

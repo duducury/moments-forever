@@ -8,7 +8,7 @@ import { loadOwnerPlaceCards } from "@/lib/experiences/load-owner-place-cards";
 import { buildPassport } from "@/lib/passport/build-passport";
 import {
   ensureOwnerProfileSlug,
-  lookupPublicProfile,
+  lookupOwnerProfileById,
   profileAvatarPublicPath,
   publicProfilePath,
 } from "@/lib/profile/profile-slug";
@@ -43,18 +43,37 @@ export default async function PassaportePage() {
     redirect("/login");
   }
 
-  const slug = await ensureOwnerProfileSlug(
-    supabase,
-    user.id,
-    displayNameFromUser(user),
-  );
-  const homeHref = publicProfilePath(slug);
-  const profile = await lookupPublicProfile(supabase, slug);
-  const result = await loadOwnerPlaceCards(supabase, user.id);
-  const places = result.places ?? [];
+  // Profile + places in parallel — biggest win vs sequential waterfall.
+  const [profileResult, placesResult] = await Promise.all([
+    lookupOwnerProfileById(supabase, user.id),
+    loadOwnerPlaceCards(supabase, user.id),
+  ]);
+
+  let profile = profileResult;
+  if (!profile?.profileSlug) {
+    const slug = await ensureOwnerProfileSlug(
+      supabase,
+      user.id,
+      displayNameFromUser(user),
+    );
+    profile = await lookupOwnerProfileById(supabase, user.id);
+    if (!profile) {
+      profile = {
+        id: user.id,
+        profileSlug: slug,
+        displayName: displayNameFromUser(user),
+        bio: null,
+        avatarPhotoId: null,
+        hasPermanentAvatar: false,
+      };
+    }
+  }
+
+  const places = placesResult.places ?? [];
   const passport = buildPassport(places, user.created_at ?? null);
   const displayName =
-    profile?.displayName?.trim() || displayNameFromUser(user);
+    profile.displayName?.trim() || displayNameFromUser(user);
+  const homeHref = publicProfilePath(profile.profileSlug);
 
   return (
     <main className="page-shell" data-bottom-nav="true">
@@ -62,19 +81,19 @@ export default async function PassaportePage() {
         <AppWordmark />
         <AuthStatus hideUserName />
       </nav>
-      {result.error ? (
+      {placesResult.error ? (
         <p className="placeholder-note" role="alert">
-          {result.error}
+          {placesResult.error}
         </p>
       ) : (
         <PassaporteClient
-          avatarPhotoId={profile?.avatarPhotoId ?? null}
+          avatarPhotoId={profile.avatarPhotoId ?? null}
           avatarRemoteSrc={
-            profile?.hasPermanentAvatar
-              ? profileAvatarPublicPath(slug)
+            profile.hasPermanentAvatar
+              ? profileAvatarPublicPath(profile.profileSlug)
               : null
           }
-          bio={profile?.bio ?? null}
+          bio={profile.bio ?? null}
           displayName={displayName}
           ownerId={user.id}
           passport={passport}

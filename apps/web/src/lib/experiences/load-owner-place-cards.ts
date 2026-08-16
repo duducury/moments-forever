@@ -7,7 +7,6 @@ import {
   countryCodeFromPlaceLabel,
   resolveLocationDisplayName,
 } from "@moments-forever/shared";
-import { connection } from "next/server";
 
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -37,8 +36,6 @@ export async function loadOwnerPlaceCards(
   | { readonly places: readonly OwnerPlaceCardItem[]; readonly error: null }
   | { readonly places: null; readonly error: string }
 > {
-  await connection();
-
   const experiences = await supabase
     .from("experiences")
     .select("id, slug, title, created_at")
@@ -66,17 +63,27 @@ export async function loadOwnerPlaceCards(
     ]),
   );
 
-  const albums = await supabase
-    .from("albums")
-    .select(
-      "id, experience_id, name, cover_photo_id, position, source_moment_id, created_at",
-    )
-    .in("experience_id", experienceIds)
-    .is("parent_album_id", null)
-    .order("position", { ascending: true });
+  // Albums + photo date/count stats in parallel (photos payload stays slim).
+  const [albums, photos] = await Promise.all([
+    supabase
+      .from("albums")
+      .select(
+        "id, experience_id, name, cover_photo_id, position, source_moment_id, created_at",
+      )
+      .in("experience_id", experienceIds)
+      .is("parent_album_id", null)
+      .order("position", { ascending: true }),
+    supabase
+      .from("photos")
+      .select("album_id, captured_at")
+      .in("experience_id", experienceIds),
+  ]);
 
   if (albums.error) {
     return { places: null, error: albums.error.message };
+  }
+  if (photos.error) {
+    return { places: null, error: photos.error.message };
   }
 
   const albumRows = albums.data ?? [];
@@ -130,42 +137,36 @@ export async function loadOwnerPlaceCards(
     }
   }
 
-  const photos = await supabase
-    .from("photos")
-    .select("id, album_id, captured_at, position_in_album")
-    .in("experience_id", experienceIds)
-    .order("position_in_album", { ascending: true });
-
-  if (photos.error) {
-    return { places: null, error: photos.error.message };
-  }
-
-  const photosByAlbum = new Map<
+  const statsByAlbum = new Map<
     string,
-    { id: string; capturedAt: string | null }[]
+    { count: number; startsAt: string | null; endsAt: string | null }
   >();
   for (const photo of photos.data ?? []) {
     const albumId = photo.album_id as string | null;
     if (!albumId) continue;
-    const list = photosByAlbum.get(albumId) ?? [];
-    list.push({
-      id: photo.id as string,
-      capturedAt: (photo.captured_at as string | null) ?? null,
-    });
-    photosByAlbum.set(albumId, list);
+    const capturedAt = (photo.captured_at as string | null) ?? null;
+    const current = statsByAlbum.get(albumId) ?? {
+      count: 0,
+      startsAt: null,
+      endsAt: null,
+    };
+    current.count += 1;
+    if (capturedAt) {
+      if (!current.startsAt || capturedAt < current.startsAt) {
+        current.startsAt = capturedAt;
+      }
+      if (!current.endsAt || capturedAt > current.endsAt) {
+        current.endsAt = capturedAt;
+      }
+    }
+    statsByAlbum.set(albumId, current);
   }
 
   const places: OwnerPlaceCardItem[] = albumRows.map((album) => {
     const experienceId = album.experience_id as string;
     const experience = experienceById.get(experienceId);
-    const albumPhotos = photosByAlbum.get(album.id as string) ?? [];
-    const captured = albumPhotos
-      .map((photo) => photo.capturedAt)
-      .filter((value): value is string => Boolean(value))
-      .sort();
-    const previewPhotoIds = albumPhotos.slice(0, 4).map((photo) => photo.id);
-    const coverPhotoId =
-      (album.cover_photo_id as string | null) ?? previewPhotoIds[0] ?? null;
+    const stats = statsByAlbum.get(album.id as string);
+    const coverPhotoId = (album.cover_photo_id as string | null) ?? null;
     const momentId = album.source_moment_id as string | null;
     const linkedPlace = momentId ? placeNameByMomentId.get(momentId) : null;
     const title = resolveLocationDisplayName({
@@ -185,14 +186,11 @@ export async function loadOwnerPlaceCards(
       experienceTitle: experience?.title ?? title,
       title,
       countryCode,
-      startsAt: captured[0] ?? null,
-      endsAt: captured[captured.length - 1] ?? null,
+      startsAt: stats?.startsAt ?? null,
+      endsAt: stats?.endsAt ?? null,
       coverPhotoId,
-      previewPhotoIds:
-        coverPhotoId && !previewPhotoIds.includes(coverPhotoId)
-          ? [coverPhotoId, ...previewPhotoIds].slice(0, 4)
-          : previewPhotoIds,
-      photoCount: albumPhotos.length,
+      previewPhotoIds: coverPhotoId ? [coverPhotoId] : [],
+      photoCount: stats?.count ?? 0,
     };
   });
 

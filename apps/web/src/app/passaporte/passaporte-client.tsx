@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useId, useMemo, useRef, useState, type PointerEvent, type ReactNode } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type PointerEvent, type ReactNode } from "react";
 
 import { ProfileAvatar } from "@/app/perfil/profile-avatar";
 import { AppCreditFooter } from "@/components/app-credit-footer";
@@ -14,7 +14,7 @@ import styles from "./passaporte.module.css";
 
 const PassportWorldMap = dynamic(
   () => import("./passport-world-map").then((mod) => mod.PassportWorldMap),
-  { ssr: false },
+  { ssr: false, loading: () => null },
 );
 
 function formatIssued(iso: string | null): string {
@@ -342,7 +342,7 @@ export function PassaporteClient({
         </h2>
         <div className={styles.worldCard}>
           {visitedCodes.length > 0 ? (
-            <PassportWorldMap
+            <DeferredPassportWorldMap
               onSelectCountry={setSelectedCode}
               visitedCodes={visitedCodes}
             />
@@ -675,6 +675,45 @@ export function PassaporteClient({
       <footer>
         <AppCreditFooter />
       </footer>
+    </div>
+  );
+}
+
+function DeferredPassportWorldMap({
+  visitedCodes,
+  onSelectCountry,
+}: {
+  readonly visitedCodes: readonly string[];
+  readonly onSelectCountry: (code: string) => void;
+}) {
+  const hostRef = useRef<HTMLDivElement | null>(null);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    const node = hostRef.current;
+    if (!node || ready) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+        setReady(true);
+        io.disconnect();
+      },
+      { rootMargin: "160px 0px" },
+    );
+    io.observe(node);
+    return () => io.disconnect();
+  }, [ready]);
+
+  return (
+    <div className={styles.worldMap} ref={hostRef}>
+      {ready ? (
+        <PassportWorldMap
+          onSelectCountry={onSelectCountry}
+          visitedCodes={visitedCodes}
+        />
+      ) : (
+        <div aria-hidden className={styles.worldMap} />
+      )}
     </div>
   );
 }

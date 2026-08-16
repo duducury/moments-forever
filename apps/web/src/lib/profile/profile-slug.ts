@@ -144,6 +144,54 @@ export async function getOwnerProfileSlug(
   return result.data.profile_slug as string;
 }
 
+/** Fast owner profile read by id — one round trip, no slug ensure/write. */
+export async function lookupOwnerProfileById(
+  supabase: ServerSupabase,
+  ownerId: string,
+): Promise<PublicProfile | null> {
+  const withAvatarKey = await supabase
+    .from("users")
+    .select(
+      "id, profile_slug, display_name, bio, avatar_photo_id, avatar_storage_key",
+    )
+    .eq("id", ownerId)
+    .maybeSingle();
+
+  if (!withAvatarKey.error && withAvatarKey.data?.id) {
+    const slug = (withAvatarKey.data.profile_slug as string | null) ?? "";
+    if (!slug) return null;
+    return mapPublicProfile({
+      id: withAvatarKey.data.id as string,
+      profile_slug: slug,
+      display_name: (withAvatarKey.data.display_name as string | null) ?? null,
+      bio: (withAvatarKey.data.bio as string | null) ?? null,
+      avatar_photo_id:
+        (withAvatarKey.data.avatar_photo_id as string | null) ?? null,
+      avatar_storage_key:
+        (withAvatarKey.data.avatar_storage_key as string | null) ?? null,
+    });
+  }
+
+  const fallback = await supabase
+    .from("users")
+    .select("id, profile_slug, display_name, bio, avatar_photo_id")
+    .eq("id", ownerId)
+    .maybeSingle();
+
+  if (fallback.error || !fallback.data?.id) return null;
+  const slug = (fallback.data.profile_slug as string | null) ?? "";
+  if (!slug) return null;
+
+  return mapPublicProfile({
+    id: fallback.data.id as string,
+    profile_slug: slug,
+    display_name: (fallback.data.display_name as string | null) ?? null,
+    bio: (fallback.data.bio as string | null) ?? null,
+    avatar_photo_id: (fallback.data.avatar_photo_id as string | null) ?? null,
+    avatar_storage_key: null,
+  });
+}
+
 /**
  * Ensure the signed-in owner has a stable public profile_slug + display_name.
  * Does not change an existing slug (keeps shared links stable).

@@ -176,21 +176,24 @@ function LightboxSlideMedia({
   readonly load?: boolean;
   readonly onReady?: () => void;
 }) {
-  // Full quality only — no soft thumbnail. Mount the <img> as soon as the
-  // URL is known so the download starts immediately; fade in once loaded.
-  const fullSrc = useLocalPhotoObjectUrl(photoId, "full");
+  // Prefer local blob / warmed URL; fall back to the media proxy immediately so
+  // the download can start before IndexedDB finishes (never block on signing).
+  const cachedSrc = useLocalPhotoObjectUrl(photoId, "full");
+  const fullSrc =
+    cachedSrc ??
+    `/api/media/${encodeURIComponent(photoId)}?variant=full`;
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     setLoaded(false);
   }, [fullSrc, photoId]);
 
-  const isLocalBlob = Boolean(fullSrc?.startsWith("blob:"));
-  const showImage = Boolean(fullSrc) && load && (isLocalBlob || loaded);
+  const isLocalBlob = Boolean(fullSrc.startsWith("blob:"));
+  const showImage = load && (isLocalBlob || loaded);
 
   useEffect(() => {
-    if (isLocalBlob && fullSrc && load) onReady?.();
-  }, [isLocalBlob, fullSrc, load, onReady]);
+    if (isLocalBlob && load) onReady?.();
+  }, [isLocalBlob, load, onReady]);
 
   return (
     <>
@@ -201,7 +204,7 @@ function LightboxSlideMedia({
           className={styles.lightboxImageShell}
         />
       ) : null}
-      {fullSrc && load ? (
+      {load ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           alt={alt}
@@ -285,10 +288,12 @@ export function PhotoLightbox({
   useLocalPhotoObjectUrl(farNextId, "full");
 
   useEffect(() => {
-    const ids = photos.map((item) => item.id);
-    if (ids.length === 0 || index < 0) return;
-    // Folder-first queue: current, next, prev, then the rest of this album.
-    prioritizeAlbumFullPrefetch(ids, index);
+    if (index < 0) return;
+    // Only the open window — never the whole album's bytes.
+    prioritizeAlbumFullPrefetch(
+      photos.map((item) => item.id),
+      index,
+    );
     void warmLocalPhotoObjectUrls(
       [
         photo?.id,

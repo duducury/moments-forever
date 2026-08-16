@@ -16,7 +16,7 @@ No bucket, o objeto sob a variante de caminho `original` **é o preview** (não 
 
 ### Entrega rápida (cliente)
 
-O browser resolve URLs assinadas do R2 em lote (`POST /api/media/signed-urls`) e cacheia na sessão. O `<img>` baixa direto do R2; `/api/media/[id]` (redirect 302) fica como fallback. Não há upgrade soft→nítido no lightbox: só o preview completo.
+O lightbox aponta para `/api/media/[id]?variant=full` de imediato (redirect curto para o R2). URLs assinadas em lote (`POST /api/media/signed-urls`) existem no servidor, mas o cliente **não espera** por elas antes de pintar — isso travava a abertura quando o álbum inteiro entrava na fila. Prefetch de bytes full fica só na janela atual ± vizinhas. Não há upgrade soft→nítido no lightbox: só o preview completo.
 
 Formatos modernos podem ser negociados no web, mantendo fallback amplamente compatível. HEIC/RAW precisam de orientação, cor e conversão testadas. Metadados úteis vão ao banco; EXIF e GPS são removidos dos arquivos entregues.
 

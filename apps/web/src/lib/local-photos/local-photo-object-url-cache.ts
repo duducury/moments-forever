@@ -1,13 +1,14 @@
 /**
- * Session cache: photo.id (+ variant) → Object URL or direct R2 signed URL.
+ * Session cache: photo.id (+ variant) → Object URL or media proxy URL.
  *
  * Object URLs must outlive React effect cleanups. Revoking on unmount raced with
  * async setState and Soft Navigation / router.refresh() on Admin & Perfil, leaving
  * revoked blob: URLs in the DOM while /trip remounted cleanly from IndexedDB.
  *
  * Blobs stay in IndexedDB; this only caches created Object URLs for the tab session.
- * Remote photos resolve short-lived R2 signed URLs once (batch) so <img> skips the
- * /api/media auth+302 hop on every paint.
+ * Remote photos use `/api/media/…` immediately (browser follows the R2 redirect).
+ * We never block first paint on batch signed-URL resolution — that made lightbox
+ * wait on the whole album and look “stuck”.
  */
 
 import {
@@ -29,22 +30,13 @@ function remoteMediaProxyUrl(
   }`;
 }
 
-function isApiProxyUrl(url: string | undefined | null): boolean {
-  return Boolean(url?.startsWith("/api/media/"));
-}
-
 function isBlobUrl(url: string | undefined | null): boolean {
   return Boolean(url?.startsWith("blob:"));
 }
 
 const urls = new Map<string, string>();
 const inflightPhotos = new Map<string, Promise<void>>();
-const signedResolveInflight = new Map<string, Promise<void>>();
 const urlListeners = new Set<() => void>();
-
-/** Client memo of batch-resolved signed URLs (refresh ~5 min before expiry). */
-const signedExpiryByPhoto = new Map<string, number>();
-const SIGNED_CLIENT_SKEW_MS = 60 * 5 * 1000;
 
 function notifyUrlListeners(): void {
   for (const listener of urlListeners) {
@@ -78,27 +70,19 @@ function cacheBlobUrl(photoId: string, variant: LocalPhotoVariant, blob: Blob) {
   return url;
 }
 
-function cacheRemoteProxyFallback(photoId: string) {
+function cacheRemoteProxyUrls(photoId: string) {
   const thumbKey = cacheKey(photoId, "thumbnail");
   const fullKey = cacheKey(photoId, "full");
-  if (!urls.has(thumbKey) || isApiProxyUrl(urls.get(thumbKey))) {
+  let changed = false;
+  if (!urls.has(thumbKey)) {
     urls.set(thumbKey, remoteMediaProxyUrl(photoId, "thumbnail"));
+    changed = true;
   }
-  if (!urls.has(fullKey) || isApiProxyUrl(urls.get(fullKey))) {
+  if (!urls.has(fullKey)) {
     urls.set(fullKey, remoteMediaProxyUrl(photoId, "full"));
+    changed = true;
   }
-}
-
-function setSignedRemoteUrl(
-  photoId: string,
-  variant: LocalPhotoVariant,
-  signedUrl: string,
-) {
-  const key = cacheKey(photoId, variant);
-  const existing = urls.get(key);
-  if (existing && isBlobUrl(existing)) return;
-  if (existing === signedUrl) return;
-  urls.set(key, signedUrl);
+  return changed;
 }
 
 function hydrateRecord(
@@ -112,128 +96,14 @@ function hydrateRecord(
   if (record.thumbnail) {
     cacheBlobUrl(photoId, "thumbnail", record.thumbnail);
   } else if (!urls.has(cacheKey(photoId, "thumbnail"))) {
-    // No separate thumb — reuse full so grids/lightbox still have a fast path.
     cacheBlobUrl(photoId, "thumbnail", record.blob);
   }
 }
 
-function needsRemoteSignedResolution(photoId: string): boolean {
-  const thumb = urls.get(cacheKey(photoId, "thumbnail"));
-  const full = urls.get(cacheKey(photoId, "full"));
-  if (isBlobUrl(thumb) && isBlobUrl(full)) return false;
-  const expiresAt = signedExpiryByPhoto.get(photoId) ?? 0;
-  if (
-    expiresAt - SIGNED_CLIENT_SKEW_MS > Date.now() &&
-    full &&
-    !isApiProxyUrl(full) &&
-    thumb &&
-    !isApiProxyUrl(thumb)
-  ) {
-    return false;
-  }
-  return true;
-}
-
-async function resolveRemoteSignedUrls(
-  photoIds: readonly string[],
-): Promise<void> {
-  const uniqueIds = [
-    ...new Set(photoIds.filter((id) => id && needsRemoteSignedResolution(id))),
-  ];
-  if (uniqueIds.length === 0 || typeof window === "undefined") return;
-
-  const alreadyWaiting = uniqueIds
-    .map((id) => signedResolveInflight.get(id))
-    .filter((value): value is Promise<void> => Boolean(value));
-  const toFetch = uniqueIds.filter((id) => !signedResolveInflight.has(id));
-
-  if (toFetch.length === 0) {
-    await Promise.all(alreadyWaiting);
-    return;
-  }
-
-  const work = (async () => {
-    try {
-      const response = await fetch("/api/media/signed-urls", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        credentials: "same-origin",
-        body: JSON.stringify({
-          photoIds: toFetch,
-          variants: ["full", "thumbnail"],
-        }),
-      });
-      if (!response.ok) {
-        for (const id of toFetch) {
-          cacheRemoteProxyFallback(id);
-        }
-        notifyUrlListeners();
-        return;
-      }
-      const payload = (await response.json()) as {
-        readonly urls?: Record<
-          string,
-          { readonly full?: string; readonly thumbnail?: string }
-        >;
-        readonly expiresAt?: number;
-      };
-      const expiresAt =
-        typeof payload.expiresAt === "number"
-          ? payload.expiresAt
-          : Date.now() + 60 * 25 * 1000;
-      let changed = false;
-      for (const id of toFetch) {
-        const entry = payload.urls?.[id];
-        if (!entry?.full && !entry?.thumbnail) {
-          cacheRemoteProxyFallback(id);
-          changed = true;
-          continue;
-        }
-        if (entry.full) {
-          setSignedRemoteUrl(id, "full", entry.full);
-          changed = true;
-        }
-        if (entry.thumbnail) {
-          setSignedRemoteUrl(id, "thumbnail", entry.thumbnail);
-          changed = true;
-        } else if (entry.full) {
-          setSignedRemoteUrl(id, "thumbnail", entry.full);
-          changed = true;
-        }
-        signedExpiryByPhoto.set(id, expiresAt);
-      }
-      if (changed) notifyUrlListeners();
-    } catch {
-      for (const id of toFetch) {
-        cacheRemoteProxyFallback(id);
-      }
-      notifyUrlListeners();
-    }
-  })().finally(() => {
-    for (const id of toFetch) {
-      signedResolveInflight.delete(id);
-    }
-  });
-
-  for (const id of toFetch) {
-    signedResolveInflight.set(id, work);
-  }
-
-  await Promise.all([work, ...alreadyWaiting]);
-}
-
 async function ensurePhotoCached(photoId: string): Promise<void> {
-  const thumb = urls.get(cacheKey(photoId, "thumbnail"));
-  const full = urls.get(cacheKey(photoId, "full"));
-  if (
-    thumb &&
-    full &&
-    !isApiProxyUrl(thumb) &&
-    !isApiProxyUrl(full) &&
-    !needsRemoteSignedResolution(photoId)
-  ) {
-    return;
-  }
+  const thumbReady = urls.has(cacheKey(photoId, "thumbnail"));
+  const fullReady = urls.has(cacheKey(photoId, "full"));
+  if (thumbReady && fullReady) return;
 
   const pending = inflightPhotos.get(photoId);
   if (pending) {
@@ -243,23 +113,24 @@ async function ensurePhotoCached(photoId: string): Promise<void> {
 
   const load = (async () => {
     try {
+      // Optimistic proxy so remote lightbox can start while IDB opens.
+      if (
+        !urls.has(cacheKey(photoId, "thumbnail")) ||
+        !urls.has(cacheKey(photoId, "full"))
+      ) {
+        if (cacheRemoteProxyUrls(photoId)) {
+          notifyUrlListeners();
+        }
+      }
       const record = await getLocalPhotoBlobRecord(photoId);
       if (record) {
         hydrateRecord(photoId, record);
         notifyUrlListeners();
-        return;
-      }
-      await resolveRemoteSignedUrls([photoId]);
-      if (
-        !urls.has(cacheKey(photoId, "full")) ||
-        !urls.has(cacheKey(photoId, "thumbnail"))
-      ) {
-        cacheRemoteProxyFallback(photoId);
-        notifyUrlListeners();
       }
     } catch {
-      cacheRemoteProxyFallback(photoId);
-      notifyUrlListeners();
+      if (cacheRemoteProxyUrls(photoId)) {
+        notifyUrlListeners();
+      }
     } finally {
       inflightPhotos.delete(photoId);
     }
@@ -274,45 +145,35 @@ export async function getOrCreateLocalPhotoObjectUrl(
   variant: LocalPhotoVariant = "thumbnail",
 ): Promise<string | null> {
   const cached = urls.get(cacheKey(photoId, variant));
-  if (cached && !isApiProxyUrl(cached) && !needsRemoteSignedResolution(photoId)) {
-    return cached;
-  }
+  if (cached) return cached;
 
   await ensurePhotoCached(photoId);
   return urls.get(cacheKey(photoId, variant)) ?? null;
 }
 
-/** Warm many photos: local blobs first, then one signed-URL batch for remotes. */
+/** Warm many photos in one IndexedDB round-trip; remotes get proxy URLs instantly. */
 export async function warmLocalPhotoObjectUrls(
   photoIds: readonly string[],
 ): Promise<void> {
   const uniqueIds = [...new Set(photoIds.filter(Boolean))];
-  if (uniqueIds.length === 0) return;
+  const missing = uniqueIds.filter(
+    (id) =>
+      !urls.has(cacheKey(id, "thumbnail")) || !urls.has(cacheKey(id, "full")),
+  );
+  if (missing.length === 0) return;
 
-  const missingLocal = uniqueIds.filter((id) => {
-    const thumb = urls.get(cacheKey(id, "thumbnail"));
-    const full = urls.get(cacheKey(id, "full"));
-    return !(isBlobUrl(thumb) && isBlobUrl(full));
-  });
-  if (missingLocal.length === 0) return;
-
-  const records = await getLocalPhotoBlobRecords(missingLocal);
-  const needSigned: string[] = [];
-  for (const id of missingLocal) {
+  const records = await getLocalPhotoBlobRecords(missing);
+  let changed = false;
+  for (const id of missing) {
     const record = records.get(id);
     if (record) {
       hydrateRecord(id, record);
-    } else {
-      needSigned.push(id);
+      changed = true;
+    } else if (cacheRemoteProxyUrls(id)) {
+      changed = true;
     }
   }
-  if (needSigned.length > 0) {
-    // Chunk to API max (48).
-    for (let offset = 0; offset < needSigned.length; offset += 48) {
-      await resolveRemoteSignedUrls(needSigned.slice(offset, offset + 48));
-    }
-  }
-  notifyUrlListeners();
+  if (changed) notifyUrlListeners();
 }
 
 /** Decode an image URL into the browser cache (no DOM paint). */
@@ -342,7 +203,8 @@ type PrefetchQueued = {
 
 let prefetchQueue: PrefetchQueued[] = [];
 let prefetchActive = 0;
-const PREFETCH_CONCURRENCY = 3;
+/** Keep low so the open photo wins the network. */
+const PREFETCH_CONCURRENCY = 2;
 
 async function preloadFullForPhoto(photoId: string): Promise<void> {
   if (preloadedFullIds.has(photoId)) return;
@@ -398,9 +260,8 @@ function enqueueFullPrefetch(photoId: string, score: number): void {
 }
 
 /**
- * Prioritize full-image prefetch for the album folder the user is in.
- * When `focusIndex` is set (lightbox open), current ± neighbors jump the queue
- * so swiping the next photo is already warm.
+ * Prefetch full bytes only for a tight window around the open photo.
+ * Never download the whole album at once — that starved the photo being viewed.
  */
 export function prioritizeAlbumFullPrefetch(
   photoIds: readonly string[],
@@ -409,56 +270,34 @@ export function prioritizeAlbumFullPrefetch(
   const uniqueIds = [...new Set(photoIds.filter(Boolean))];
   if (uniqueIds.length === 0) return;
 
-  // Resolve signed URLs for the folder in the background (cheap vs image bytes).
-  void warmLocalPhotoObjectUrls(uniqueIds);
+  const focus =
+    focusIndex != null && focusIndex >= 0 && focusIndex < uniqueIds.length
+      ? focusIndex
+      : 0;
 
-  const allowed = new Set(uniqueIds);
-  prefetchQueue = prefetchQueue.filter((item) => allowed.has(item.photoId));
-
-  if (focusIndex != null && focusIndex >= 0 && focusIndex < uniqueIds.length) {
-    const ordered: { id: string; score: number }[] = [];
-    const push = (offset: number, score: number) => {
-      const id =
-        uniqueIds[
-          (focusIndex + offset + uniqueIds.length) % uniqueIds.length
-        ];
-      if (id) ordered.push({ id, score });
-    };
-    push(0, 10_000);
-    push(1, 9_500);
-    push(-1, 9_400);
-    push(2, 9_000);
-    push(-2, 8_900);
-    push(3, 8_500);
-    push(-3, 8_400);
-
-    const seen = new Set<string>();
-    for (const item of ordered) {
-      if (seen.has(item.id)) continue;
-      seen.add(item.id);
-      enqueueFullPrefetch(item.id, item.score);
-    }
-    uniqueIds.forEach((id, index) => {
-      if (seen.has(id)) return;
-      const distance = Math.min(
-        Math.abs(index - focusIndex),
-        uniqueIds.length - Math.abs(index - focusIndex),
-      );
-      enqueueFullPrefetch(id, 1_000 - distance);
-    });
-  } else {
-    uniqueIds.forEach((id, index) => {
-      enqueueFullPrefetch(id, 500 - index);
-    });
+  // Resolve local/proxy URLs for the window only (cheap).
+  const windowIds: string[] = [];
+  for (const offset of [0, 1, -1, 2, -2, 3, -3]) {
+    const id =
+      uniqueIds[(focus + offset + uniqueIds.length) % uniqueIds.length];
+    if (id && !windowIds.includes(id)) windowIds.push(id);
   }
+  void warmLocalPhotoObjectUrls(windowIds);
 
+  prefetchQueue = prefetchQueue.filter((item) => windowIds.includes(item.photoId));
+
+  windowIds.forEach((id, order) => {
+    enqueueFullPrefetch(id, 10_000 - order * 100);
+  });
   pumpFullPrefetchQueue();
 }
 
 /** Start full prefetch as soon as the user intends to open a photo. */
 export function prefetchLocalPhotoFullOnIntent(photoId: string): void {
   if (!photoId) return;
-  enqueueFullPrefetch(photoId, 20_000);
+  // Jump the queue ahead of neighbors.
+  enqueueFullPrefetch(photoId, 50_000);
+  void warmLocalPhotoObjectUrls([photoId]);
   pumpFullPrefetchQueue();
 }
 
@@ -500,7 +339,6 @@ export function forgetLocalPhotoObjectUrls(photoId: string): void {
     urls.delete(key);
   }
   inflightPhotos.delete(photoId);
-  signedExpiryByPhoto.delete(photoId);
   preloadedFullIds.delete(photoId);
 }
 

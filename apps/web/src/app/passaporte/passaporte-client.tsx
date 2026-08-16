@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useMemo, useRef, useState, type PointerEvent, type ReactNode } from "react";
+import { useId, useMemo, useRef, useState, type PointerEvent, type ReactNode } from "react";
 
 import { ProfileAvatar } from "@/app/perfil/profile-avatar";
 import { AppCreditFooter } from "@/components/app-credit-footer";
@@ -686,31 +686,37 @@ function JourneyWavyBridge({
   readonly className: string;
   readonly side: "into-paper" | "into-page";
 }) {
+  const gradientId = useId().replace(/:/g, "");
   return (
     <div aria-hidden="true" className={className} data-side={side}>
-      {JOURNEY_WAVE_LAYERS.map((path, index) => (
-        <svg
-          className={styles.waveLayer}
-          data-step={index + 1}
-          key={path}
-          preserveAspectRatio="none"
-          viewBox="0 0 1440 160"
-        >
-          <path d={path} />
-        </svg>
-      ))}
+      <svg
+        className={styles.journeyWaveSvg}
+        preserveAspectRatio="none"
+        viewBox="0 0 1440 160"
+      >
+        <defs>
+          <linearGradient
+            gradientUnits="userSpaceOnUse"
+            id={gradientId}
+            x1="0"
+            x2="0"
+            y1="0"
+            y2="160"
+          >
+            <stop offset="0%" stopColor="var(--journey-fade-ink)" stopOpacity="1" />
+            <stop offset="42%" stopColor="var(--journey-fade-ink)" stopOpacity="0.72" />
+            <stop offset="72%" stopColor="var(--journey-fade-ink)" stopOpacity="0.28" />
+            <stop offset="100%" stopColor="var(--journey-fade-ink)" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <path
+          d="M0 0h1440v96c-160 18-320-14-480-6-190 10-300 28-460 20S280 96 140 108C70 116 28 110 0 104V0Z"
+          fill={`url(#${gradientId})`}
+        />
+      </svg>
     </div>
   );
 }
-
-/** Soft undulating dissolve — each layer reaches further with lower opacity. */
-const JOURNEY_WAVE_LAYERS = [
-  "M0 0h1440v46c-130 12-270-10-420-4-170 7-270 20-430 16S300 42 170 50C90 56 40 52 0 48V0Z",
-  "M0 0h1440v68c-150 14-290-12-450-4-180 9-290 24-450 18S280 64 150 74C80 80 30 76 0 70V0Z",
-  "M0 0h1440v92c-140 10-300-14-460-4-190 12-300 28-460 20S270 88 140 98C70 104 28 98 0 94V0Z",
-  "M0 0h1440v116c-160 12-310-10-470-2-200 10-310 26-470 18S260 112 130 122C70 128 24 122 0 116V0Z",
-  "M0 0h1440v138c-150 10-320-12-480-2-200 11-320 24-480 16S250 134 120 142C60 146 22 140 0 136V0Z",
-] as const;
 
 function CountryFlag({
   code,

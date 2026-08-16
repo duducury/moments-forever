@@ -605,7 +605,7 @@
 }
 
 /*
- * Minha jornada — full-bleed inverted band with a wavy soft dissolve.
+ * Minha jornada — full-bleed inverted band with one soft wavy fade.
  * Dark page → cream band; light page → dark band.
  * Scoped styles only; other sections untouched.
  */
@@ -665,56 +665,27 @@
   overflow: hidden;
 }
 
-/* Into paper: page color dissolves in waves over cream. */
+/* Into paper: page color fades out through one wavy shape. */
 .journeyTransitionTop {
+  --journey-fade-ink: var(--background);
   margin-top: -1px;
   background: var(--journey-paper);
   color: var(--background);
 }
 
-/* Into page: cream dissolves in waves over the page color. */
+/* Into page: cream fades out through one wavy shape. */
 .journeyTransitionBottom {
+  --journey-fade-ink: var(--journey-paper);
   margin-bottom: -1px;
   background: var(--background);
   color: var(--journey-paper);
 }
 
-.waveLayer {
-  position: absolute;
-  inset: 0;
+.journeyWaveSvg {
   display: block;
   width: 100%;
   height: 100%;
   color: inherit;
-}
-
-.waveLayer path {
-  fill: currentColor;
-}
-
-.waveLayer[data-step="1"] {
-  opacity: 1;
-  z-index: 5;
-}
-
-.waveLayer[data-step="2"] {
-  opacity: 0.62;
-  z-index: 4;
-}
-
-.waveLayer[data-step="3"] {
-  opacity: 0.36;
-  z-index: 3;
-}
-
-.waveLayer[data-step="4"] {
-  opacity: 0.18;
-  z-index: 2;
-}
-
-.waveLayer[data-step="5"] {
-  opacity: 0.08;
-  z-index: 1;
 }
 
 .journeyBody {

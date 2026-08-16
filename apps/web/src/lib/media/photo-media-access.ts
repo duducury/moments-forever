@@ -57,24 +57,48 @@ export async function createMemoizedPresignedGetUrl(
   return entry;
 }
 
+const accessMemo = new Map<
+  string,
+  { readonly keys: PhotoStorageKeys | null; readonly expiresAtMs: number }
+>();
+const ACCESS_MEMO_TTL_MS = 60_000;
+
 export async function canReadPhoto(
   supabase: Supabase,
   photoId: string,
   userId: string | null,
 ): Promise<PhotoStorageKeys | null> {
+  const memoKey = `${photoId}\0${userId ?? ""}`;
+  const memo = accessMemo.get(memoKey);
+  if (memo && memo.expiresAtMs > Date.now()) {
+    return memo.keys;
+  }
+
   const plain = await supabase
     .from("photos")
     .select("id, experience_id, storage_key, thumbnail_storage_key")
     .eq("id", photoId)
     .maybeSingle();
-  if (plain.error || !plain.data) return null;
+  if (plain.error || !plain.data) {
+    accessMemo.set(memoKey, {
+      keys: null,
+      expiresAtMs: Date.now() + ACCESS_MEMO_TTL_MS,
+    });
+    return null;
+  }
 
   const experience = await supabase
     .from("experiences")
     .select("id, owner_id")
     .eq("id", plain.data.experience_id)
     .maybeSingle();
-  if (experience.error || !experience.data) return null;
+  if (experience.error || !experience.data) {
+    accessMemo.set(memoKey, {
+      keys: null,
+      expiresAtMs: Date.now() + ACCESS_MEMO_TTL_MS,
+    });
+    return null;
+  }
 
   const keys: PhotoStorageKeys = {
     storageKey: (plain.data.storage_key as string | null) ?? null,
@@ -82,21 +106,24 @@ export async function canReadPhoto(
       (plain.data.thumbnail_storage_key as string | null) ?? null,
   };
 
+  let allowed = false;
   if (userId && experience.data.owner_id === userId) {
-    return keys;
+    allowed = true;
+  } else {
+    const owner = await supabase
+      .from("users")
+      .select("id, profile_slug")
+      .eq("id", experience.data.owner_id)
+      .maybeSingle();
+    allowed = Boolean(owner.data?.profile_slug);
   }
 
-  const owner = await supabase
-    .from("users")
-    .select("id, profile_slug")
-    .eq("id", experience.data.owner_id)
-    .maybeSingle();
-
-  if (owner.data?.profile_slug) {
-    return keys;
-  }
-
-  return null;
+  const result = allowed ? keys : null;
+  accessMemo.set(memoKey, {
+    keys: result,
+    expiresAtMs: Date.now() + ACCESS_MEMO_TTL_MS,
+  });
+  return result;
 }
 
 /**

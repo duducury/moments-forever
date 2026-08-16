@@ -176,35 +176,60 @@ function LightboxSlideMedia({
   readonly load?: boolean;
   readonly onReady?: () => void;
 }) {
-  // Prefer local blob / warmed URL; fall back to the media proxy immediately so
-  // the download can start before IndexedDB finishes (never block on signing).
-  const cachedSrc = useLocalPhotoObjectUrl(photoId, "full");
+  // Instant open: the grid already warmed the thumbnail. Show it immediately,
+  // then swap once to full when that decode finishes (no blank shell wait).
+  const thumbSrc = useLocalPhotoObjectUrl(photoId, "thumbnail");
+  const cachedFull = useLocalPhotoObjectUrl(photoId, "full");
   const fullSrc =
-    cachedSrc ??
-    `/api/media/${encodeURIComponent(photoId)}?variant=full`;
-  const [loaded, setLoaded] = useState(false);
+    cachedFull ??
+    (load
+      ? `/api/media/${encodeURIComponent(photoId)}?variant=full`
+      : null);
+  const [fullReady, setFullReady] = useState(false);
 
   useEffect(() => {
-    setLoaded(false);
-  }, [fullSrc, photoId]);
+    setFullReady(false);
+  }, [photoId]);
 
-  const isLocalBlob = Boolean(fullSrc.startsWith("blob:"));
-  const showImage = load && (isLocalBlob || loaded);
+  // Local blob full is already on-device — paint without waiting for onLoad.
+  const showFull = Boolean(
+    fullSrc && load && (fullReady || fullSrc.startsWith("blob:")),
+  );
 
   useEffect(() => {
-    if (isLocalBlob && load) onReady?.();
-  }, [isLocalBlob, load, onReady]);
+    if (showFull) onReady?.();
+  }, [showFull, onReady]);
+
+  if (!load) {
+    return (
+      <div
+        aria-busy="true"
+        aria-label="Carregando foto"
+        className={styles.lightboxImageShell}
+      />
+    );
+  }
 
   return (
     <>
-      {!showImage ? (
+      {thumbSrc && !showFull ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          alt={alt}
+          className={styles.lightboxImage}
+          decoding="async"
+          draggable={false}
+          src={thumbSrc}
+        />
+      ) : null}
+      {!thumbSrc && !showFull ? (
         <div
           aria-busy="true"
           aria-label="Carregando foto"
           className={styles.lightboxImageShell}
         />
       ) : null}
-      {load ? (
+      {fullSrc ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           alt={alt}
@@ -213,17 +238,17 @@ function LightboxSlideMedia({
           draggable={false}
           fetchPriority={priority ? "high" : "auto"}
           onError={() => {
-            setLoaded(true);
+            setFullReady(true);
             markLocalPhotoFullPreloaded(photoId);
             onReady?.();
           }}
           onLoad={() => {
-            setLoaded(true);
+            setFullReady(true);
             markLocalPhotoFullPreloaded(photoId);
             onReady?.();
           }}
           src={fullSrc}
-          style={{ opacity: showImage ? 1 : 0 }}
+          style={{ opacity: showFull ? 1 : 0 }}
         />
       ) : null}
     </>

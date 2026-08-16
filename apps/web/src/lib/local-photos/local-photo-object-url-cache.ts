@@ -113,18 +113,15 @@ async function ensurePhotoCached(photoId: string): Promise<void> {
 
   const load = (async () => {
     try {
-      // Optimistic proxy so remote lightbox can start while IDB opens.
-      if (
-        !urls.has(cacheKey(photoId, "thumbnail")) ||
-        !urls.has(cacheKey(photoId, "full"))
-      ) {
-        if (cacheRemoteProxyUrls(photoId)) {
-          notifyUrlListeners();
-        }
-      }
+      // Check IndexedDB first. Setting a remote proxy before that races with
+      // local blobs and restarts the lightbox download (felt much slower).
       const record = await getLocalPhotoBlobRecord(photoId);
       if (record) {
         hydrateRecord(photoId, record);
+        notifyUrlListeners();
+        return;
+      }
+      if (cacheRemoteProxyUrls(photoId)) {
         notifyUrlListeners();
       }
     } catch {

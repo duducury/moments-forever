@@ -16,7 +16,7 @@ No bucket, o objeto sob a variante de caminho `original` **é o preview** (não 
 
 ### Entrega rápida (cliente)
 
-O lightbox aponta para `/api/media/[id]?variant=full` de imediato (redirect curto para o R2). URLs assinadas em lote (`POST /api/media/signed-urls`) existem no servidor, mas o cliente **não espera** por elas antes de pintar — isso travava a abertura quando o álbum inteiro entrava na fila. Prefetch de bytes full fica só na janela atual ± vizinhas. Não há upgrade soft→nítido no lightbox: só o preview completo.
+O lightbox pinta na hora a **thumbnail** já aquecida pelo grid e, em paralelo, baixa o preview `full`. Quando o `full` decodifica, troca uma vez (sem tela preta esperando). O `<img>` usa `/api/media/[id]` (redirect curto para o R2); prefetch de bytes full fica só na janela atual ± vizinhas.
 
 Formatos modernos podem ser negociados no web, mantendo fallback amplamente compatível. HEIC/RAW precisam de orientação, cor e conversão testadas. Metadados úteis vão ao banco; EXIF e GPS são removidos dos arquivos entregues.
 

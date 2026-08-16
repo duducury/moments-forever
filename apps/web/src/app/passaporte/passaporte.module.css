@@ -605,10 +605,12 @@
 }
 
 /*
- * Minha jornada — full-bleed cream environment with a soft fade
- * from the dark page. Scoped styles only; other sections untouched.
+ * Minha jornada — full-bleed inverted band with a soft fade.
+ * Dark page → cream band; light page → dark band.
+ * Scoped styles only; other sections untouched.
  */
 .journeySection {
+  /* Dark mode page: cream album environment */
   --journey-paper: #f5f1ea;
   --journey-card: #fbf8f3;
   --journey-ink: #1a1612;
@@ -629,6 +631,27 @@
   background: var(--journey-paper);
   color: var(--journey-ink);
   isolation: isolate;
+}
+
+/* Light mode page: dark band for contrast */
+:global(html[data-resolved-theme="light"]) .journeySection {
+  --journey-paper: #161412;
+  --journey-card: #211e1b;
+  --journey-ink: #f3efe8;
+  --journey-muted: #a8a29a;
+  --journey-line: rgb(243 239 232 / 10%);
+  --journey-shadow: rgb(0 0 0 / 28%);
+  --journey-accent: #d08a6e;
+}
+
+:global(html[data-resolved-theme="dark"]) .journeySection {
+  --journey-paper: #f5f1ea;
+  --journey-card: #fbf8f3;
+  --journey-ink: #1a1612;
+  --journey-muted: #5c554c;
+  --journey-line: rgb(26 22 18 / 9%);
+  --journey-shadow: rgb(42 32 22 / 7%);
+  --journey-accent: #8b3f28;
 }
 
 .journeyFadeTop,
@@ -750,7 +773,7 @@
   width: 72px;
   height: 72px;
   border-radius: 12px;
-  background: color-mix(in srgb, var(--journey-paper) 70%, #ddd4c6);
+  background: color-mix(in srgb, var(--journey-card) 72%, var(--journey-muted));
 }
 
 .journeyCoverImg {

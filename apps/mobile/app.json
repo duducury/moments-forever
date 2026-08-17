@@ -20,7 +20,16 @@
       "predictiveBackGestureEnabled": false
     },
     "plugins": [
-      "expo-dev-client"
+      "expo-dev-client",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#F7F4EE",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain"
+        }
+      ]
     ],
     "web": {
       "favicon": "./assets/favicon.png"

@@ -33,6 +33,8 @@ export function AuthProvider({ children }: { readonly children: ReactNode }) {
     void supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
       setLoading(false);
+    }).catch(() => {
+      setLoading(false);
     });
 
     const authSubscription = supabase.auth.onAuthStateChange(

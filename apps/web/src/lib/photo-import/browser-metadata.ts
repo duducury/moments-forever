@@ -238,7 +238,7 @@ export async function createBrowserThumbnail(
   }
 }
 
-/** Display asset for lightbox/covers — max edge ~1600 JPEG (MVP “full” / R2 original key). */
+/** Display asset for lightbox/covers — max edge ~1600 WebP/JPEG (MVP “full” / R2 original key). */
 export async function createBrowserPreview(
   file: Blob,
   maximumEdge = DEFAULT_PREVIEW_EDGE,

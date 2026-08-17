@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 
+import { resolvePhotoSrc } from "@/lib/media/media-url";
+
 import {
   getOrCreateLocalPhotoObjectUrl,
   peekLocalPhotoObjectUrl,
@@ -10,11 +12,12 @@ import {
 import type { LocalPhotoVariant } from "./photo-blob-store";
 
 /**
- * Resolves IndexedDB photo blobs / R2 signed URLs via a session cache.
+ * Resolves IndexedDB photo blobs / R2 media proxy URLs via a session cache.
  *
- * Reads the cache synchronously when warm (Soft Nav / Admin↔trip) so covers do
- * not flash empty. Never revokes on effect cleanup — that raced with async loads
- * and left dead blob: URLs painted on Admin/Perfil.
+ * Returns the proxy URL on the first render (SSR included) so <img> is in the
+ * HTML immediately. IndexedDB blobs replace it when this device has them.
+ * Never revokes on effect cleanup — that raced with async loads and left dead
+ * blob: URLs painted on Admin/Perfil.
  */
 export function useLocalPhotoObjectUrl(
   photoId: string | null | undefined,
@@ -46,6 +49,9 @@ export function useLocalPhotoObjectUrl(
     };
   }, [photoId, variant]);
 
-  if (!photoId) return null;
-  return peekLocalPhotoObjectUrl(photoId, variant) ?? warm;
+  return resolvePhotoSrc(
+    photoId,
+    variant,
+    photoId ? (peekLocalPhotoObjectUrl(photoId, variant) ?? warm) : null,
+  );
 }

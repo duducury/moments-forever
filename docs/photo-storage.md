@@ -16,7 +16,7 @@ No bucket, o objeto sob a variante de caminho `original` **é o preview** (não 
 
 ### Entrega rápida (cliente)
 
-O lightbox segue o padrão dos sites com `next/image`: a miniatura do grid entra só como **LQIP borrado** (não é a foto). O preview `full` baixa em paralelo e aparece nítido de uma vez. `/api/media/[id]` usa a sessão do cookie (sem `getUser` na rede) e cacheia o redirect. Prefetch de bytes full fica só na janela atual ± vizinhas. Fotos novas são WebP quando o aparelho consegue gerar.
+O HTML já inclui `<img src="/api/media/{id}?variant=…">` no primeiro paint (SSR), sem esperar IndexedDB nem URLs assinadas. Visitantes baixam na hora; no aparelho que importou, blobs locais substituem o proxy quando existirem. O lightbox usa a miniatura só como **LQIP borrado**; o preview `full` baixa em paralelo e aparece nítido. `/api/media/[id]` entrega os **bytes** (não um 302) com cache CDN longo para fotos de perfil público — o mesmo padrão de URL estável dos outros sites. Prefetch de bytes full fica só na janela atual ± vizinhas. Cards de perfil usam thumbnail (~640 px); capa/hero e lightbox usam o preview. Fotos novas são WebP quando o aparelho consegue gerar.
 
 Formatos modernos podem ser negociados no web, mantendo fallback amplamente compatível. HEIC/RAW precisam de orientação, cor e conversão testadas. Metadados úteis vão ao banco; EXIF e GPS são removidos dos arquivos entregues.
 
@@ -37,8 +37,9 @@ Bucket não é público. Uma camada edge valida acesso:
 
 - mídia pública pode usar cache CDN longo e chaves versionadas;
 - mídia privada usa autorização curta e não entra em cache público compartilhado;
-- mapa e grids recebem somente thumbnails;
-- capas e lightbox usam o preview (`full` / chave `original`);
+- mapa, grids e cards de perfil recebem somente thumbnails;
+- capas grandes (hero do álbum) e lightbox usam o preview (`full` / chave `original`);
+- `/api/media/{id}` entrega os bytes (URL estável, cacheável); fotos de perfil público podem ir ao CDN; fotos só do dono ficam em cache privado;
 - URLs de objeto não revelam usuário, local ou título.
 
 Cloudflare R2 armazena a mídia, separado do Supabase Auth/PostgreSQL. Isso evita usar o banco ou Supabase Storage para arquivos pesados. R2 reduz egress dentro do ecossistema Cloudflare, mas operações, transformação e fornecedor continuam sendo custos/risco. O modelo de `media_variants` e o contrato de storage permitem adicionar `original` ou migrar fornecedor sem redesenhar memórias.

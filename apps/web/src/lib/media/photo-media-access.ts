@@ -1,3 +1,5 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 import { createPresignedGetUrl, getR2Config } from "@/lib/storage/r2";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -11,6 +13,27 @@ export type PhotoStorageKeys = {
 type Supabase = NonNullable<
   Awaited<ReturnType<typeof createSupabaseServerClient>>
 >;
+
+/** RLS is the access check — anon sees public-profile photos, owners see their own. */
+export async function loadReadablePhotoKeys(
+  supabase: SupabaseClient,
+  photoId: string,
+): Promise<PhotoStorageKeys | null> {
+  const plain = await supabase
+    .from("photos")
+    .select("storage_key, thumbnail_storage_key")
+    .eq("id", photoId)
+    .maybeSingle();
+  if (plain.error || !plain.data) return null;
+
+  const keys: PhotoStorageKeys = {
+    storageKey: (plain.data.storage_key as string | null) ?? null,
+    thumbnailStorageKey:
+      (plain.data.thumbnail_storage_key as string | null) ?? null,
+  };
+  if (!keys.storageKey && !keys.thumbnailStorageKey) return null;
+  return keys;
+}
 
 const SIGNED_TTL_SECONDS = 60 * 30;
 /** Refresh server memo before the signed URL actually expires. */

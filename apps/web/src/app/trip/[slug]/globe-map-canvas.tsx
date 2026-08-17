@@ -5,6 +5,7 @@ import maplibregl, { type Map as MapLibreMap, type Marker } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 
 import { getLocalPhotoBlob } from "@/lib/local-photos/photo-blob-store";
+import { mediaProxyUrl } from "@/lib/media/media-url";
 import {
   clusterGeoPoints,
   clusterRadiusForZoom,
@@ -122,25 +123,25 @@ export function GlobeMapCanvas({
 
     void (async () => {
       const next: Record<string, string> = {};
+      for (const photoId of previewPhotoIds) {
+        next[photoId] = mediaProxyUrl(photoId, "thumbnail");
+      }
+      if (!cancelled) setPinThumbs(next);
+
       await Promise.all(
         previewPhotoIds.map(async (photoId) => {
           try {
             const blob = await getLocalPhotoBlob(photoId, "thumbnail");
-            if (cancelled) return;
-            if (blob) {
-              const url = URL.createObjectURL(blob);
-              createdUrls.push(url);
-              next[photoId] = url;
-              return;
-            }
-            next[photoId] =
-              `/api/media/${encodeURIComponent(photoId)}?variant=thumbnail`;
+            if (cancelled || !blob) return;
+            const url = URL.createObjectURL(blob);
+            createdUrls.push(url);
+            next[photoId] = url;
           } catch {
-            // Pin fallback when blob missing.
+            // Keep the media proxy URL when IndexedDB has nothing.
           }
         }),
       );
-      if (!cancelled) setPinThumbs(next);
+      if (!cancelled) setPinThumbs({ ...next });
     })();
 
     return () => {

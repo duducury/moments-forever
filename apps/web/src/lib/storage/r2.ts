@@ -214,6 +214,24 @@ export async function putR2Object(input: {
 export async function getR2ObjectBytes(input: {
   readonly key: string;
 }): Promise<{ readonly body: Uint8Array; readonly contentType: string } | null> {
+  const streamed = await getR2ObjectStream(input);
+  if (!streamed) return null;
+  const body = new Uint8Array(await new Response(streamed.body).arrayBuffer());
+  return {
+    body,
+    contentType: streamed.contentType,
+  };
+}
+
+/** Stream an object so `/api/media` can pipe bytes with a stable cacheable URL. */
+export async function getR2ObjectStream(input: {
+  readonly key: string;
+}): Promise<{
+  readonly body: ReadableStream<Uint8Array>;
+  readonly contentType: string;
+  readonly contentLength: number | null;
+  readonly etag: string | null;
+} | null> {
   const config = getR2Config();
   if (!config) return null;
   const client = getR2Client(config);
@@ -225,10 +243,27 @@ export async function getR2ObjectBytes(input: {
       }),
     );
     if (!result.Body) return null;
-    const body = new Uint8Array(await result.Body.transformToByteArray());
+    const webStream =
+      typeof result.Body.transformToWebStream === "function"
+        ? result.Body.transformToWebStream()
+        : new ReadableStream<Uint8Array>({
+            start(controller) {
+              void result.Body!.transformToByteArray()
+                .then((bytes) => {
+                  controller.enqueue(bytes);
+                  controller.close();
+                })
+                .catch((error: unknown) => {
+                  controller.error(error);
+                });
+            },
+          });
     return {
-      body,
+      body: webStream,
       contentType: result.ContentType?.trim() || "application/octet-stream",
+      contentLength:
+        typeof result.ContentLength === "number" ? result.ContentLength : null,
+      etag: result.ETag?.trim() || null,
     };
   } catch {
     return null;

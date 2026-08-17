@@ -72,6 +72,7 @@ export function ProfilePlaceCard({
         fallbackClassName={styles.coverFallback}
         imageClassName={styles.coverImage}
         title={place.title}
+        variant="thumbnail"
       />
       <span aria-hidden className={styles.coverFade} />
       <div className={styles.cardTitleBlock}>

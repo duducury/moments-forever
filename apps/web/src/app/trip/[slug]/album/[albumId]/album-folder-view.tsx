@@ -630,6 +630,7 @@ export function AlbumFolderView({
                 coverPhotoId={heroCoverId}
                 fallbackClassName={styles.albumHeroFallback}
                 imageClassName={styles.albumHeroImage}
+                priority
                 title={album.displayName}
               />
             </div>

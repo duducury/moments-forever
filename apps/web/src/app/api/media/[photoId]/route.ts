@@ -1,14 +1,64 @@
 import { NextResponse } from "next/server";
 
+import { mediaCacheControl } from "@/lib/media/media-url";
 import {
   assertR2Configured,
-  canReadPhoto,
   createMemoizedPresignedGetUrl,
-  normalizeMediaVariant,
+  loadReadablePhotoKeys,
   storageKeyForVariant,
   type MediaVariant,
+  type PhotoStorageKeys,
 } from "@/lib/media/photo-media-access";
+import { createSupabaseAnonClient } from "@/lib/supabase/anon";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getR2ObjectStream } from "@/lib/storage/r2";
+
+async function resolvePhotoAccess(
+  photoId: string,
+): Promise<{ readonly keys: PhotoStorageKeys; readonly publicCache: boolean } | null> {
+  const anon = createSupabaseAnonClient();
+  if (anon) {
+    const publicKeys = await loadReadablePhotoKeys(anon, photoId);
+    if (publicKeys) {
+      return { keys: publicKeys, publicCache: true };
+    }
+  }
+
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) return null;
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session?.user) return null;
+
+  const ownerKeys = await loadReadablePhotoKeys(supabase, photoId);
+  if (!ownerKeys) return null;
+  return { keys: ownerKeys, publicCache: false };
+}
+
+function mediaHeaders(input: {
+  readonly contentType: string;
+  readonly contentLength: number | null;
+  readonly etag: string | null;
+  readonly publicCache: boolean;
+}): Headers {
+  const headers = new Headers();
+  headers.set("Content-Type", input.contentType);
+  headers.set("Cache-Control", mediaCacheControl(input.publicCache));
+  if (input.publicCache) {
+    headers.set("CDN-Cache-Control", mediaCacheControl(true));
+  }
+  headers.set("X-Content-Type-Options", "nosniff");
+  headers.set("Accept-Ranges", "bytes");
+  if (input.contentLength != null) {
+    headers.set("Content-Length", String(input.contentLength));
+  }
+  if (input.etag) {
+    headers.set("ETag", input.etag);
+  }
+  return headers;
+}
 
 export async function GET(
   request: Request,
@@ -22,24 +72,7 @@ export async function GET(
   }
 
   const { photoId } = await context.params;
-  const supabase = await createSupabaseServerClient();
-  if (!supabase) {
-    return NextResponse.json(
-      { error: "Supabase local não configurado." },
-      { status: 503 },
-    );
-  }
-
-  // Cookie session is enough for owner vs public — skip getUser() network round-trip.
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  const access = await canReadPhoto(
-    supabase,
-    photoId,
-    session?.user?.id ?? null,
-  );
+  const access = await resolvePhotoAccess(photoId);
   if (!access) {
     return NextResponse.json({ error: "Foto não encontrada." }, { status: 404 });
   }
@@ -50,9 +83,7 @@ export async function GET(
     | "original";
   const variant: MediaVariant =
     clientVariant === "thumbnail" ? "thumbnail" : "full";
-  const key = storageKeyForVariant(access, variant);
-  // Keep normalize for defensive logging parity with older clients.
-  void normalizeMediaVariant(url.searchParams.get("variant"));
+  const key = storageKeyForVariant(access.keys, variant);
 
   if (!key) {
     return NextResponse.json(
@@ -62,8 +93,8 @@ export async function GET(
   }
 
   try {
-    const signed = await createMemoizedPresignedGetUrl(key);
     if (url.searchParams.get("json") === "1") {
+      const signed = await createMemoizedPresignedGetUrl(key);
       return NextResponse.json(
         {
           url: signed.url,
@@ -77,10 +108,37 @@ export async function GET(
         },
       );
     }
-    const response = NextResponse.redirect(signed.url, 302);
-    // Signed Location is memoized ~25 min; let the browser reuse this hop.
-    response.headers.set("Cache-Control", "private, max-age=240");
-    return response;
+
+    const object = await getR2ObjectStream({ key });
+    if (!object) {
+      return NextResponse.json(
+        { error: "Foto sem arquivo permanente." },
+        { status: 404 },
+      );
+    }
+
+    const requestEtag = request.headers.get("if-none-match");
+    if (object.etag && requestEtag && requestEtag === object.etag) {
+      return new NextResponse(null, {
+        status: 304,
+        headers: mediaHeaders({
+          contentType: object.contentType,
+          contentLength: null,
+          etag: object.etag,
+          publicCache: access.publicCache,
+        }),
+      });
+    }
+
+    return new NextResponse(object.body, {
+      status: 200,
+      headers: mediaHeaders({
+        contentType: object.contentType,
+        contentLength: object.contentLength,
+        etag: object.etag,
+        publicCache: access.publicCache,
+      }),
+    });
   } catch {
     return NextResponse.json(
       { error: "Não foi possível gerar acesso à foto." },

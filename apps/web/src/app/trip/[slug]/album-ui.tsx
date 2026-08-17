@@ -20,6 +20,7 @@ import {
   warmLocalPhotoObjectUrls,
 } from "@/lib/local-photos/local-photo-object-url-cache";
 import { useLocalPhotoObjectUrl } from "@/lib/local-photos/use-local-photo-urls";
+import { mediaProxyUrl } from "@/lib/media/media-url";
 
 import {
   buildAlbumCards,
@@ -183,16 +184,13 @@ function LightboxSlideMedia({
   const fullSrc =
     cachedFull ??
     (load
-      ? `/api/media/${encodeURIComponent(photoId)}?variant=full`
+      ? mediaProxyUrl(photoId, "full")
       : null);
   const localFull = Boolean(fullSrc?.startsWith("blob:"));
-  const [fullReady, setFullReady] = useState(localFull);
-
-  useEffect(() => {
-    setFullReady(Boolean(fullSrc?.startsWith("blob:")));
-  }, [photoId, fullSrc]);
-
-  const showFull = Boolean(fullSrc && load && (fullReady || localFull));
+  const [loadedSrc, setLoadedSrc] = useState<string | null>(null);
+  const showFull = Boolean(
+    fullSrc && load && (localFull || loadedSrc === fullSrc),
+  );
 
   useEffect(() => {
     if (showFull) onReady?.();
@@ -237,12 +235,12 @@ function LightboxSlideMedia({
           draggable={false}
           fetchPriority={priority ? "high" : "low"}
           onError={() => {
-            setFullReady(true);
+            setLoadedSrc(fullSrc);
             markLocalPhotoFullPreloaded(photoId);
             onReady?.();
           }}
           onLoad={() => {
-            setFullReady(true);
+            setLoadedSrc(fullSrc);
             markLocalPhotoFullPreloaded(photoId);
             onReady?.();
           }}

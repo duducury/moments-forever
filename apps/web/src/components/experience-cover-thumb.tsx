@@ -1,11 +1,13 @@
 "use client";
 
+import { useState } from "react";
+
 import { useLocalPhotoObjectUrl } from "@/lib/local-photos/use-local-photo-urls";
 
 /**
- * Renders a trip/place cover from IndexedDB by photo id.
- * Cover surfaces request the MVP preview (`full` / R2 original key); thumb is placeholder.
- * Compact pickers can keep `variant="thumbnail"`.
+ * Renders a trip/place cover from IndexedDB / `/api/media` by photo id.
+ * Cover surfaces request the MVP preview (`full` / R2 original key); thumb is LQIP.
+ * Compact pickers and profile cards keep `variant="thumbnail"`.
  */
 export function ExperienceCoverThumb({
   coverPhotoId,
@@ -14,6 +16,7 @@ export function ExperienceCoverThumb({
   imageClassName,
   fallbackClassName,
   variant = "cover",
+  priority = false,
 }: {
   readonly coverPhotoId: string | null;
   readonly title: string;
@@ -22,6 +25,8 @@ export function ExperienceCoverThumb({
   readonly fallbackClassName?: string;
   /** `cover` = preview quality; `thumbnail` = small preview only. */
   readonly variant?: "cover" | "thumbnail";
+  /** LCP hero — start the network with high priority. */
+  readonly priority?: boolean;
 }) {
   const initial = title.trim().slice(0, 1).toUpperCase() || "·";
 
@@ -33,6 +38,7 @@ export function ExperienceCoverThumb({
         fallbackClassName={fallbackClassName}
         imageClassName={imageClassName}
         initial={initial}
+        priority={priority}
       />
     );
   }
@@ -44,6 +50,7 @@ export function ExperienceCoverThumb({
       fallbackClassName={fallbackClassName}
       imageClassName={imageClassName}
       initial={initial}
+      priority={priority}
     />
   );
 }
@@ -54,19 +61,28 @@ function CoverThumbOnly({
   imageClassName,
   fallbackClassName,
   initial,
+  priority,
 }: {
   readonly coverPhotoId: string | null;
   readonly className?: string;
   readonly imageClassName?: string;
   readonly fallbackClassName?: string;
   readonly initial: string;
+  readonly priority: boolean;
 }) {
   const src = useLocalPhotoObjectUrl(coverPhotoId, "thumbnail");
   if (src) {
     return (
       <span className={className} data-has-image="true">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img alt="" className={imageClassName} decoding="async" src={src} />
+        <img
+          alt=""
+          className={imageClassName}
+          decoding="async"
+          fetchPriority={priority ? "high" : "low"}
+          loading={priority ? "eager" : "lazy"}
+          src={src}
+        />
       </span>
     );
   }
@@ -85,16 +101,20 @@ function CoverFull({
   imageClassName,
   fallbackClassName,
   initial,
+  priority,
 }: {
   readonly coverPhotoId: string | null;
   readonly className?: string;
   readonly imageClassName?: string;
   readonly fallbackClassName?: string;
   readonly initial: string;
+  readonly priority: boolean;
 }) {
-  // Load MVP preview (`full`) for trip/place covers — thumbnails look soft on wide cards.
   const thumbSrc = useLocalPhotoObjectUrl(coverPhotoId, "thumbnail");
   const fullSrc = useLocalPhotoObjectUrl(coverPhotoId, "full");
+  const localFull = Boolean(fullSrc?.startsWith("blob:"));
+  const [loadedSrc, setLoadedSrc] = useState<string | null>(null);
+  const showFull = Boolean(fullSrc && (localFull || loadedSrc === fullSrc));
   const hasImage = Boolean(thumbSrc || fullSrc);
 
   if (!hasImage) {
@@ -113,7 +133,7 @@ function CoverFull({
       data-has-image="true"
       data-progressive-cover="true"
     >
-      {thumbSrc && !fullSrc ? (
+      {thumbSrc && !showFull ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           alt=""
@@ -129,7 +149,11 @@ function CoverFull({
           className={imageClassName}
           data-cover-full=""
           decoding="async"
+          fetchPriority={priority ? "high" : "low"}
+          onError={() => setLoadedSrc(fullSrc)}
+          onLoad={() => setLoadedSrc(fullSrc)}
           src={fullSrc}
+          style={{ opacity: showFull ? 1 : 0 }}
         />
       ) : null}
     </span>

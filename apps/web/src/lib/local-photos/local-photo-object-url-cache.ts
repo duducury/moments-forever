@@ -6,10 +6,15 @@
  * revoked blob: URLs in the DOM while /trip remounted cleanly from IndexedDB.
  *
  * Blobs stay in IndexedDB; this only caches created Object URLs for the tab session.
- * Remote photos use `/api/media/…` immediately (browser follows the R2 redirect).
- * We never block first paint on batch signed-URL resolution — that made lightbox
- * wait on the whole album and look “stuck”.
+ * Persisted photos use `/api/media/…` on first paint (SSR + hydration) so the
+ * browser can start the download like a normal <img>. IndexedDB blobs replace
+ * that URL when present (upload device) without blocking visitors.
  */
+
+import {
+  isPersistedPhotoId,
+  mediaProxyUrl,
+} from "@/lib/media/media-url";
 
 import {
   getLocalPhotoBlobRecord,
@@ -25,9 +30,7 @@ function remoteMediaProxyUrl(
   photoId: string,
   variant: LocalPhotoVariant,
 ): string {
-  return `/api/media/${encodeURIComponent(photoId)}?variant=${
-    variant === "thumbnail" ? "thumbnail" : "full"
-  }`;
+  return mediaProxyUrl(photoId, variant);
 }
 
 function isBlobUrl(url: string | undefined | null): boolean {
@@ -36,6 +39,7 @@ function isBlobUrl(url: string | undefined | null): boolean {
 
 const urls = new Map<string, string>();
 const inflightPhotos = new Map<string, Promise<void>>();
+const idbChecked = new Set<string>();
 const urlListeners = new Set<() => void>();
 
 function notifyUrlListeners(): void {
@@ -71,6 +75,7 @@ function cacheBlobUrl(photoId: string, variant: LocalPhotoVariant, blob: Blob) {
 }
 
 function cacheRemoteProxyUrls(photoId: string) {
+  if (!isPersistedPhotoId(photoId)) return false;
   const thumbKey = cacheKey(photoId, "thumbnail");
   const fullKey = cacheKey(photoId, "full");
   let changed = false;
@@ -101,9 +106,15 @@ function hydrateRecord(
 }
 
 async function ensurePhotoCached(photoId: string): Promise<void> {
-  const thumbReady = urls.has(cacheKey(photoId, "thumbnail"));
-  const fullReady = urls.has(cacheKey(photoId, "full"));
-  if (thumbReady && fullReady) return;
+  // Publish the proxy URL synchronously so <img> can start before IndexedDB.
+  if (cacheRemoteProxyUrls(photoId)) {
+    notifyUrlListeners();
+  }
+
+  const thumb = urls.get(cacheKey(photoId, "thumbnail"));
+  const full = urls.get(cacheKey(photoId, "full"));
+  if (isBlobUrl(thumb) && isBlobUrl(full)) return;
+  if (idbChecked.has(photoId)) return;
 
   const pending = inflightPhotos.get(photoId);
   if (pending) {
@@ -113,18 +124,14 @@ async function ensurePhotoCached(photoId: string): Promise<void> {
 
   const load = (async () => {
     try {
-      // Check IndexedDB first. Setting a remote proxy before that races with
-      // local blobs and restarts the lightbox download (felt much slower).
       const record = await getLocalPhotoBlobRecord(photoId);
+      idbChecked.add(photoId);
       if (record) {
         hydrateRecord(photoId, record);
         notifyUrlListeners();
-        return;
-      }
-      if (cacheRemoteProxyUrls(photoId)) {
-        notifyUrlListeners();
       }
     } catch {
+      idbChecked.add(photoId);
       if (cacheRemoteProxyUrls(photoId)) {
         notifyUrlListeners();
       }
@@ -142,10 +149,10 @@ export async function getOrCreateLocalPhotoObjectUrl(
   variant: LocalPhotoVariant = "thumbnail",
 ): Promise<string | null> {
   const cached = urls.get(cacheKey(photoId, variant));
-  if (cached) return cached;
+  if (cached && isBlobUrl(cached)) return cached;
 
   await ensurePhotoCached(photoId);
-  return urls.get(cacheKey(photoId, variant)) ?? null;
+  return urls.get(cacheKey(photoId, variant)) ?? cached ?? null;
 }
 
 /** Warm many photos in one IndexedDB round-trip; remotes get proxy URLs instantly. */
@@ -153,20 +160,25 @@ export async function warmLocalPhotoObjectUrls(
   photoIds: readonly string[],
 ): Promise<void> {
   const uniqueIds = [...new Set(photoIds.filter(Boolean))];
-  const missing = uniqueIds.filter(
-    (id) =>
-      !urls.has(cacheKey(id, "thumbnail")) || !urls.has(cacheKey(id, "full")),
-  );
+  let changed = false;
+  const missing: string[] = [];
+  for (const id of uniqueIds) {
+    const thumb = urls.get(cacheKey(id, "thumbnail"));
+    const full = urls.get(cacheKey(id, "full"));
+    if (isBlobUrl(thumb) && isBlobUrl(full)) continue;
+    if (cacheRemoteProxyUrls(id)) changed = true;
+    if (idbChecked.has(id)) continue;
+    missing.push(id);
+  }
+  if (changed) notifyUrlListeners();
   if (missing.length === 0) return;
 
   const records = await getLocalPhotoBlobRecords(missing);
-  let changed = false;
   for (const id of missing) {
+    idbChecked.add(id);
     const record = records.get(id);
     if (record) {
       hydrateRecord(id, record);
-      changed = true;
-    } else if (cacheRemoteProxyUrls(id)) {
       changed = true;
     }
   }
@@ -336,6 +348,7 @@ export function forgetLocalPhotoObjectUrls(photoId: string): void {
     urls.delete(key);
   }
   inflightPhotos.delete(photoId);
+  idbChecked.delete(photoId);
   preloadedFullIds.delete(photoId);
 }
 

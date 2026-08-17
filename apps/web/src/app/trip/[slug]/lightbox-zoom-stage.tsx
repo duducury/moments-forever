@@ -170,6 +170,7 @@ export function LightboxZoomStage({
   }
 
   function onTrackTransitionEnd(event: TransitionEvent<HTMLDivElement>) {
+    if (event.target !== event.currentTarget) return;
     if (event.propertyName !== "transform") return;
     const pending = pendingSwipeRef.current;
     if (pending == null) {
@@ -412,6 +413,10 @@ export function LightboxZoomStage({
 
   const dismissing = Math.abs(dragY) > 0.5;
   const useTrack = canSlide && scale <= 1.01;
+  const slideTransition = settle
+    ? `transform ${SLIDE_MS}ms cubic-bezier(0.22, 1, 0.36, 1)`
+    : "none";
+  const dragShift = `translate3d(${dragX}px, ${dragY}px, 0)`;
 
   return (
     <div
@@ -423,24 +428,37 @@ export function LightboxZoomStage({
       ref={stageRef}
     >
       {useTrack ? (
-        <div
-          className={styles.lightboxSlideTrack}
-          onTransitionEnd={onTrackTransitionEnd}
-          style={{
-            transform: `translate3d(${dragX}px, ${dragY}px, 0)`,
-            transition: settle
-              ? `transform ${SLIDE_MS}ms cubic-bezier(0.22, 1, 0.36, 1)`
-              : "none",
-          }}
-        >
-          <div className={styles.lightboxSlide} data-slot="prev">
+        <div className={styles.lightboxSlideViewport}>
+          <div
+            className={styles.lightboxSlide}
+            data-slot="prev"
+            style={{
+              transform: `translate3d(-100%, 0, 0) ${dragShift}`,
+              transition: slideTransition,
+            }}
+          >
             {prevSlide}
           </div>
-          <div className={styles.lightboxSlide} data-slot="current">
-            {children}
-          </div>
-          <div className={styles.lightboxSlide} data-slot="next">
+          <div
+            className={styles.lightboxSlide}
+            data-slot="next"
+            style={{
+              transform: `translate3d(100%, 0, 0) ${dragShift}`,
+              transition: slideTransition,
+            }}
+          >
             {nextSlide}
+          </div>
+          <div
+            className={styles.lightboxSlide}
+            data-slot="current"
+            onTransitionEnd={onTrackTransitionEnd}
+            style={{
+              transform: dragShift,
+              transition: slideTransition,
+            }}
+          >
+            {children}
           </div>
         </div>
       ) : (

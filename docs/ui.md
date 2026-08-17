@@ -36,7 +36,7 @@ Fluxo principal de administração: “Adicionar fotos”, selecionar, analisar 
 
 ## Performance percebida
 
-A capa e primeiras thumbnails têm prioridade. Grid usa carregamento virtualizado e imagens responsivas. A galeria e o lightbox seguem a ordem de posição; a capa fica só no hero, sem pular para o início da grelha. Tela cheia pré-carrega somente vizinhas reais (sem circular da última para a primeira). Mapa só busca dados do viewport e nível de zoom. Na página de álbum, o HTML crítico (capa + galeria) não espera o bloco “Veja também”; MapLibre do mapa em destaque entra após idle para não competir com as primeiras fotos. No perfil (`/{nome}`), Destaques entram com o grid; só o mapa inferior faz stream e o MapLibre carrega perto do viewport.
+A capa e primeiras thumbnails têm prioridade. Grid usa carregamento virtualizado e imagens responsivas. A galeria e o lightbox seguem a ordem de posição; a capa fica só no hero, sem pular para o início da grelha. Em tela cheia a foto aberta ocupa o palco (`translate 0`); as vizinhas ficam fora da tela e só entram no gesto, sem circular da última para a primeira. Mapa só busca dados do viewport e nível de zoom. Na página de álbum, o HTML crítico (capa + galeria) não espera o bloco “Veja também”; MapLibre do mapa em destaque entra após idle para não competir com as primeiras fotos. No perfil (`/{nome}`), Destaques entram com o grid; só o mapa inferior faz stream e o MapLibre carrega perto do viewport.
 
 ## Conteúdo e estados
 

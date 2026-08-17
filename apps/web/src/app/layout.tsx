@@ -84,7 +84,14 @@ const themeBootScript = `
     const preference = stored === "light" ? "light" : "dark";
     document.documentElement.dataset.theme = preference;
     document.documentElement.dataset.resolvedTheme = preference;
-  } catch (_) {}
+    const bg = preference === "light" ? "#e8e0d4" : "#121110";
+    const fg = preference === "light" ? "#1a1612" : "#f3efe8";
+    document.documentElement.style.backgroundColor = bg;
+    document.documentElement.style.color = fg;
+  } catch (_) {
+    document.documentElement.style.backgroundColor = "#121110";
+    document.documentElement.style.color = "#f3efe8";
+  }
 })();
 `;
 
@@ -94,7 +101,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
       </head>
-      <body>
+      <body style={{ backgroundColor: "#121110", color: "#f3efe8", minHeight: "100%" }}>
         <ThemeProvider>
           <AuthProvider>
             <RevealOnScroll />

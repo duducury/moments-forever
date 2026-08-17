@@ -10,7 +10,7 @@ import {
   View,
 } from "react-native";
 
-import { supabase } from "../lib/supabase";
+import { getSupabase } from "../lib/supabase";
 import { Button, Screen, typography } from "../ui";
 
 WebBrowser.maybeCompleteAuthSession();
@@ -23,6 +23,8 @@ export function LoginScreen() {
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  const supabase = getSupabase();
 
   if (!supabase) {
     return (

@@ -11,6 +11,7 @@ export default tseslint.config(
       "**/dist/**",
       "**/build/**",
       "**/*.d.ts",
+      "apps/mobile/metro.config.js",
     ],
   },
   eslint.configs.recommended,

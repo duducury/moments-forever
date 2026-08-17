@@ -7,9 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { AppState } from "react-native";
-
-import { supabase } from "../lib/supabase";
+import { AppState, InteractionManager } from "react-native";
 
 interface AuthContextValue {
   readonly configured: boolean;
@@ -23,49 +21,82 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { readonly children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(Boolean(supabase));
+  const [configured, setConfigured] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!supabase) {
-      return;
-    }
+    let cancelled = false;
+    let cleanup: (() => void) | undefined;
 
-    void supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setLoading(false);
-    });
+    const task = InteractionManager.runAfterInteractions(() => {
+      void import("../lib/supabase").then(({ getSupabase }) => {
+        if (cancelled) {
+          return;
+        }
 
-    const authSubscription = supabase.auth.onAuthStateChange(
-      (_event, nextSession) => {
-        setSession(nextSession);
-        setLoading(false);
-      },
-    );
-    const appStateSubscription = AppState.addEventListener("change", (state) => {
-      if (state === "active") {
-        supabase?.auth.startAutoRefresh();
-      } else {
-        supabase?.auth.stopAutoRefresh();
-      }
+        const client = getSupabase();
+        setConfigured(Boolean(client));
+
+        if (!client) {
+          setLoading(false);
+          return;
+        }
+
+        void client.auth
+          .getSession()
+          .then(({ data }) => {
+            if (!cancelled) {
+              setSession(data.session);
+              setLoading(false);
+            }
+          })
+          .catch(() => {
+            if (!cancelled) {
+              setLoading(false);
+            }
+          });
+
+        const authSubscription = client.auth.onAuthStateChange((_event, nextSession) => {
+          if (!cancelled) {
+            setSession(nextSession);
+            setLoading(false);
+          }
+        });
+
+        const appStateSubscription = AppState.addEventListener("change", (state) => {
+          if (state === "active") {
+            client.auth.startAutoRefresh();
+          } else {
+            client.auth.stopAutoRefresh();
+          }
+        });
+
+        cleanup = () => {
+          authSubscription.data.subscription.unsubscribe();
+          appStateSubscription.remove();
+        };
+      });
     });
 
     return () => {
-      authSubscription.data.subscription.unsubscribe();
-      appStateSubscription.remove();
+      cancelled = true;
+      task.cancel();
+      cleanup?.();
     };
   }, []);
 
   const value = useMemo<AuthContextValue>(
     () => ({
-      configured: Boolean(supabase),
+      configured,
       loading,
       session,
       user: session?.user ?? null,
       signOut: async () => {
-        await supabase?.auth.signOut();
+        const { getSupabase } = await import("../lib/supabase");
+        await getSupabase()?.auth.signOut();
       },
     }),
-    [loading, session],
+    [configured, loading, session],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

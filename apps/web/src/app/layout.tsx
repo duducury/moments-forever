@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 
 import { AuthProvider } from "@/components/auth-provider";
+import { PwaSplashDismiss } from "@/components/pwa-splash-dismiss";
 import { RevealOnScroll } from "@/components/reveal-on-scroll";
 import { ThemeProvider } from "@/components/theme-provider";
 import { getSiteUrl } from "@/lib/site-url";
@@ -76,6 +77,15 @@ export const viewport: Viewport = {
   themeColor: "#121110",
 };
 
+const criticalBootCss = `
+html,body{margin:0;min-height:100%;background:#121110;color:#f3efe8}
+html[data-resolved-theme="light"],html[data-resolved-theme="light"] body{background:#e8e0d4;color:#1a1612}
+#pwa-boot-splash{position:fixed;inset:0;z-index:2147483646;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:#121110;color:#a8a29a;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+html[data-resolved-theme="light"] #pwa-boot-splash{background:#e8e0d4;color:#5c554c}
+#pwa-boot-splash img{width:88px;height:88px;border-radius:22px}
+#pwa-boot-splash p{margin:0;font-size:15px;font-weight:600;letter-spacing:0.02em}
+`;
+
 const themeBootScript = `
 (() => {
   try {
@@ -84,7 +94,24 @@ const themeBootScript = `
     const preference = stored === "light" ? "light" : "dark";
     document.documentElement.dataset.theme = preference;
     document.documentElement.dataset.resolvedTheme = preference;
-  } catch (_) {}
+    const bg = preference === "light" ? "#e8e0d4" : "#121110";
+    const fg = preference === "light" ? "#1a1612" : "#f3efe8";
+    const muted = preference === "light" ? "#5c554c" : "#a8a29a";
+    document.documentElement.style.backgroundColor = bg;
+    document.documentElement.style.color = fg;
+    if (document.body) {
+      document.body.style.backgroundColor = bg;
+      document.body.style.color = fg;
+    }
+    const splash = document.getElementById("pwa-boot-splash");
+    if (splash) {
+      splash.style.backgroundColor = bg;
+      splash.style.color = muted;
+    }
+  } catch (_) {
+    document.documentElement.style.backgroundColor = "#121110";
+    document.documentElement.style.color = "#f3efe8";
+  }
 })();
 `;
 
@@ -92,15 +119,22 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="pt-BR" data-theme="dark" data-resolved-theme="dark" suppressHydrationWarning>
       <head>
+        <style dangerouslySetInnerHTML={{ __html: criticalBootCss }} />
         <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
       </head>
-      <body>
+      <body style={{ backgroundColor: "#121110", color: "#f3efe8", minHeight: "100%" }}>
+        <div id="pwa-boot-splash" role="status" aria-live="polite" aria-label="Carregando Moments Forever">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img alt="" height={88} src="/brand/apple-touch-icon.png" width={88} />
+          <p>Moments Forever</p>
+        </div>
         <ThemeProvider>
           <AuthProvider>
             <RevealOnScroll />
             {children}
           </AuthProvider>
         </ThemeProvider>
+        <PwaSplashDismiss />
       </body>
     </html>
   );

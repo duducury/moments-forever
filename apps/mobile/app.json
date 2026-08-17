@@ -29,7 +29,8 @@
           "imageWidth": 200,
           "resizeMode": "contain"
         }
-      ]
+      ],
+      "expo-image"
     ],
     "web": {
       "favicon": "./assets/favicon.png"

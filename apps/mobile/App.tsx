@@ -5,13 +5,10 @@ import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 
-import { AuthProvider, useAuth } from "./src/auth/auth-provider";
+import { AuthProvider } from "./src/auth/auth-provider";
+import { getLazyScreen } from "./src/lazy-screens";
 import type { RootStackParamList } from "./src/navigation";
-import { CollectionScreen } from "./src/screens/collection-screen";
-import { CreateMemoryScreen } from "./src/screens/create-memory-screen";
 import { HomeScreen } from "./src/screens/home-screen";
-import { LoginScreen } from "./src/screens/login-screen";
-import { SettingsScreen } from "./src/screens/settings-screen";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -33,13 +30,9 @@ SplashScreen.setOptions({
 });
 
 function AppNavigation() {
-  const { loading } = useAuth();
-
   useEffect(() => {
-    if (!loading) {
-      void SplashScreen.hideAsync();
-    }
-  }, [loading]);
+    void SplashScreen.hideAsync();
+  }, []);
 
   return (
     <NavigationContainer theme={theme}>
@@ -53,21 +46,25 @@ function AppNavigation() {
         }}
       >
         <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="Login" component={LoginScreen} options={{ title: "Conta" }} />
+        <Stack.Screen
+          name="Login"
+          options={{ title: "Conta" }}
+          getComponent={() => getLazyScreen("Login")}
+        />
         <Stack.Screen
           name="Collection"
-          component={CollectionScreen}
           options={{ title: "Coleção" }}
+          getComponent={() => getLazyScreen("Collection")}
         />
         <Stack.Screen
           name="CreateMemory"
-          component={CreateMemoryScreen}
           options={{ title: "Nova memória" }}
+          getComponent={() => getLazyScreen("CreateMemory")}
         />
         <Stack.Screen
           name="Settings"
-          component={SettingsScreen}
           options={{ title: "Ajustes" }}
+          getComponent={() => getLazyScreen("Settings")}
         />
       </Stack.Navigator>
     </NavigationContainer>

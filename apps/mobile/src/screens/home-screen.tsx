@@ -1,7 +1,8 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { Image, StyleSheet, Text, View } from "react-native";
+import { Image } from "expo-image";
+import { StyleSheet, Text, View } from "react-native";
 
-import brandLogo from "../../assets/brand-logo.png";
+import brandLogo from "../../assets/brand-logo.webp";
 import type { RootStackParamList } from "../navigation";
 import { Button, Screen, typography } from "../ui";
 
@@ -13,9 +14,10 @@ export function HomeScreen({ navigation }: Props) {
       <View style={styles.content}>
         <Image
           accessibilityLabel="Logo do Moments Forever"
-          resizeMode="contain"
+          contentFit="contain"
           source={brandLogo}
           style={styles.brandLogo}
+          transition={200}
         />
         <Text style={typography.eyebrow}>Suas histórias, sempre por perto</Text>
         <Text style={typography.title}>Colecione momentos, não coisas.</Text>

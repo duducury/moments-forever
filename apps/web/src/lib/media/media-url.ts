@@ -37,6 +37,20 @@ export function resolvePhotoSrc(
   return null;
 }
 
+/** True when the browser already has decoded pixels for this URL. */
+export function isDecodedImageUrl(url: string | null | undefined): boolean {
+  if (!url) return false;
+  if (url.startsWith("blob:")) return true;
+  if (typeof window === "undefined") return false;
+  try {
+    const probe = new window.Image();
+    probe.src = url;
+    return probe.complete && probe.naturalWidth > 0;
+  } catch {
+    return false;
+  }
+}
+
 /** Browser + CDN cache. Public photos skip cookies so shared caches may store. */
 export function mediaCacheControl(publicCache: boolean): string {
   if (publicCache) {

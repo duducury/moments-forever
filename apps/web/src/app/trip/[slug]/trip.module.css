@@ -854,13 +854,15 @@
   user-select: none;
   -webkit-user-drag: none;
   pointer-events: none;
-  transition: opacity 180ms ease-out;
 }
 
 .lightboxImageLqip {
-  filter: blur(28px);
-  transform: scale(1.18);
-  opacity: 0.7;
+  /* Real photo underneath — never a gray fog over black. */
+  z-index: 0;
+}
+
+.lightboxImage[data-full] {
+  z-index: 1;
 }
 
 .lightboxImageShell {

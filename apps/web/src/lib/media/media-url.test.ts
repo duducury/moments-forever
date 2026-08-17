@@ -2,11 +2,18 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  isDecodedImageUrl,
   isPersistedPhotoId,
   mediaCacheControl,
   mediaProxyUrl,
   resolvePhotoSrc,
 } from "./media-url";
+
+test("isDecodedImageUrl treats blob URLs as ready", () => {
+  assert.equal(isDecodedImageUrl("blob:https://local/photo"), true);
+  assert.equal(isDecodedImageUrl(null), false);
+  assert.equal(isDecodedImageUrl(""), false);
+});
 
 test("isPersistedPhotoId accepts photo UUIDs only", () => {
   assert.equal(

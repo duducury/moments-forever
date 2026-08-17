@@ -317,6 +317,10 @@ export function markLocalPhotoFullPreloaded(photoId: string): void {
   prefetchQueue = prefetchQueue.filter((item) => item.photoId !== photoId);
 }
 
+export function isLocalPhotoFullPreloaded(photoId: string): boolean {
+  return Boolean(photoId) && preloadedFullIds.has(photoId);
+}
+
 /** Stop pending folder prefetches (e.g. leaving the album). */
 export function clearAlbumFullPrefetch(): void {
   prefetchQueue = [];

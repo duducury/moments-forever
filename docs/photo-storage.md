@@ -16,7 +16,7 @@ No bucket, o objeto sob a variante de caminho `original` **é o preview** (não 
 
 ### Entrega rápida (cliente)
 
-O HTML já inclui `<img src="/api/media/{id}?variant=…">` no primeiro paint (SSR), sem esperar IndexedDB nem URLs assinadas. Visitantes baixam na hora; no aparelho que importou, blobs locais substituem o proxy quando existirem. O lightbox usa a miniatura só como **LQIP borrado**; o preview `full` baixa em paralelo e aparece nítido. `/api/media/[id]` entrega os **bytes** (não um 302) com cache CDN longo para fotos de perfil público — o mesmo padrão de URL estável dos outros sites. Prefetch de bytes full fica só na janela atual ± vizinhas. Cards de perfil usam thumbnail (~640 px); capa/hero e lightbox usam o preview. Fotos novas são WebP quando o aparelho consegue gerar.
+O HTML já inclui `<img src="/api/media/{id}?variant=…">` no primeiro paint (SSR), sem esperar IndexedDB nem URLs assinadas. Visitantes baixam na hora; no aparelho que importou, blobs locais substituem o proxy quando existirem. No lightbox a miniatura do grid permanece visível (é a foto) até o preview `full` estar decodificado — inclusive ao passar para a vizinha já pré-carregada. Não há tela preta nem placeholder cinza entre uma foto e outra. `/api/media/[id]` entrega os **bytes** (não um 302) com cache CDN longo para fotos de perfil público. Prefetch de bytes full fica só na janela atual ± vizinhas. Cards de perfil usam thumbnail (~640 px); capa/hero e lightbox usam o preview. Fotos novas são WebP quando o aparelho consegue gerar.
 
 Formatos modernos podem ser negociados no web, mantendo fallback amplamente compatível. HEIC/RAW precisam de orientação, cor e conversão testadas. Metadados úteis vão ao banco; EXIF e GPS são removidos dos arquivos entregues.
 

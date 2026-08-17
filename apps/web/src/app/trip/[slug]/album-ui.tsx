@@ -14,13 +14,14 @@ import { createPortal } from "react-dom";
 import { AppWordmark } from "@/components/app-wordmark";
 import { deleteLocalPhotoBlobs } from "@/lib/local-photos/photo-blob-store";
 import {
+  isLocalPhotoFullPreloaded,
   markLocalPhotoFullPreloaded,
   prefetchLocalPhotoFullOnIntent,
   prioritizeAlbumFullPrefetch,
   warmLocalPhotoObjectUrls,
 } from "@/lib/local-photos/local-photo-object-url-cache";
 import { useLocalPhotoObjectUrl } from "@/lib/local-photos/use-local-photo-urls";
-import { mediaProxyUrl } from "@/lib/media/media-url";
+import { isDecodedImageUrl, mediaProxyUrl } from "@/lib/media/media-url";
 
 import {
   buildAlbumCards,
@@ -167,48 +168,32 @@ function LightboxSlideMedia({
   photoId,
   alt = "",
   priority = false,
-  load = true,
-  onReady,
 }: {
   readonly photoId: string;
   readonly alt?: string;
   readonly priority?: boolean;
-  /** When false, keep the shell and let the prefetch queue warm pixels. */
-  readonly load?: boolean;
-  readonly onReady?: () => void;
 }) {
-  // Same pattern as next/image on the other sites: a blurred wash (LQIP),
-  // then one sharp display file. Never stretch the 640px grid thumb as the photo.
   const thumbSrc = useLocalPhotoObjectUrl(photoId, "thumbnail");
   const cachedFull = useLocalPhotoObjectUrl(photoId, "full");
-  const fullSrc =
-    cachedFull ??
-    (load
-      ? mediaProxyUrl(photoId, "full")
-      : null);
-  const localFull = Boolean(fullSrc?.startsWith("blob:"));
+  const fullSrc = cachedFull ?? mediaProxyUrl(photoId, "full");
   const [loadedSrc, setLoadedSrc] = useState<string | null>(null);
   const showFull = Boolean(
-    fullSrc && load && (localFull || loadedSrc === fullSrc),
+    fullSrc &&
+      (fullSrc.startsWith("blob:") ||
+        loadedSrc === fullSrc ||
+        isLocalPhotoFullPreloaded(photoId) ||
+        isDecodedImageUrl(fullSrc)),
   );
 
-  useEffect(() => {
-    if (showFull) onReady?.();
-  }, [showFull, onReady]);
-
-  if (!load) {
-    return (
-      <div
-        aria-busy="true"
-        aria-label="Carregando foto"
-        className={styles.lightboxImageShell}
-      />
-    );
+  function markFullReady() {
+    if (!fullSrc) return;
+    setLoadedSrc(fullSrc);
+    markLocalPhotoFullPreloaded(photoId);
   }
 
   return (
     <>
-      {thumbSrc && !showFull ? (
+      {thumbSrc ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           alt=""
@@ -231,18 +216,17 @@ function LightboxSlideMedia({
         <img
           alt={alt}
           className={styles.lightboxImage}
-          decoding="async"
+          data-full=""
+          decoding={priority ? "sync" : "async"}
           draggable={false}
           fetchPriority={priority ? "high" : "low"}
-          onError={() => {
-            setLoadedSrc(fullSrc);
-            markLocalPhotoFullPreloaded(photoId);
-            onReady?.();
-          }}
-          onLoad={() => {
-            setLoadedSrc(fullSrc);
-            markLocalPhotoFullPreloaded(photoId);
-            onReady?.();
+          onError={markFullReady}
+          onLoad={markFullReady}
+          ref={(node) => {
+            if (showFull || !node) return;
+            if (node.complete && node.naturalWidth > 0) {
+              queueMicrotask(markFullReady);
+            }
           }}
           src={fullSrc}
           style={{ opacity: showFull ? 1 : 0 }}
@@ -293,17 +277,9 @@ export function PhotoLightbox({
   const photo = index >= 0 ? photos[index] : null;
   const [farPrevId, neighborPrevId, neighborNextId, farNextId] =
     useLightboxNeighborIds(photos, index);
-  const fullSrc = useLocalPhotoObjectUrl(photo?.id, "full");
-  const [currentReady, setCurrentReady] = useState(false);
-
-  useEffect(() => {
-    setCurrentReady(false);
-    // Give the open photo a short head start, then let neighbors attach too.
-    const timer = window.setTimeout(() => setCurrentReady(true), 120);
-    return () => window.clearTimeout(timer);
-  }, [photoId]);
 
   // Resolve URLs for the visible track + one step further.
+  useLocalPhotoObjectUrl(photo?.id, "full");
   useLocalPhotoObjectUrl(neighborPrevId, "full");
   useLocalPhotoObjectUrl(neighborNextId, "full");
   useLocalPhotoObjectUrl(farPrevId, "full");
@@ -385,24 +361,16 @@ export function PhotoLightbox({
   const prevSlide = useMemo(
     () =>
       neighborPrevId ? (
-        <LightboxSlideMedia
-          key={neighborPrevId}
-          load={currentReady}
-          photoId={neighborPrevId}
-        />
+        <LightboxSlideMedia key={neighborPrevId} photoId={neighborPrevId} />
       ) : null,
-    [neighborPrevId, currentReady],
+    [neighborPrevId],
   );
   const nextSlide = useMemo(
     () =>
       neighborNextId ? (
-        <LightboxSlideMedia
-          key={neighborNextId}
-          load={currentReady}
-          photoId={neighborNextId}
-        />
+        <LightboxSlideMedia key={neighborNextId} photoId={neighborNextId} />
       ) : null,
-    [neighborNextId, currentReady],
+    [neighborNextId],
   );
 
   if (!photo) return null;
@@ -569,7 +537,6 @@ export function PhotoLightbox({
           <LightboxSlideMedia
             alt={`Foto ${index + 1}`}
             key={currentPhoto.id}
-            onReady={() => setCurrentReady(true)}
             photoId={currentPhoto.id}
             priority
           />

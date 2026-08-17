@@ -1,6 +1,6 @@
 import styles from "./pwa-loading-shell.module.css";
 
-type Variant = "profile" | "passport";
+type Variant = "profile" | "passport" | "minimal";
 
 /**
  * Instant paint while server data loads — avoids a blank wait when opening the
@@ -14,7 +14,10 @@ export function PwaLoadingShell({
   readonly variant?: Variant;
 }) {
   return (
-    <main className="page-shell" data-bottom-nav={variant === "profile" ? "true" : undefined}>
+    <main
+      className="page-shell"
+      data-bottom-nav={variant === "profile" ? "true" : undefined}
+    >
       <nav className="topbar" aria-label="Navegação">
         <span className={styles.brand}>Moments Forever</span>
       </nav>

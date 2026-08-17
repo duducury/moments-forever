@@ -828,6 +828,11 @@
 }
 
 .lightboxSlideTrack {
+  /* Pin prev/current/next in the stage. Percent translate on a 300% track
+     plus place-items:center showed the NEXT photo when opening the first. */
+  position: absolute;
+  top: 0;
+  left: -100%;
   display: flex;
   width: 300%;
   height: 100%;

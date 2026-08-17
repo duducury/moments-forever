@@ -19,6 +19,14 @@ function photo(id: string, positionInAlbum: number): TripPhoto {
   };
 }
 
+test("sortAlbumPhotos without a cover keeps position order", () => {
+  const photos = [photo("a", 1), photo("b", 2), photo("c", 3)];
+  assert.deepEqual(
+    sortAlbumPhotos(photos, null).map((item) => item.id),
+    ["a", "b", "c"],
+  );
+});
+
 test("sortAlbumPhotos keeps position order when cover is already first", () => {
   const photos = [photo("a", 1), photo("b", 2), photo("c", 3)];
   assert.deepEqual(

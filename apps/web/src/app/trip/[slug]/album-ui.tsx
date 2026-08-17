@@ -22,6 +22,7 @@ import {
 } from "@/lib/local-photos/local-photo-object-url-cache";
 import { useLocalPhotoObjectUrl } from "@/lib/local-photos/use-local-photo-urls";
 import { isDecodedImageUrl, mediaProxyUrl } from "@/lib/media/media-url";
+import { lightboxNeighborIds } from "@/lib/photos/lightbox-neighbors";
 
 import {
   buildAlbumCards,
@@ -217,7 +218,7 @@ function LightboxSlideMedia({
           alt={alt}
           className={styles.lightboxImage}
           data-full=""
-          decoding={priority ? "sync" : "async"}
+          decoding="async"
           draggable={false}
           fetchPriority={priority ? "high" : "low"}
           onError={markFullReady}
@@ -240,14 +241,13 @@ function useLightboxNeighborIds(
   photos: readonly TripPhoto[],
   index: number,
 ): readonly [string | null, string | null, string | null, string | null] {
-  return useMemo(() => {
-    if (photos.length < 2 || index < 0) {
-      return [null, null, null, null];
-    }
-    const at = (offset: number) =>
-      photos[(index + offset + photos.length) % photos.length]?.id ?? null;
-    return [at(-2), at(-1), at(1), at(2)];
-  }, [photos, index]);
+  return useMemo(
+    () => lightboxNeighborIds(
+      photos.map((item) => item.id),
+      index,
+    ),
+    [photos, index],
+  );
 }
 
 export function PhotoLightbox({
@@ -338,11 +338,11 @@ export function PhotoLightbox({
       if (event.key === "Escape") onClose();
       if (!photo || photos.length < 2) return;
       if (event.key === "ArrowRight") {
-        const next = photos[(index + 1) % photos.length];
+        const next = photos[index + 1];
         if (next) onSelect(next.id);
       }
       if (event.key === "ArrowLeft") {
-        const prev = photos[(index - 1 + photos.length) % photos.length];
+        const prev = photos[index - 1];
         if (prev) onSelect(prev.id);
       }
     }
@@ -379,8 +379,7 @@ export function PhotoLightbox({
   const currentPhoto = photo;
 
   function go(delta: number) {
-    if (photos.length < 2) return;
-    const next = photos[(index + delta + photos.length) % photos.length];
+    const next = photos[index + delta];
     if (next) onSelect(next.id);
   }
 
@@ -506,7 +505,7 @@ export function PhotoLightbox({
       </header>
 
       <div className={styles.lightboxStageWrap}>
-        {photos.length > 1 ? (
+        {index > 0 ? (
           <button
             aria-label="Foto anterior"
             className={`${styles.lightboxArrow} ${styles.lightboxArrowPrev}`}
@@ -542,7 +541,7 @@ export function PhotoLightbox({
           />
         </LightboxZoomStage>
 
-        {photos.length > 1 ? (
+        {index < photos.length - 1 ? (
           <button
             aria-label="Próxima foto"
             className={`${styles.lightboxArrow} ${styles.lightboxArrowNext}`}
@@ -1197,8 +1196,7 @@ export function PhotoGallery({
   readonly onOpenPhoto?: (photoId: string) => void;
 }) {
   const [lightboxId, setLightboxId] = useState<string | null>(null);
-  // Keep the caller's order (cover-first on albums). Re-sorting here made the
-  // first grid tile open as photo 2 in the lightbox.
+  // Keep the caller's order. Re-sorting here used to make tile 1 open as photo 2.
   const ordered = photos;
 
   function openPhoto(photoId: string) {

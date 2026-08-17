@@ -284,11 +284,13 @@ export function prioritizeAlbumFullPrefetch(
       ? focusIndex
       : 0;
 
-  // Resolve local/proxy URLs for the window only (cheap).
+  // Resolve local/proxy URLs for the window only (cheap). Do not wrap:
+  // prefetching the last photo as "previous" of the first starved the open photo.
   const windowIds: string[] = [];
   for (const offset of [0, 1, -1, 2, -2, 3, -3]) {
-    const id =
-      uniqueIds[(focus + offset + uniqueIds.length) % uniqueIds.length];
+    const next = focus + offset;
+    if (next < 0 || next >= uniqueIds.length) continue;
+    const id = uniqueIds[next];
     if (id && !windowIds.includes(id)) windowIds.push(id);
   }
   void warmLocalPhotoObjectUrls(windowIds);

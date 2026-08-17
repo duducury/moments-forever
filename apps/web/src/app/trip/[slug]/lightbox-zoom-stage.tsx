@@ -427,7 +427,7 @@ export function LightboxZoomStage({
           className={styles.lightboxSlideTrack}
           onTransitionEnd={onTrackTransitionEnd}
           style={{
-            transform: `translate3d(calc(-33.333333% + ${dragX}px), ${dragY}px, 0)`,
+            transform: `translate3d(${dragX}px, ${dragY}px, 0)`,
             transition: settle
               ? `transform ${SLIDE_MS}ms cubic-bezier(0.22, 1, 0.36, 1)`
               : "none",

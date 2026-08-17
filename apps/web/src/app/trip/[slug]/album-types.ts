@@ -210,6 +210,7 @@ export function locationLabel(
   return city ?? country;
 }
 
+/** Order by album/moment position. Pass a cover id only to promote it; album grid/lightbox pass null so the hero keeps the cover without shifting tile 1. */
 export function sortAlbumPhotos(
   photos: readonly TripPhoto[],
   coverPhotoId: string | null,

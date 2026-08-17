@@ -181,8 +181,8 @@ export function AlbumFolderView({
   );
 
   const carouselPhotos = useMemo(
-    () => sortAlbumPhotos(albumPhotos, album?.coverPhotoId ?? null),
-    [album?.coverPhotoId, albumPhotos],
+    () => sortAlbumPhotos(albumPhotos, null),
+    [albumPhotos],
   );
 
   // Prefer this folder on the network: warm fulls in order, and when the

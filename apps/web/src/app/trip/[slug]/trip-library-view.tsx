@@ -109,8 +109,8 @@ export function TripLibraryView({
   ).length;
   const gpsCount = photosWithGps(photos).length;
   const galleryPhotos = useMemo(
-    () => sortAlbumPhotos(photos, experience.coverPhotoId),
-    [experience.coverPhotoId, photos],
+    () => sortAlbumPhotos(photos, null),
+    [photos],
   );
   const canIdentifyPlaces = albums.some((album) => {
     const label = album.placeName ?? album.name;

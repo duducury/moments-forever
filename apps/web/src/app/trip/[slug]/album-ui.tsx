@@ -1174,6 +1174,9 @@ function SquarePhotoTile({
       aria-label={`Abrir foto ${order}`}
       className={styles.tileButton}
       onClick={onOpen}
+      onPointerDown={() => {
+        prefetchLocalPhotoFullOnIntent(photo.id);
+      }}
       type="button"
     >
       <ProgressiveTileMedia className={styles.squareTile} photoId={photo.id} />
@@ -1194,17 +1197,12 @@ export function PhotoGallery({
   readonly onOpenPhoto?: (photoId: string) => void;
 }) {
   const [lightboxId, setLightboxId] = useState<string | null>(null);
-  const ordered = useMemo(
-    () =>
-      photos.slice().sort(
-        (a, b) =>
-          (a.positionInAlbum ?? a.positionInMoment) -
-          (b.positionInAlbum ?? b.positionInMoment),
-      ),
-    [photos],
-  );
+  // Keep the caller's order (cover-first on albums). Re-sorting here made the
+  // first grid tile open as photo 2 in the lightbox.
+  const ordered = photos;
 
   function openPhoto(photoId: string) {
+    prefetchLocalPhotoFullOnIntent(photoId);
     if (onOpenPhoto) {
       onOpenPhoto(photoId);
       return;

@@ -19,6 +19,7 @@ import { AlbumGrid, LibraryShell, PhotoGallery } from "./album-ui";
 import {
   buildBreadcrumb,
   photosWithGps,
+  sortAlbumPhotos,
   type TripAlbum,
   type TripExperience,
   type TripPhoto,
@@ -107,6 +108,10 @@ export function TripLibraryView({
     (album) => album.parentAlbumId === null,
   ).length;
   const gpsCount = photosWithGps(photos).length;
+  const galleryPhotos = useMemo(
+    () => sortAlbumPhotos(photos, experience.coverPhotoId),
+    [experience.coverPhotoId, photos],
+  );
   const canIdentifyPlaces = albums.some((album) => {
     const label = album.placeName ?? album.name;
     return (
@@ -395,7 +400,7 @@ export function TripLibraryView({
           </div>
           <PhotoGallery
             emptyLabel="Esta viagem ainda não tem fotos."
-            photos={photos}
+            photos={galleryPhotos}
           />
         </section>
       </div>

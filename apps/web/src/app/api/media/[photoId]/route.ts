@@ -30,11 +30,16 @@ export async function GET(
     );
   }
 
+  // Cookie session is enough for owner vs public — skip getUser() network round-trip.
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
 
-  const access = await canReadPhoto(supabase, photoId, user?.id ?? null);
+  const access = await canReadPhoto(
+    supabase,
+    photoId,
+    session?.user?.id ?? null,
+  );
   if (!access) {
     return NextResponse.json({ error: "Foto não encontrada." }, { status: 404 });
   }
@@ -67,13 +72,14 @@ export async function GET(
         },
         {
           headers: {
-            "Cache-Control": "private, max-age=60",
+            "Cache-Control": "private, max-age=240",
           },
         },
       );
     }
     const response = NextResponse.redirect(signed.url, 302);
-    response.headers.set("Cache-Control", "private, max-age=60");
+    // Signed Location is memoized ~25 min; let the browser reuse this hop.
+    response.headers.set("Cache-Control", "private, max-age=240");
     return response;
   } catch {
     return NextResponse.json(

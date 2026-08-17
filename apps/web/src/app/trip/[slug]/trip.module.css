@@ -854,7 +854,13 @@
   user-select: none;
   -webkit-user-drag: none;
   pointer-events: none;
-  transition: opacity 140ms ease-out;
+  transition: opacity 180ms ease-out;
+}
+
+.lightboxImageLqip {
+  filter: blur(28px);
+  transform: scale(1.18);
+  opacity: 0.7;
 }
 
 .lightboxImageShell {

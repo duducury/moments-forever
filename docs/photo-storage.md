@@ -6,8 +6,8 @@ O MVP guarda somente derivados adequados à experiência, nunca originais. As pr
 
 ## Variantes
 
-- **Thumbnail:** grids, clusters, mapa e previews pequenos; lado maior ~640 px (JPEG no dispositivo).
-- **Preview:** visualização normal/tela cheia e capas; lado maior ~1.600 px (JPEG no dispositivo). Fotos mais antigas podem ainda estar em ~2.048 px até reprocessamento.
+- **Thumbnail:** grids, clusters, mapa e previews pequenos; lado maior ~640 px (WebP/JPEG no dispositivo).
+- **Preview:** visualização normal/tela cheia e capas; lado maior ~1.600 px (WebP/JPEG no dispositivo). Fotos mais antigas podem ainda estar em JPEG ~2.048 px até reprocessamento.
 - **Original:** proibido no fluxo do MVP; extensão futura premium com consentimento, cota, preço e retenção próprios.
 
 ### Compatibilidade de chave R2 (MVP)
@@ -16,7 +16,7 @@ No bucket, o objeto sob a variante de caminho `original` **é o preview** (não 
 
 ### Entrega rápida (cliente)
 
-O lightbox pinta na hora a **thumbnail** já aquecida pelo grid e, em paralelo, baixa o preview `full`. Quando o `full` decodifica, troca uma vez (sem tela preta esperando). O `<img>` usa `/api/media/[id]` (redirect curto para o R2); prefetch de bytes full fica só na janela atual ± vizinhas.
+O lightbox segue o padrão dos sites com `next/image`: a miniatura do grid entra só como **LQIP borrado** (não é a foto). O preview `full` baixa em paralelo e aparece nítido de uma vez. `/api/media/[id]` usa a sessão do cookie (sem `getUser` na rede) e cacheia o redirect. Prefetch de bytes full fica só na janela atual ± vizinhas. Fotos novas são WebP quando o aparelho consegue gerar.
 
 Formatos modernos podem ser negociados no web, mantendo fallback amplamente compatível. HEIC/RAW precisam de orientação, cor e conversão testadas. Metadados úteis vão ao banco; EXIF e GPS são removidos dos arquivos entregues.
 

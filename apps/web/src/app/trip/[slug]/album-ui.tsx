@@ -176,8 +176,8 @@ function LightboxSlideMedia({
   readonly load?: boolean;
   readonly onReady?: () => void;
 }) {
-  // Instant open: the grid already warmed the thumbnail. Show it immediately,
-  // then swap once to full when that decode finishes (no blank shell wait).
+  // Same pattern as next/image on the other sites: a blurred wash (LQIP),
+  // then one sharp display file. Never stretch the 640px grid thumb as the photo.
   const thumbSrc = useLocalPhotoObjectUrl(photoId, "thumbnail");
   const cachedFull = useLocalPhotoObjectUrl(photoId, "full");
   const fullSrc =
@@ -185,16 +185,14 @@ function LightboxSlideMedia({
     (load
       ? `/api/media/${encodeURIComponent(photoId)}?variant=full`
       : null);
-  const [fullReady, setFullReady] = useState(false);
+  const localFull = Boolean(fullSrc?.startsWith("blob:"));
+  const [fullReady, setFullReady] = useState(localFull);
 
   useEffect(() => {
-    setFullReady(false);
-  }, [photoId]);
+    setFullReady(Boolean(fullSrc?.startsWith("blob:")));
+  }, [photoId, fullSrc]);
 
-  // Local blob full is already on-device — paint without waiting for onLoad.
-  const showFull = Boolean(
-    fullSrc && load && (fullReady || fullSrc.startsWith("blob:")),
-  );
+  const showFull = Boolean(fullSrc && load && (fullReady || localFull));
 
   useEffect(() => {
     if (showFull) onReady?.();
@@ -215,8 +213,9 @@ function LightboxSlideMedia({
       {thumbSrc && !showFull ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          alt={alt}
-          className={styles.lightboxImage}
+          alt=""
+          aria-hidden
+          className={`${styles.lightboxImage} ${styles.lightboxImageLqip}`}
           decoding="async"
           draggable={false}
           src={thumbSrc}
@@ -234,9 +233,9 @@ function LightboxSlideMedia({
         <img
           alt={alt}
           className={styles.lightboxImage}
-          decoding={priority ? "sync" : "async"}
+          decoding="async"
           draggable={false}
-          fetchPriority={priority ? "high" : "auto"}
+          fetchPriority={priority ? "high" : "low"}
           onError={() => {
             setFullReady(true);
             markLocalPhotoFullPreloaded(photoId);
@@ -392,7 +391,6 @@ export function PhotoLightbox({
           key={neighborPrevId}
           load={currentReady}
           photoId={neighborPrevId}
-          priority
         />
       ) : null,
     [neighborPrevId, currentReady],
@@ -404,7 +402,6 @@ export function PhotoLightbox({
           key={neighborNextId}
           load={currentReady}
           photoId={neighborNextId}
-          priority
         />
       ) : null,
     [neighborNextId, currentReady],

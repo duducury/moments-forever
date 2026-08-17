@@ -131,7 +131,7 @@ export const DEFAULT_PREVIEW_EDGE = 1600;
 const DEFAULT_THUMBNAIL_QUALITY = 0.88;
 const DEFAULT_PREVIEW_QUALITY = 0.82;
 
-async function encodeJpegDerivative(
+async function encodeDisplayDerivative(
   bitmap: ImageBitmap,
   maximumEdge: number,
   quality: number,
@@ -143,6 +143,17 @@ async function encodeJpegDerivative(
   const context = canvas.getContext("2d");
   if (!context) return null;
   context.drawImage(bitmap, 0, 0, width, height);
+  try {
+    const webp = await canvas.convertToBlob({
+      type: "image/webp",
+      quality,
+    });
+    if (webp && webp.size > 0 && webp.type === "image/webp") {
+      return webp;
+    }
+  } catch {
+    // Fall through to JPEG.
+  }
   return canvas.convertToBlob({
     type: "image/jpeg",
     quality,
@@ -151,7 +162,7 @@ async function encodeJpegDerivative(
 
 /**
  * Decode once and produce MVP derivatives: thumbnail (~640) + preview (~1600).
- * Never returns the camera original — both outputs are JPEG re-encodes.
+ * Never returns the camera original — WebP when the browser can encode it.
  */
 export async function createBrowserPhotoDerivatives(
   source: Blob,
@@ -177,12 +188,12 @@ export async function createBrowserPhotoDerivatives(
     const sourceWidth = bitmap.width;
     const sourceHeight = bitmap.height;
     const [thumbBlob, previewBlob] = await Promise.all([
-      encodeJpegDerivative(
+      encodeDisplayDerivative(
         bitmap,
         options?.thumbnailEdge ?? DEFAULT_THUMBNAIL_EDGE,
         options?.thumbnailQuality ?? DEFAULT_THUMBNAIL_QUALITY,
       ),
-      encodeJpegDerivative(
+      encodeDisplayDerivative(
         bitmap,
         options?.previewEdge ?? DEFAULT_PREVIEW_EDGE,
         options?.previewQuality ?? DEFAULT_PREVIEW_QUALITY,
@@ -217,7 +228,7 @@ export async function createBrowserThumbnail(
   let bitmap: ImageBitmap | null = null;
   try {
     bitmap = await createImageBitmap(file);
-    const blob = await encodeJpegDerivative(bitmap, maximumEdge, quality);
+    const blob = await encodeDisplayDerivative(bitmap, maximumEdge, quality);
     if (!blob) return null;
     return { blob, width: bitmap.width, height: bitmap.height };
   } catch {

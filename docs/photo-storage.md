@@ -40,6 +40,7 @@ Bucket não é público. Uma camada edge valida acesso:
 - mapa, grids e cards de perfil recebem somente thumbnails;
 - capas grandes (hero do álbum) e lightbox usam o preview (`full` / chave `original`);
 - `/api/media/{id}` entrega os bytes (URL estável, cacheável); fotos de perfil público podem ir ao CDN; fotos só do dono ficam em cache privado;
+- prévias de partilha da capa do álbum passam por `/api/albums/{id}/cover` (RLS anônimo, mesma regra da mídia pública);
 - URLs de objeto não revelam usuário, local ou título.
 
 Cloudflare R2 armazena a mídia, separado do Supabase Auth/PostgreSQL. Isso evita usar o banco ou Supabase Storage para arquivos pesados. R2 reduz egress dentro do ecossistema Cloudflare, mas operações, transformação e fornecedor continuam sendo custos/risco. O modelo de `media_variants` e o contrato de storage permitem adicionar `original` ou migrar fornecedor sem redesenhar memórias.

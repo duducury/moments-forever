@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 
@@ -11,9 +12,38 @@ import {
   publicProfilePath,
 } from "@/lib/profile/profile-slug";
 import { profilePath } from "@/lib/routes/app-routes";
+import { buildAlbumShareMetadata } from "@/lib/share/album-share-preview";
+import { loadAlbumSharePreview } from "@/lib/share/load-album-share-preview";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import { AlbumRelatedPlaces } from "./album-related-places";
+
+export const dynamic = "force-dynamic";
+
+export async function generateMetadata({
+  params,
+}: {
+  readonly params: Promise<{
+    readonly tripSlug: string;
+    readonly albumId: string;
+  }>;
+}): Promise<Metadata> {
+  const { tripSlug: rawSlug, albumId: rawAlbumId } = await params;
+  const slug = decodeURIComponent(rawSlug);
+  const albumId = decodeURIComponent(rawAlbumId);
+
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) {
+    return { title: "Álbum" };
+  }
+
+  const preview = await loadAlbumSharePreview(supabase, slug, albumId);
+  if (!preview) {
+    return { title: "Álbum" };
+  }
+
+  return buildAlbumShareMetadata(preview);
+}
 
 /** Unified album view — edit controls only when current user owns the experience. */
 export default async function ProfileTripAlbumPage({

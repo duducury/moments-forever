@@ -1,21 +1,16 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
-import { AppWordmark } from "@/components/app-wordmark";
-import { loadOwnerCarouselPhotos } from "@/lib/experiences/load-owner-carousel-photos";
-import { loadOwnerPlaceCards } from "@/lib/experiences/load-owner-place-cards";
+import { AppBootSplash } from "@/components/app-boot-splash";
 import {
   isReservedProfileSlug,
   lookupPublicProfile,
-  profileAvatarPublicPath,
   publicProfilePath,
 } from "@/lib/profile/profile-slug";
 import { absoluteUrl } from "@/lib/site-url";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-import { ProfileView } from "../perfil/profile-view";
-import { ProfileMapSection } from "./profile-map-section";
+import { PublicProfileContent } from "./profile-content";
 
 export const dynamic = "force-dynamic";
 
@@ -80,79 +75,15 @@ export async function generateMetadata({
   };
 }
 
-export default async function PublicProfilePage({
+/** Sync shell so the Home Screen app paints the brand before profile data. */
+export default function PublicProfilePage({
   params,
 }: {
   readonly params: Promise<{ readonly profileSlug: string }>;
 }) {
-  const { profileSlug: raw } = await params;
-  const profileSlug = decodeURIComponent(raw).trim().toLowerCase();
-
-  if (!profileSlug || isReservedProfileSlug(profileSlug)) {
-    notFound();
-  }
-
-  const supabase = await createSupabaseServerClient();
-  if (!supabase) {
-    return (
-      <main className="page-shell">
-        <nav className="topbar" aria-label="Navegação">
-          <AppWordmark />
-        </nav>
-        <section className="narrow">
-          <h1>Supabase local não configurado</h1>
-        </section>
-      </main>
-    );
-  }
-
-  // Auth does not depend on the profile row — fetch together.
-  const [profile, userResult] = await Promise.all([
-    lookupPublicProfile(supabase, profileSlug),
-    supabase.auth.getUser(),
-  ]);
-  if (!profile) {
-    notFound();
-  }
-
-  const user = userResult.data.user;
-  const isOwner = Boolean(user && user.id === profile.id);
-
-  // Destaques + place cards together so the carousel is not a late pop-in.
-  // Bottom map still streams — it is below the fold.
-  const [result, carouselPhotos] = await Promise.all([
-    loadOwnerPlaceCards(supabase, profile.id),
-    loadOwnerCarouselPhotos(supabase, profile.id),
-  ]);
-
-  const displayName = profile.displayName?.trim() || profile.profileSlug;
-  const hasPlaces = (result.places?.length ?? 0) > 0;
-
   return (
-    <ProfileView
-      avatarPhotoId={profile.avatarPhotoId}
-      avatarRemoteSrc={
-        profile.hasPermanentAvatar
-          ? profileAvatarPublicPath(profile.profileSlug)
-          : null
-      }
-      bio={profile.bio}
-      carouselPhotos={carouselPhotos}
-      displayName={displayName}
-      homeHref={publicProfilePath(profile.profileSlug)}
-      isOwner={isOwner}
-      loadError={
-        result.error ? "Não foi possível carregar as viagens deste perfil." : null
-      }
-      mapSlot={
-        hasPlaces ? (
-          <Suspense fallback={null}>
-            <ProfileMapSection ownerId={profile.id} />
-          </Suspense>
-        ) : null
-      }
-      ownerId={profile.id}
-      places={result.places ?? []}
-    />
+    <Suspense fallback={<AppBootSplash hint="Abrindo seu perfil…" />}>
+      <PublicProfileContent params={params} />
+    </Suspense>
   );
 }

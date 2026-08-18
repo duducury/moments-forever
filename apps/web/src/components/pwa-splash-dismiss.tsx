@@ -23,13 +23,10 @@ function hideSplash(splash: HTMLElement) {
   window.setTimeout(() => splash.remove(), 280);
 }
 
-function holdsSplash(pathname: string | null): boolean {
-  return pathname === "/login" || pathname === "/perfil";
-}
-
 /**
- * Keeps the inline brand splash up while /login and /perfil resolve the
- * session. Other routes hide it after the first full load.
+ * Hold the brand splash until the destination UI signals ready.
+ * /{nome} from the iPhone Home Screen waits on profile data — do not hide
+ * on the first paint or the user sees a blank page.
  */
 export function PwaSplashDismiss() {
   const pathname = usePathname();
@@ -40,26 +37,11 @@ export function PwaSplashDismiss() {
 
     const hide = () => hideSplash(splash);
     window.addEventListener(BOOT_READY_EVENT, hide);
-
-    const failsafeMs = holdsSplash(pathname) ? 12000 : 4000;
-    const failsafe = window.setTimeout(hide, failsafeMs);
-
-    let loadTimer = 0;
-    if (!holdsSplash(pathname)) {
-      const onLoad = () => {
-        loadTimer = window.setTimeout(hide, 120);
-      };
-      if (document.readyState === "complete") {
-        onLoad();
-      } else {
-        window.addEventListener("load", onLoad, { once: true });
-      }
-    }
+    const failsafe = window.setTimeout(hide, 12000);
 
     return () => {
       window.removeEventListener(BOOT_READY_EVENT, hide);
       window.clearTimeout(failsafe);
-      window.clearTimeout(loadTimer);
     };
   }, [pathname]);
 

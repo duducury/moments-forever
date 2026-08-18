@@ -1,8 +1,14 @@
 import styles from "./app-boot-splash.module.css";
 
+const splashStyle = {
+  background:
+    "radial-gradient(90% 60% at 50% 18%, rgb(208 138 110 / 18%), transparent 58%), #121110",
+  color: "#f3efe8",
+} as const;
+
 /**
  * Branded wait state for iPhone home-screen / login cold start.
- * Inline layout splash mirrors this so the first paint is never a blank page.
+ * Inline colors so the screen stays dark before the CSS module loads.
  */
 export function AppBootSplash({
   hint = "Abrindo sua coleção…",
@@ -18,6 +24,7 @@ export function AppBootSplash({
       className={styles.splash}
       data-overlay={overlay ? "true" : undefined}
       role="status"
+      style={splashStyle}
     >
       <div className={styles.stage}>
         {/* Static PNG so the mark appears before Next/Image hydrates. */}

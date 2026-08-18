@@ -3,11 +3,12 @@ import test from "node:test";
 
 import { IOS_STARTUP_IMAGES } from "./ios-startup-images";
 
-test("iOS startup images cover portrait iPhone sizes without duplicates", () => {
-  assert.ok(IOS_STARTUP_IMAGES.length >= 10);
+test("iOS startup images cover portrait and landscape iPhone sizes", () => {
+  assert.ok(IOS_STARTUP_IMAGES.length >= 20);
 
   const keys = IOS_STARTUP_IMAGES.map(
-    (image) => `${image.width}x${image.height}@${image.pixelRatio}`,
+    (image) =>
+      `${image.width}x${image.height}@${image.pixelRatio}:${image.orientation}`,
   );
   assert.equal(new Set(keys).size, keys.length);
 
@@ -18,20 +19,26 @@ test("iOS startup images cover portrait iPhone sizes without duplicates", () => 
       image.src,
       `/brand/splash/${image.width}x${image.height}.png`,
     );
-    assert.match(image.media, /orientation: portrait/);
+    assert.match(image.media, new RegExp(`orientation: ${image.orientation}`));
     assert.match(image.media, new RegExp(`device-width: ${image.deviceWidth}px`));
   }
 
   assert.ok(
     IOS_STARTUP_IMAGES.some(
-      (image) => image.width === 1260 && image.height === 2736,
+      (image) =>
+        image.width === 1260 &&
+        image.height === 2736 &&
+        image.orientation === "portrait",
     ),
-    "iPhone Air 420x912@3",
+    "iPhone Air portrait",
   );
   assert.ok(
     IOS_STARTUP_IMAGES.some(
-      (image) => image.width === 1080 && image.height === 2340,
+      (image) =>
+        image.width === 2736 &&
+        image.height === 1260 &&
+        image.orientation === "landscape",
     ),
-    "iPhone mini 360x780@3",
+    "iPhone Air landscape",
   );
 });

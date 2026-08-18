@@ -10,6 +10,7 @@ export type IosStartupImage = {
   readonly deviceWidth: number;
   readonly deviceHeight: number;
   readonly pixelRatio: number;
+  readonly orientation: "portrait" | "landscape";
   readonly media: string;
 };
 
@@ -17,8 +18,9 @@ function splashMedia(
   deviceWidth: number,
   deviceHeight: number,
   pixelRatio: number,
+  orientation: "portrait" | "landscape",
 ): string {
-  return `(device-width: ${deviceWidth}px) and (device-height: ${deviceHeight}px) and (-webkit-device-pixel-ratio: ${pixelRatio}) and (orientation: portrait)`;
+  return `(device-width: ${deviceWidth}px) and (device-height: ${deviceHeight}px) and (-webkit-device-pixel-ratio: ${pixelRatio}) and (orientation: ${orientation})`;
 }
 
 function splash(
@@ -27,6 +29,7 @@ function splash(
   deviceWidth: number,
   deviceHeight: number,
   pixelRatio: number,
+  orientation: "portrait" | "landscape",
 ): IosStartupImage {
   return {
     src: `/brand/splash/${width}x${height}.png`,
@@ -35,26 +38,40 @@ function splash(
     deviceWidth,
     deviceHeight,
     pixelRatio,
-    media: splashMedia(deviceWidth, deviceHeight, pixelRatio),
+    orientation,
+    media: splashMedia(deviceWidth, deviceHeight, pixelRatio, orientation),
   };
 }
 
-/** Portrait launches for current iPhone sizes (SE through 17 / Air). */
+function pair(
+  cssWidth: number,
+  cssHeight: number,
+  pixelRatio: number,
+): readonly IosStartupImage[] {
+  const width = cssWidth * pixelRatio;
+  const height = cssHeight * pixelRatio;
+  return [
+    splash(width, height, cssWidth, cssHeight, pixelRatio, "portrait"),
+    splash(height, width, cssHeight, cssWidth, pixelRatio, "landscape"),
+  ];
+}
+
+/** Portrait + landscape for SE through iPhone 17 / Air. */
 export const IOS_STARTUP_IMAGES: readonly IosStartupImage[] = [
-  splash(1320, 2868, 440, 956, 3),
-  splash(1260, 2736, 420, 912, 3),
-  splash(1206, 2622, 402, 874, 3),
-  splash(1290, 2796, 430, 932, 3),
-  splash(1179, 2556, 393, 852, 3),
-  splash(1284, 2778, 428, 926, 3),
-  splash(1170, 2532, 390, 844, 3),
-  splash(1242, 2688, 414, 896, 3),
-  splash(1080, 2340, 360, 780, 3),
-  splash(828, 1792, 414, 896, 2),
-  splash(1125, 2436, 375, 812, 3),
-  splash(1242, 2208, 414, 736, 3),
-  splash(750, 1334, 375, 667, 2),
-  splash(640, 1136, 320, 568, 2),
+  ...pair(440, 956, 3),
+  ...pair(420, 912, 3),
+  ...pair(402, 874, 3),
+  ...pair(430, 932, 3),
+  ...pair(393, 852, 3),
+  ...pair(428, 926, 3),
+  ...pair(390, 844, 3),
+  ...pair(414, 896, 3),
+  ...pair(360, 780, 3),
+  ...pair(414, 896, 2),
+  ...pair(375, 812, 3),
+  ...pair(414, 736, 3),
+  ...pair(375, 667, 2),
+  ...pair(320, 568, 2),
 ];
 
 /** Matches the default (dark) theme and web manifest background_color. */

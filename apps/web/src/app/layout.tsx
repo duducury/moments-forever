@@ -31,10 +31,6 @@ export const metadata: Metadata = {
     capable: true,
     title: "Moments Forever",
     statusBarStyle: "black-translucent",
-    startupImage: IOS_STARTUP_IMAGES.map((image) => ({
-      url: image.src,
-      media: image.media,
-    })),
   },
   openGraph: {
     type: "website",
@@ -113,20 +109,26 @@ const themeBootScript = `
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="pt-BR" data-theme="dark" data-resolved-theme="dark" suppressHydrationWarning>
+    <html
+      lang="pt-BR"
+      data-theme="dark"
+      data-resolved-theme="dark"
+      style={{ backgroundColor: "#121110", color: "#f3efe8" }}
+      suppressHydrationWarning
+    >
       <head>
         <style dangerouslySetInnerHTML={{ __html: criticalBootCss }} />
         <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
         {IOS_STARTUP_IMAGES.map((image) => (
           <link
             href={image.src}
-            key={image.src}
+            key={`${image.src}:${image.orientation}`}
             media={image.media}
             rel="apple-touch-startup-image"
           />
         ))}
       </head>
-      <body>
+      <body style={{ backgroundColor: "#121110", color: "#f3efe8", margin: 0 }}>
         <div
           aria-label="Carregando Moments Forever"
           aria-live="polite"

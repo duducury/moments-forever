@@ -2,13 +2,8 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 
 import { AppBootSplash } from "@/components/app-boot-splash";
-import {
-  isReservedProfileSlug,
-  lookupPublicProfile,
-  publicProfilePath,
-} from "@/lib/profile/profile-slug";
+import { isReservedProfileSlug, publicProfilePath } from "@/lib/profile/profile-slug";
 import { absoluteUrl } from "@/lib/site-url";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import { PublicProfileContent } from "./profile-content";
 
@@ -25,52 +20,19 @@ export async function generateMetadata({
     return { title: "Perfil" };
   }
 
-  const supabase = await createSupabaseServerClient();
-  if (!supabase) {
-    return { title: "Perfil" };
-  }
-
-  const profile = await lookupPublicProfile(supabase, profileSlug);
-  if (!profile) {
-    return { title: "Perfil" };
-  }
-
-  const displayName = profile.displayName?.trim() || profile.profileSlug;
-  const description =
-    profile.bio?.trim() ||
-    `Perfil de ${displayName} no Moments Forever.`;
-  const profileUrl = absoluteUrl(publicProfilePath(profile.profileSlug));
-  const imageUrl = profile.hasPermanentAvatar
-    ? absoluteUrl(
-        `/api/profile/${encodeURIComponent(profile.profileSlug)}/avatar`,
-      )
-    : absoluteUrl("/brand/icon-512.png");
+  const profileUrl = absoluteUrl(publicProfilePath(profileSlug));
+  const imageUrl = absoluteUrl("/brand/icon-512.png");
 
   return {
-    title: displayName,
-    description,
+    title: profileSlug,
     alternates: { canonical: profileUrl },
     openGraph: {
       type: "profile",
       locale: "pt_BR",
       siteName: "Moments Forever",
-      title: displayName,
-      description,
+      title: profileSlug,
       url: profileUrl,
-      images: [
-        {
-          url: imageUrl,
-          width: 512,
-          height: 512,
-          alt: displayName,
-        },
-      ],
-    },
-    twitter: {
-      card: "summary",
-      title: displayName,
-      description,
-      images: [imageUrl],
+      images: [{ url: imageUrl, width: 512, height: 512, alt: profileSlug }],
     },
   };
 }

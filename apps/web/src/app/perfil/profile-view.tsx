@@ -9,6 +9,7 @@ import { AuthStatus } from "@/components/auth-status";
 import { NewTripButton } from "@/components/new-trip-button";
 import { RememberOwnerHome } from "@/components/remember-owner-home";
 import { R2UploadWarningBanner } from "@/components/r2-upload-warning-banner";
+import { SignalPwaBootReady } from "@/components/signal-pwa-boot-ready";
 import type { ProfileCarouselPhoto } from "@/lib/experiences/load-owner-carousel-photos";
 import type { OwnerPlaceCardItem } from "@/lib/experiences/load-owner-place-cards";
 import { profilePath } from "@/lib/routes/app-routes";
@@ -64,6 +65,7 @@ export function ProfileView({
 
   return (
     <main className="page-shell" data-bottom-nav="true">
+      <SignalPwaBootReady />
       {isOwner ? <RememberOwnerHome path={homeHref} userId={ownerId} /> : null}
       <nav className="topbar" aria-label="Navegação">
         <AppWordmark />

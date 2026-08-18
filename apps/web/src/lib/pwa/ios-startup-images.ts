@@ -39,15 +39,17 @@ function splash(
   };
 }
 
-/** Portrait launches for current iPhone sizes (SE through 16 Pro Max). */
+/** Portrait launches for current iPhone sizes (SE through 17 / Air). */
 export const IOS_STARTUP_IMAGES: readonly IosStartupImage[] = [
   splash(1320, 2868, 440, 956, 3),
+  splash(1260, 2736, 420, 912, 3),
   splash(1206, 2622, 402, 874, 3),
   splash(1290, 2796, 430, 932, 3),
   splash(1179, 2556, 393, 852, 3),
   splash(1284, 2778, 428, 926, 3),
   splash(1170, 2532, 390, 844, 3),
   splash(1242, 2688, 414, 896, 3),
+  splash(1080, 2340, 360, 780, 3),
   splash(828, 1792, 414, 896, 2),
   splash(1125, 2436, 375, 812, 3),
   splash(1242, 2208, 414, 736, 3),

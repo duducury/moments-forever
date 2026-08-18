@@ -21,4 +21,17 @@ test("iOS startup images cover portrait iPhone sizes without duplicates", () => 
     assert.match(image.media, /orientation: portrait/);
     assert.match(image.media, new RegExp(`device-width: ${image.deviceWidth}px`));
   }
+
+  assert.ok(
+    IOS_STARTUP_IMAGES.some(
+      (image) => image.width === 1260 && image.height === 2736,
+    ),
+    "iPhone Air 420x912@3",
+  );
+  assert.ok(
+    IOS_STARTUP_IMAGES.some(
+      (image) => image.width === 1080 && image.height === 2340,
+    ),
+    "iPhone mini 360x780@3",
+  );
 });

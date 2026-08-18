@@ -7,12 +7,13 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 import { AppBootSplash } from "./app-boot-splash";
 import { useAuth } from "./auth-provider";
+import { signalPwaBootReady } from "./pwa-splash-dismiss";
 
 type Mode = "sign-in" | "sign-up";
 
 export function AuthForm() {
   const router = useRouter();
-  const { session, loading: authLoading } = useAuth();
+  const { session, loading: authLoading, configured } = useAuth();
   const client = createSupabaseBrowserClient();
   const [mode, setMode] = useState<Mode>("sign-in");
   const [message, setMessage] = useState<string | null>(null);
@@ -23,6 +24,12 @@ export function AuthForm() {
       router.replace("/perfil");
     }
   }, [authLoading, session, router]);
+
+  useEffect(() => {
+    if (!configured || (!authLoading && !session)) {
+      signalPwaBootReady();
+    }
+  }, [authLoading, configured, session]);
 
   if (!client) {
     return (

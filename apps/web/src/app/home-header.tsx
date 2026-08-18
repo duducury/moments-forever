@@ -5,6 +5,7 @@ import { useEffect, useId, useRef, useState } from "react";
 
 import { AppWordmark } from "@/components/app-wordmark";
 import { useAuth } from "@/components/auth-provider";
+import { SignalPwaBootReady } from "@/components/signal-pwa-boot-ready";
 import { ThemeSelector } from "@/components/theme-selector";
 import { displayNameFromUser } from "@/lib/auth/display-name";
 import { profilePath } from "@/lib/routes/app-routes";
@@ -39,6 +40,7 @@ export function HomeHeader() {
 
   return (
     <header className={styles.header} ref={rootRef}>
+      <SignalPwaBootReady />
       <AppWordmark className={`wordmark ${styles.headerWordmark}`} />
 
       <nav aria-label="Conta" className={styles.headerNav}>

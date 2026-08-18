@@ -84,17 +84,12 @@ export const viewport: Viewport = {
 
 const criticalBootCss = `
 html,body{margin:0;min-height:100%;background:#121110;color:#f3efe8}
-html[data-resolved-theme="light"],html[data-resolved-theme="light"] body{background:#e8e0d4;color:#1a1612}
 #pwa-boot-splash{position:fixed;inset:0;z-index:2147483646;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:radial-gradient(90% 60% at 50% 18%,rgba(208,138,110,.18),transparent 58%),#121110;color:#f3efe8;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;text-align:center;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
-html[data-resolved-theme="light"] #pwa-boot-splash{background:radial-gradient(90% 60% at 50% 18%,rgba(139,63,40,.14),transparent 58%),#e8e0d4;color:#1a1612}
 #pwa-boot-splash img{width:88px;height:88px;border-radius:22px}
 #pwa-boot-splash .mf-boot-title{margin:0;font-family:Georgia,"Times New Roman",serif;font-size:1.45rem;font-weight:500;letter-spacing:-0.03em}
 #pwa-boot-splash .mf-boot-copy{margin:0;color:#a8a29a;font-size:15px;line-height:1.45}
-html[data-resolved-theme="light"] #pwa-boot-splash .mf-boot-copy{color:#5c554c}
 #pwa-boot-splash .mf-boot-hint{margin:4px 0 0;color:#d08a6e;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
-html[data-resolved-theme="light"] #pwa-boot-splash .mf-boot-hint{color:#8b3f28}
 #pwa-boot-splash .mf-boot-pulse{width:10px;height:10px;border-radius:999px;background:#d08a6e;animation:mfBootPulse 1.6s ease-in-out infinite}
-html[data-resolved-theme="light"] #pwa-boot-splash .mf-boot-pulse{background:#8b3f28}
 @keyframes mfBootPulse{0%,100%{opacity:.35;transform:scale(.85)}50%{opacity:1;transform:scale(1)}}
 @media (prefers-reduced-motion:reduce){#pwa-boot-splash .mf-boot-pulse{animation:none;opacity:.8}}
 `;
@@ -107,10 +102,8 @@ const themeBootScript = `
     const preference = stored === "light" ? "light" : "dark";
     document.documentElement.dataset.theme = preference;
     document.documentElement.dataset.resolvedTheme = preference;
-    const bg = preference === "light" ? "#e8e0d4" : "#121110";
-    const fg = preference === "light" ? "#1a1612" : "#f3efe8";
-    document.documentElement.style.backgroundColor = bg;
-    document.documentElement.style.color = fg;
+    document.documentElement.style.backgroundColor = "#121110";
+    document.documentElement.style.color = "#f3efe8";
   } catch (_) {
     document.documentElement.style.backgroundColor = "#121110";
     document.documentElement.style.color = "#f3efe8";
@@ -124,6 +117,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <head>
         <style dangerouslySetInnerHTML={{ __html: criticalBootCss }} />
         <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
+        {IOS_STARTUP_IMAGES.map((image) => (
+          <link
+            href={image.src}
+            key={image.src}
+            media={image.media}
+            rel="apple-touch-startup-image"
+          />
+        ))}
       </head>
       <body>
         <div

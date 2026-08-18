@@ -5,6 +5,7 @@ import { useEffect, useState, type FormEvent } from "react";
 
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
+import { AppBootSplash } from "./app-boot-splash";
 import { useAuth } from "./auth-provider";
 
 type Mode = "sign-in" | "sign-up";
@@ -32,11 +33,12 @@ export function AuthForm() {
     );
   }
 
-  if (!authLoading && session) {
+  if (authLoading || session) {
     return (
-      <p className="form-message" role="status">
-        Sessão iniciada. Redirecionando…
-      </p>
+      <AppBootSplash
+        hint={session ? "Entrando na sua coleção…" : "Abrindo o acesso…"}
+        overlay
+      />
     );
   }
 

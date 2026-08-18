@@ -7,6 +7,7 @@ import { AppCreditFooter } from "@/components/app-credit-footer";
 import { AppWordmark } from "@/components/app-wordmark";
 import { AuthStatus } from "@/components/auth-status";
 import { NewTripButton } from "@/components/new-trip-button";
+import { RememberOwnerHome } from "@/components/remember-owner-home";
 import { R2UploadWarningBanner } from "@/components/r2-upload-warning-banner";
 import type { ProfileCarouselPhoto } from "@/lib/experiences/load-owner-carousel-photos";
 import type { OwnerPlaceCardItem } from "@/lib/experiences/load-owner-place-cards";
@@ -63,6 +64,7 @@ export function ProfileView({
 
   return (
     <main className="page-shell" data-bottom-nav="true">
+      {isOwner ? <RememberOwnerHome path={homeHref} userId={ownerId} /> : null}
       <nav className="topbar" aria-label="Navegação">
         <AppWordmark />
         <div className={styles.topActions}>

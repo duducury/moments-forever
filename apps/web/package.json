@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "test": "node --import tsx --test src/lib/photo-import/browser-metadata.test.ts src/lib/location/*.test.ts src/lib/profile/profile-slug.test.ts src/lib/media/media-url.test.ts src/lib/photos/*.test.ts",
+    "test": "node --import tsx --test src/lib/photo-import/browser-metadata.test.ts src/lib/location/*.test.ts src/lib/profile/profile-slug.test.ts src/lib/media/media-url.test.ts src/lib/photos/*.test.ts src/lib/pwa/*.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

@@ -4,7 +4,7 @@ import { AuthProvider } from "@/components/auth-provider";
 import { PwaSplashDismiss } from "@/components/pwa-splash-dismiss";
 import { RevealOnScroll } from "@/components/reveal-on-scroll";
 import { ThemeProvider } from "@/components/theme-provider";
-import { IOS_STARTUP_IMAGES } from "@/lib/pwa/ios-startup-images";
+import { IOS_STARTUP_IMAGES, iosStartupImageMedia } from "@/lib/pwa/ios-startup-images";
 import { getSiteUrl } from "@/lib/site-url";
 import { THEME_STORAGE_KEY } from "@/lib/theme/theme";
 
@@ -119,14 +119,16 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <head>
         <style dangerouslySetInnerHTML={{ __html: criticalBootCss }} />
         <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
-        {IOS_STARTUP_IMAGES.map((image) => (
-          <link
-            href={image.src}
-            key={`${image.src}:${image.orientation}`}
-            media={image.media}
-            rel="apple-touch-startup-image"
-          />
-        ))}
+        {IOS_STARTUP_IMAGES.flatMap((image) =>
+          iosStartupImageMedia(image).map((media) => (
+            <link
+              href={`${siteUrl}${image.src}`}
+              key={`${image.src}:${media}`}
+              media={media}
+              rel="apple-touch-startup-image"
+            />
+          )),
+        )}
       </head>
       <body style={{ backgroundColor: "#121110", color: "#f3efe8", margin: 0 }}>
         <div

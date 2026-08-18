@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { IOS_STARTUP_IMAGES } from "./ios-startup-images";
+import { IOS_STARTUP_IMAGES, iosStartupImageMedia } from "./ios-startup-images";
 
 test("iOS startup images cover portrait and landscape iPhone sizes", () => {
   assert.ok(IOS_STARTUP_IMAGES.length >= 20);
@@ -19,6 +19,7 @@ test("iOS startup images cover portrait and landscape iPhone sizes", () => {
       image.src,
       `/brand/splash/${image.width}x${image.height}.png`,
     );
+    assert.match(image.media, /^screen and /);
     assert.match(image.media, new RegExp(`orientation: ${image.orientation}`));
     assert.match(image.media, new RegExp(`device-width: ${image.deviceWidth}px`));
   }
@@ -42,3 +43,14 @@ test("iOS startup images cover portrait and landscape iPhone sizes", () => {
     "iPhone Air landscape",
   );
 });
+
+test("iosStartupImageMedia includes screen, dark, and light queries", () => {
+  const image = IOS_STARTUP_IMAGES[0];
+  if (!image) throw new Error("missing startup image");
+  const media = iosStartupImageMedia(image);
+  assert.equal(media.length, 3);
+  assert.equal(media[0], image.media);
+  assert.match(media[1] ?? "", /prefers-color-scheme: dark/);
+  assert.match(media[2] ?? "", /prefers-color-scheme: light/);
+});
+

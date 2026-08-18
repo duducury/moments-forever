@@ -20,7 +20,7 @@ function splashMedia(
   pixelRatio: number,
   orientation: "portrait" | "landscape",
 ): string {
-  return `(device-width: ${deviceWidth}px) and (device-height: ${deviceHeight}px) and (-webkit-device-pixel-ratio: ${pixelRatio}) and (orientation: ${orientation})`;
+  return `screen and (device-width: ${deviceWidth}px) and (device-height: ${deviceHeight}px) and (-webkit-device-pixel-ratio: ${pixelRatio}) and (orientation: ${orientation})`;
 }
 
 function splash(
@@ -76,3 +76,13 @@ export const IOS_STARTUP_IMAGES: readonly IosStartupImage[] = [
 
 /** Matches the default (dark) theme and web manifest background_color. */
 export const IOS_SPLASH_BACKGROUND = "#121110";
+
+/** Extra queries so light/dark iOS appearance still picks a startup image. */
+export function iosStartupImageMedia(image: IosStartupImage): readonly string[] {
+  const core = image.media.replace(/^screen and /u, "");
+  return [
+    image.media,
+    `screen and (prefers-color-scheme: dark) and ${core}`,
+    `screen and (prefers-color-scheme: light) and ${core}`,
+  ];
+}

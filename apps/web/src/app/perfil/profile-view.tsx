@@ -31,6 +31,8 @@ export function ProfileView({
   loadError,
   homeHref = profilePath(),
   mapSlot = null,
+  carouselSlot = null,
+  gridPending = false,
 }: {
   readonly ownerId: string;
   readonly displayName: string;
@@ -45,6 +47,10 @@ export function ProfileView({
   readonly homeHref?: string;
   /** Streamed bottom map — GPS + MapLibre must not block Início. */
   readonly mapSlot?: ReactNode;
+  /** Streamed Destaques so the place grid can paint first. */
+  readonly carouselSlot?: ReactNode;
+  /** Header is ready; place cards are still streaming. */
+  readonly gridPending?: boolean;
 }) {
   const totalPhotos = places.reduce((sum, item) => sum + item.photoCount, 0);
   const visitedCountryCodes = (() => {
@@ -102,11 +108,24 @@ export function ProfileView({
           </p>
         ) : null}
 
-        {!loadError && places.length > 0 ? (
-          <ProfileCarousel photos={carouselPhotos} />
+        {gridPending ? (
+          <div
+            aria-busy="true"
+            aria-label="Carregando viagens"
+            className={styles.gridPending}
+          >
+            <span className={styles.gridPendingCard} />
+            <span className={styles.gridPendingCard} />
+            <span className={styles.gridPendingCard} />
+            <span className={styles.gridPendingCard} />
+          </div>
         ) : null}
 
-        {!loadError && places.length === 0 ? (
+        {!loadError && !gridPending && places.length > 0
+          ? (carouselSlot ?? <ProfileCarousel photos={carouselPhotos} />)
+          : null}
+
+        {!loadError && !gridPending && places.length === 0 ? (
           <div className={styles.empty} data-reveal>
             {isOwner ? (
               <>
@@ -121,7 +140,7 @@ export function ProfileView({
           </div>
         ) : null}
 
-        {places.length > 0 ? (
+        {!gridPending && places.length > 0 ? (
           <ProfilePlacesSection
             isOwner={isOwner}
             places={places}
@@ -129,7 +148,7 @@ export function ProfileView({
           />
         ) : null}
 
-        {!loadError && places.length > 0 ? mapSlot : null}
+        {!loadError && !gridPending && places.length > 0 ? mapSlot : null}
       </section>
 
       <footer>

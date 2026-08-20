@@ -17,16 +17,25 @@ import { EditPlaceDialog } from "./edit-place-dialog";
 import { MergePlacesDialog } from "./merge-places-dialog";
 import styles from "./perfil.module.css";
 
+const shortMonthFormatter = new Intl.DateTimeFormat("pt-BR", {
+  month: "short",
+});
+
+/** "21 jul" — year only when it isn't the current one, to read like a
+ * travel journal instead of a spreadsheet row. */
 function formatCardDate(
   startsAt: string | null,
   endsAt: string | null,
 ): string | null {
-  const format = (iso: string) =>
-    new Intl.DateTimeFormat("pt-BR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "2-digit",
-    }).format(new Date(iso));
+  const currentYear = new Date().getFullYear();
+  const format = (iso: string) => {
+    const date = new Date(iso);
+    const month = shortMonthFormatter.format(date).replace(".", "");
+    const base = `${date.getDate()} ${month}`;
+    return date.getFullYear() === currentYear
+      ? base
+      : `${base} ${date.getFullYear()}`;
+  };
 
   if (startsAt && endsAt) {
     const start = format(startsAt);

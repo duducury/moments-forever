@@ -6,7 +6,6 @@ import {
   S3Client,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { NodeHttpHandler } from "@smithy/node-http-handler";
 
 export type R2PhotoVariant = "original" | "thumbnail";
 
@@ -61,13 +60,6 @@ function getR2Client(config: R2Config): S3Client {
       accessKeyId: config.accessKeyId,
       secretAccessKey: config.secretAccessKey,
     },
-    // Without an explicit timeout a stalled R2 connection hangs the request
-    // indefinitely, which on mobile surfaces as a stuck spinner or the
-    // browser's own "page couldn't load" error instead of a fast retry.
-    requestHandler: new NodeHttpHandler({
-      connectionTimeout: 10_000,
-      requestTimeout: 30_000,
-    }),
   });
   cachedEndpoint = config.endpoint;
   return cachedClient;

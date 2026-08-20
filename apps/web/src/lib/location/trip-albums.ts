@@ -1,7 +1,6 @@
 import { resolveLocationDisplayName } from "@moments-forever/shared";
 
 import type { TripAlbum, TripPhoto } from "@/app/trip/[slug]/album-types";
-import { timeStep } from "@/lib/perf-log";
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type ServerSupabase = NonNullable<
@@ -34,15 +33,13 @@ export async function loadTripAlbums(
   supabase: ServerSupabase,
   experienceId: string,
 ): Promise<TripAlbum[]> {
-  const albumsResult = await timeStep(`loadTripAlbums:albums(${experienceId})`, () =>
-    supabase
-      .from("albums")
-      .select(
-        "id, experience_id, parent_album_id, name, description, cover_photo_id, position, source_moment_id",
-      )
-      .eq("experience_id", experienceId)
-      .order("position"),
-  );
+  const albumsResult = await supabase
+    .from("albums")
+    .select(
+      "id, experience_id, parent_album_id, name, description, cover_photo_id, position, source_moment_id",
+    )
+    .eq("experience_id", experienceId)
+    .order("position");
 
   const rows = (albumsResult.data ?? []) as AlbumRow[];
   const momentIds = [
@@ -55,11 +52,10 @@ export async function loadTripAlbums(
 
   const placeByMomentId = new Map<string, PlaceRow>();
   if (momentIds.length > 0) {
-    const momentsResult = await timeStep(
-      `loadTripAlbums:moments(${experienceId})`,
-      () =>
-        supabase.from("moments").select("id, place_id").in("id", momentIds),
-    );
+    const momentsResult = await supabase
+      .from("moments")
+      .select("id, place_id")
+      .in("id", momentIds);
 
     const placeIds = [
       ...new Set(
@@ -71,14 +67,10 @@ export async function loadTripAlbums(
 
     const placesById = new Map<string, PlaceRow>();
     if (placeIds.length > 0) {
-      const placesResult = await timeStep(
-        `loadTripAlbums:places(${experienceId})`,
-        () =>
-          supabase
-            .from("places")
-            .select("id, name, confirmed_by_user")
-            .in("id", placeIds),
-      );
+      const placesResult = await supabase
+        .from("places")
+        .select("id, name, confirmed_by_user")
+        .in("id", placeIds);
       for (const place of placesResult.data ?? []) {
         placesById.set(place.id, {
           id: place.id,

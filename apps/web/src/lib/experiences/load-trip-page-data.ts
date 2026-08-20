@@ -6,6 +6,7 @@ import {
   attachPhotoLocationLabels,
   loadTripAlbums,
 } from "@/lib/location/trip-albums";
+import { timeStep } from "@/lib/perf-log";
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import type {
@@ -28,29 +29,39 @@ export async function loadTripPageData(
   supabase: ServerSupabase,
   slug: string,
 ): Promise<TripPageData | null> {
-  const experienceResult = await supabase
-    .from("experiences")
-    .select(
-      "id, owner_id, slug, title, description, starts_at, ends_at, primary_city, primary_country, cover_photo_id, status, visibility",
-    )
-    .eq("slug", slug)
-    .maybeSingle();
+  const experienceResult = await timeStep(`loadTripPageData:experience(${slug})`, () =>
+    supabase
+      .from("experiences")
+      .select(
+        "id, owner_id, slug, title, description, starts_at, ends_at, primary_city, primary_country, cover_photo_id, status, visibility",
+      )
+      .eq("slug", slug)
+      .maybeSingle(),
+  );
 
   if (experienceResult.error || !experienceResult.data) {
     return null;
   }
 
   const experienceRow = experienceResult.data;
-  const [albums, photosResult] = await Promise.all([
-    loadTripAlbums(supabase, experienceRow.id as string),
-    supabase
-      .from("photos")
-      .select(
-        "id, album_id, moment_id, position_in_album, position_in_moment, captured_at, width, height, exact_latitude, exact_longitude, storage_key",
-      )
-      .eq("experience_id", experienceRow.id as string)
-      .order("position_in_album"),
-  ]);
+  const [albums, photosResult] = await timeStep(
+    `loadTripPageData:albums+photos(${slug})`,
+    () =>
+      Promise.all([
+        timeStep(`loadTripAlbums(${slug})`, () =>
+          loadTripAlbums(supabase, experienceRow.id as string),
+        ),
+        timeStep(`photosQuery(${slug})`, () =>
+          supabase
+            .from("photos")
+            .select(
+              "id, album_id, moment_id, position_in_album, position_in_moment, captured_at, width, height, exact_latitude, exact_longitude, storage_key",
+            )
+            .eq("experience_id", experienceRow.id as string)
+            .order("position_in_album"),
+        ),
+      ]),
+  );
 
   const photos: TripPhoto[] = attachPhotoLocationLabels(
     (photosResult.data ?? []).map((photo) => ({

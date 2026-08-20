@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  useEffect,
   useMemo,
   useState,
   type DragEvent as ReactDragEvent,
@@ -11,6 +12,7 @@ import {
   comparePlaceRecency,
   type OwnerPlaceCardItem,
 } from "@/lib/experiences/load-owner-place-cards";
+import { warmLocalPhotoObjectUrls } from "@/lib/local-photos/local-photo-object-url-cache";
 import { setPlaceOrderPrefs } from "@/lib/profile/place-order-prefs";
 
 import { ProfilePlaceCard } from "./profile-place-card";
@@ -63,6 +65,15 @@ export function ProfilePlacesSection({
 
   const editing = draft !== null;
   const items = draft ?? datedPlaces;
+
+  // One batched IndexedDB read for every trip cover instead of one per card.
+  useEffect(() => {
+    void warmLocalPhotoObjectUrls(
+      datedPlaces
+        .map((place) => place.coverPhotoId)
+        .filter((id): id is string => Boolean(id)),
+    );
+  }, [datedPlaces]);
 
   function moveItem(fromId: string, toId: string) {
     if (fromId === toId) return;

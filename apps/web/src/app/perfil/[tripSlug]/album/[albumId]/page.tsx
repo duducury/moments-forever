@@ -6,6 +6,7 @@ import { AuthStatus } from "@/components/auth-status";
 import { ProfileHomeProvider } from "@/components/profile-home";
 import { AlbumFolderView } from "@/app/trip/[slug]/album/[albumId]/album-folder-view";
 import { loadTripPageData } from "@/lib/experiences/load-trip-page-data";
+import { timeStep } from "@/lib/perf-log";
 import {
   getOwnerProfileSlug,
   publicProfilePath,
@@ -35,7 +36,9 @@ export default async function ProfileTripAlbumPage({
   const initialPhotoId = photoParam?.trim() || null;
   const initialPrivacyMode =
     privacyParam === "1" || privacyParam?.toLowerCase() === "true";
-  const supabase = await createSupabaseServerClient();
+  const supabase = await timeStep("createSupabaseServerClient", () =>
+    createSupabaseServerClient(),
+  );
 
   if (!supabase) {
     return (
@@ -51,10 +54,12 @@ export default async function ProfileTripAlbumPage({
   }
 
   // Auth does not depend on trip data — fetch in parallel with the album payload.
-  const [data, userResult] = await Promise.all([
-    loadTripPageData(supabase, slug),
-    supabase.auth.getUser(),
-  ]);
+  const [data, userResult] = await timeStep(`page:data+auth(${slug})`, () =>
+    Promise.all([
+      loadTripPageData(supabase, slug),
+      timeStep("auth.getUser", () => supabase.auth.getUser()),
+    ]),
+  );
   if (!data) {
     return (
       <main className="page-shell">
@@ -69,9 +74,8 @@ export default async function ProfileTripAlbumPage({
     );
   }
 
-  const ownerSlug = await getOwnerProfileSlug(
-    supabase,
-    data.experience.ownerId,
+  const ownerSlug = await timeStep("getOwnerProfileSlug", () =>
+    getOwnerProfileSlug(supabase, data.experience.ownerId),
   );
   const profileHomeHref = ownerSlug ? publicProfilePath(ownerSlug) : null;
   const backHref = profileHomeHref ?? profilePath();

@@ -14,6 +14,7 @@ import {
 } from "@/lib/profile/profile-slug";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
+import perfilStyles from "../perfil/perfil.module.css";
 import { ProfileView } from "../perfil/profile-view";
 import { ProfileMapSection } from "./profile-map-section";
 
@@ -66,7 +67,22 @@ async function ProfilePlacesBody({
       {...identity}
       carouselSlot={
         hasPlaces ? (
-          <Suspense fallback={null}>
+          <Suspense
+            fallback={
+              <section
+                aria-label="Destaques"
+                className={perfilStyles.carouselSection}
+              >
+                <div className={perfilStyles.mapHeader}>
+                  <h2 className={perfilStyles.sectionTitle}>Destaques</h2>
+                </div>
+                <div
+                  aria-hidden="true"
+                  className={perfilStyles.carouselSkeleton}
+                />
+              </section>
+            }
+          >
             <ProfileCarouselSection ownerId={profile.id} />
           </Suspense>
         ) : null

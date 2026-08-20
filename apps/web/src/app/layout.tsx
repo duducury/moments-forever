@@ -79,7 +79,7 @@ export const viewport: Viewport = {
 };
 
 const criticalBootCss = `
-html,body{margin:0;min-height:100%;background:#121110;color:#f3efe8}
+html,body{margin:0;min-height:100%;background:var(--background,#121110);color:var(--text,#f3efe8)}
 #pwa-boot-splash{position:fixed;inset:0;z-index:2147483646;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:radial-gradient(90% 60% at 50% 18%,rgba(208,138,110,.18),transparent 58%),#121110;color:#f3efe8;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;text-align:center;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
 #pwa-boot-splash img{width:88px;height:88px;border-radius:22px}
 #pwa-boot-splash .mf-boot-title{margin:0;font-family:Georgia,"Times New Roman",serif;font-size:1.45rem;font-weight:500;letter-spacing:-0.03em}

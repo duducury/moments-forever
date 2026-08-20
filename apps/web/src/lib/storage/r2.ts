@@ -65,8 +65,8 @@ function getR2Client(config: R2Config): S3Client {
     // indefinitely, which on mobile surfaces as a stuck spinner or the
     // browser's own "page couldn't load" error instead of a fast retry.
     requestHandler: new NodeHttpHandler({
-      connectionTimeout: 5_000,
-      requestTimeout: 20_000,
+      connectionTimeout: 10_000,
+      requestTimeout: 30_000,
     }),
   });
   cachedEndpoint = config.endpoint;

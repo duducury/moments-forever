@@ -1,4 +1,7 @@
-const DEFAULT_TIMEOUT_MS = 15_000;
+// Generous on purpose: a Vercel cold start plus a cold Supabase connection
+// pool can legitimately take 15-20s on the very first request after idle.
+// This only exists to catch a truly stuck connection, not ordinary latency.
+const DEFAULT_TIMEOUT_MS = 30_000;
 
 function mergeSignals(
   a: AbortSignal | null | undefined,

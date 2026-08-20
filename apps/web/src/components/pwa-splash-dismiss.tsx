@@ -16,11 +16,18 @@ function hideSplash(splash: HTMLElement) {
   splash.style.opacity = "0";
   splash.style.pointerEvents = "none";
   splash.style.transition = "opacity 0.28s ease";
+  splash.setAttribute("aria-hidden", "true");
+  splash.removeAttribute("aria-live");
+  splash.removeAttribute("role");
   if (document.documentElement.dataset.resolvedTheme === "light") {
     document.documentElement.style.backgroundColor = "#e8e0d4";
     document.documentElement.style.color = "#1a1612";
   }
-  window.setTimeout(() => splash.remove(), 280);
+  // Never splash.remove(): this node is rendered by React (root layout).
+  // Removing it directly from the DOM leaves React's tree pointing at a
+  // node that no longer exists, so the next unrelated re-render throws
+  // "Failed to execute 'insertBefore'/'removeChild' on 'Node'" and takes
+  // the whole page down. Hiding it in place is enough — it's inert.
 }
 
 /**

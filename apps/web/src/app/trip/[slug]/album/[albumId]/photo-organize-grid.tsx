@@ -8,6 +8,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 
+import { warmLocalPhotoObjectUrls } from "@/lib/local-photos/local-photo-object-url-cache";
 import { useLocalPhotoObjectUrl } from "@/lib/local-photos/use-local-photo-urls";
 
 import { toneFromId, type TripPhoto } from "../../album-types";
@@ -111,6 +112,12 @@ export function PhotoOrganizeGrid({
     // Sync from server when not mid-drag.
     if (dragIdRef.current) return;
     setItems(sortByAlbumPosition(photos));
+  }, [photos, photosKey]);
+
+  // One batched IndexedDB read for the whole grid instead of one transaction
+  // per tile — matters for places with hundreds of photos.
+  useEffect(() => {
+    void warmLocalPhotoObjectUrls(photos.map((photo) => photo.id));
   }, [photos, photosKey]);
 
   useEffect(() => {

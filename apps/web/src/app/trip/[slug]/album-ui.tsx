@@ -1199,6 +1199,12 @@ export function PhotoGallery({
   // Keep the caller's order. Re-sorting here used to make tile 1 open as photo 2.
   const ordered = photos;
 
+  // One batched IndexedDB read for the whole grid instead of one transaction
+  // per tile — matters for places with hundreds of photos.
+  useEffect(() => {
+    void warmLocalPhotoObjectUrls(ordered.map((photo) => photo.id));
+  }, [ordered]);
+
   function openPhoto(photoId: string) {
     prefetchLocalPhotoFullOnIntent(photoId);
     if (onOpenPhoto) {

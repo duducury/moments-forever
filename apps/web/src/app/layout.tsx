@@ -96,10 +96,12 @@ const themeBootScript = `
     const key = ${JSON.stringify(THEME_STORAGE_KEY)};
     const stored = localStorage.getItem(key);
     const preference = stored === "light" ? "light" : "dark";
+    const bg = preference === "light" ? "#e8e0d4" : "#121110";
+    const fg = preference === "light" ? "#1a1612" : "#f3efe8";
     document.documentElement.dataset.theme = preference;
     document.documentElement.dataset.resolvedTheme = preference;
-    document.documentElement.style.backgroundColor = "#121110";
-    document.documentElement.style.color = "#f3efe8";
+    document.documentElement.style.backgroundColor = bg;
+    document.documentElement.style.color = fg;
   } catch (_) {
     document.documentElement.style.backgroundColor = "#121110";
     document.documentElement.style.color = "#f3efe8";

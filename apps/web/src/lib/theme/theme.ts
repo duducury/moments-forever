@@ -32,6 +32,14 @@ export function applyThemeToDocument(
   if (typeof document === "undefined") return;
   document.documentElement.dataset.theme = preference;
   document.documentElement.dataset.resolvedTheme = resolved;
+  // The boot script paints an inline background/color before hydration to
+  // avoid a flash. Clear it here so the [data-resolved-theme] CSS variables
+  // (which are correct for both themes) take over — otherwise that inline
+  // style outlives the boot paint and the theme toggle has no visible effect.
+  document.documentElement.style.removeProperty("background-color");
+  document.documentElement.style.removeProperty("color");
+  document.body?.style.removeProperty("background-color");
+  document.body?.style.removeProperty("color");
 }
 
 export function persistThemePreference(preference: ThemePreference) {

@@ -33,6 +33,20 @@ export default function RouteError({
           Tivemos um problema ao carregar esta página. Verifique sua conexão
           e tente novamente.
         </p>
+        {/* Temporary diagnostic detail — remove once root-caused. Client
+            errors keep their real message (only Server Component errors get
+            redacted to a digest), so this is safe to show. */}
+        <p
+          style={{
+            marginTop: 12,
+            fontSize: 13,
+            opacity: 0.6,
+            wordBreak: "break-word",
+          }}
+        >
+          {error.message || "(sem mensagem)"}
+          {error.digest ? ` · digest: ${error.digest}` : ""}
+        </p>
         <div
           style={{
             display: "flex",

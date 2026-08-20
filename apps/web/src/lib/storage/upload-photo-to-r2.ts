@@ -100,46 +100,6 @@ async function putToSignedUrl(
   }
 }
 
-/** Concurrent uploads in flight — enough to cut wall-clock time on big batches
- *  without saturating a phone's uplink or R2's per-connection limits. */
-const UPLOAD_CONCURRENCY = 3;
-
-/**
- * Runs `worker` over `items` with bounded concurrency. Every item is attempted
- * even after a failure (a stuck/broken photo shouldn't block the rest of the
- * batch — PendingR2Sync retries whatever is still missing); the first error
- * is rethrown once every item has settled so callers keep seeing failures.
- */
-async function runWithConcurrency<T>(
-  items: readonly T[],
-  concurrency: number,
-  worker: (item: T) => Promise<void>,
-): Promise<void> {
-  let cursor = 0;
-  let firstError: unknown = null;
-
-  async function runNext(): Promise<void> {
-    for (;;) {
-      const index = cursor;
-      if (index >= items.length) return;
-      cursor += 1;
-      try {
-        await worker(items[index]!);
-      } catch (error) {
-        firstError ??= error;
-      }
-    }
-  }
-
-  await Promise.all(
-    Array.from({ length: Math.min(concurrency, items.length) }, () =>
-      runNext(),
-    ),
-  );
-
-  if (firstError) throw firstError;
-}
-
 export async function uploadManyPhotoBlobsToR2(
   experienceId: string,
   items: readonly {
@@ -150,7 +110,7 @@ export async function uploadManyPhotoBlobsToR2(
   onProgress?: (done: number, total: number) => void,
 ): Promise<void> {
   let done = 0;
-  await runWithConcurrency(items, UPLOAD_CONCURRENCY, async (item) => {
+  for (const item of items) {
     await uploadPhotoBlobsToR2({
       photoId: item.id,
       experienceId,
@@ -159,7 +119,7 @@ export async function uploadManyPhotoBlobsToR2(
     });
     done += 1;
     onProgress?.(done, items.length);
-  });
+  }
 }
 
 export type SyncLocalPhotosToR2Result = {
@@ -188,16 +148,16 @@ export async function syncLocalPhotosToR2(
   let uploaded = 0;
   let skipped = 0;
   let failed = 0;
-  let done = 0;
   let lastError: string | null = null;
   const uniqueIds = [...new Set(photoIds.filter(Boolean))];
 
-  await runWithConcurrency(uniqueIds, UPLOAD_CONCURRENCY, async (photoId) => {
+  for (const [index, photoId] of uniqueIds.entries()) {
     try {
       const record = await getLocalPhotoBlobRecord(photoId);
       if (!record?.blob) {
         skipped += 1;
-        return;
+        onProgress?.(index + 1, uniqueIds.length);
+        continue;
       }
       await uploadPhotoBlobsToR2({
         photoId,
@@ -213,11 +173,9 @@ export async function syncLocalPhotosToR2(
         error instanceof Error
           ? error.message
           : "Falha ao reenviar foto ao armazenamento.";
-    } finally {
-      done += 1;
-      onProgress?.(done, uniqueIds.length);
     }
-  });
+    onProgress?.(index + 1, uniqueIds.length);
+  }
 
   return { uploaded, skipped, failed, lastError };
 }

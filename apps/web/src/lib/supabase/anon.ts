@@ -1,7 +1,6 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 import { getSupabaseConfig } from "./config";
-import { fetchWithTimeout } from "./fetch-with-timeout";
 
 /**
  * Cookie-less anon client so public media responses can be CDN-cached.
@@ -16,9 +15,6 @@ export function createSupabaseAnonClient(): SupabaseClient | null {
       persistSession: false,
       autoRefreshToken: false,
       detectSessionInUrl: false,
-    },
-    global: {
-      fetch: fetchWithTimeout(),
     },
   });
 }

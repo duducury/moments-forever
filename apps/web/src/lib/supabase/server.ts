@@ -2,7 +2,6 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
 import { getSupabaseConfig } from "./config";
-import { fetchWithTimeout } from "./fetch-with-timeout";
 
 export async function createSupabaseServerClient() {
   const config = getSupabaseConfig();
@@ -23,9 +22,6 @@ export async function createSupabaseServerClient() {
           // Server Components cannot write cookies; callback routes can.
         }
       },
-    },
-    global: {
-      fetch: fetchWithTimeout(),
     },
   });
 }

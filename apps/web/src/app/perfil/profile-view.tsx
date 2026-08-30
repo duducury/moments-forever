@@ -158,6 +158,7 @@ export function ProfileView({
       <AppBottomNav
         homeHref={homeHref}
         mapHref={isOwner ? "/mapa" : `${homeHref}/mapa`}
+        passaporteHref={isOwner ? "/passaporte" : `${homeHref}/passaporte`}
         showCreate={isOwner}
       />
     </main>

@@ -1104,6 +1104,13 @@ export function AlbumFolderView({
               ? `${profileHomeHref}/mapa`
               : "/mapa"
         }
+        passaporteHref={
+          isOwner
+            ? "/passaporte"
+            : profileHomeHref
+              ? `${profileHomeHref}/passaporte`
+              : "/passaporte"
+        }
         showCreate={isOwner}
       />
     </>

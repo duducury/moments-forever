@@ -73,6 +73,7 @@ export default async function PublicProfileMapPage({
       <AppBottomNav
         homeHref={homeHref}
         mapHref={`${homeHref}/mapa`}
+        passaporteHref={isOwner ? "/passaporte" : `${homeHref}/passaporte`}
         showCreate={isOwner}
       />
     </main>

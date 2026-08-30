@@ -101,9 +101,12 @@ function MoreIcon() {
 export function AppBottomNav({
   homeHref,
   mapHref = "/mapa",
+  passaporteHref = "/passaporte",
 }: {
   readonly homeHref: string;
   readonly mapHref?: string;
+  /** Owner's own passport is /passaporte; a visitor needs {profileHomeHref}/passaporte. */
+  readonly passaporteHref?: string;
   readonly showCreate?: boolean;
 }) {
   const pathname = usePathname();
@@ -112,7 +115,8 @@ export function AppBottomNav({
     pathname === "/mapa" ||
     pathname.endsWith("/mapa") ||
     pathname === mapHref;
-  const passportActive = pathname.startsWith("/passaporte");
+  const passportActive =
+    pathname.startsWith("/passaporte") || pathname === passaporteHref;
   const moreActive =
     pathname.startsWith("/geral") || pathname.startsWith("/privacidade");
   const homeActive =
@@ -171,7 +175,7 @@ export function AppBottomNav({
             aria-current={passportActive ? "page" : undefined}
             className={styles.tab}
             data-active={passportActive ? "true" : "false"}
-            href="/passaporte"
+            href={passaporteHref}
             prefetch
           >
             <span className={styles.icon}>

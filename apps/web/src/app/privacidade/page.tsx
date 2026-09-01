@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { AppBottomNav } from "@/components/app-bottom-nav";
 import { AppWordmark } from "@/components/app-wordmark";
 import { AuthStatus } from "@/components/auth-status";
+import { SignalPwaBootReady } from "@/components/signal-pwa-boot-ready";
 import { displayNameFromUser } from "@/lib/auth/display-name";
 import {
   ensureOwnerProfileSlug,
@@ -73,6 +74,7 @@ export default async function PrivacyPage() {
   if (experiences.error) {
     return (
       <main className="page-shell" data-bottom-nav="true">
+        <SignalPwaBootReady />
         <nav className="topbar" aria-label="Navegação">
           <AppWordmark />
           <AuthStatus />
@@ -135,6 +137,7 @@ export default async function PrivacyPage() {
 
   return (
     <main className="page-shell" data-bottom-nav="true">
+      <SignalPwaBootReady />
       <nav className="topbar" aria-label="Navegação">
         <AppWordmark />
         <AuthStatus />

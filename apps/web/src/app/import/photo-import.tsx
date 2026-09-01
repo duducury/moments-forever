@@ -37,6 +37,7 @@ import {
 import { AppBottomNav } from "@/components/app-bottom-nav";
 import { AppWordmark } from "@/components/app-wordmark";
 import { useAuth } from "@/components/auth-provider";
+import { SignalPwaBootReady } from "@/components/signal-pwa-boot-ready";
 import { profilePath } from "@/lib/routes/app-routes";
 import {
   enrichImportGroupLabels,
@@ -924,6 +925,7 @@ export function PhotoImport() {
 
   return (
     <main className={styles.shell}>
+      <SignalPwaBootReady />
       <nav className={styles.nav} aria-label="Importação de fotos">
         <AppWordmark />
         {screen !== "start" ? (

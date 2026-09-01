@@ -51,10 +51,20 @@ export function isDecodedImageUrl(url: string | null | undefined): boolean {
   }
 }
 
-/** Browser + CDN cache. Public photos skip cookies so shared caches may store. */
+/**
+ * Browser + CDN cache. A photo's bytes at a given id never change (edits
+ * create a new id; deleting/going private just stops serving it), so the
+ * browser can hold onto them for a long time — repeat visits shouldn't
+ * re-download the same photo. `s-maxage` (the shared/CDN cache, which
+ * affects *other* visitors) stays conservative so a profile going private
+ * stops being served from a shared cache reasonably quickly; only the
+ * viewer's own browser cache — lower stakes, since they already saw it —
+ * gets the long lifetime. Public photos skip cookies so shared caches may
+ * store them at all.
+ */
 export function mediaCacheControl(publicCache: boolean): string {
   if (publicCache) {
-    return "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800";
+    return "public, max-age=2592000, s-maxage=86400, stale-while-revalidate=604800";
   }
-  return "private, max-age=86400, stale-while-revalidate=604800";
+  return "private, max-age=2592000, stale-while-revalidate=604800";
 }

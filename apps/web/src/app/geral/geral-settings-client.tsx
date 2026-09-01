@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 import { AppCreditFooter } from "@/components/app-credit-footer";
 import { useAuth } from "@/components/auth-provider";
@@ -11,10 +12,32 @@ import { toggleThemePreference } from "@/lib/theme/theme";
 
 import styles from "./geral.module.css";
 
+interface OptimizeBatchResult {
+  readonly processed: number;
+  readonly skipped: number;
+  readonly failed: number;
+  readonly bytesBefore: number;
+  readonly bytesAfter: number;
+  readonly remaining: boolean;
+  readonly errors: readonly string[];
+}
+
+const MAX_OPTIMIZE_ROUNDS = 500;
+
+function formatMegabytes(bytes: number): string {
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 export function GeralSettingsClient() {
   const router = useRouter();
   const { user, signOut } = useAuth();
   const { preference, setPreference } = useTheme();
+  const [optimizeStatus, setOptimizeStatus] = useState<
+    "idle" | "running" | "done" | "error"
+  >("idle");
+  const [optimizeHint, setOptimizeHint] = useState(
+    "Reduz fotos antigas enviadas antes das melhorias de compressão",
+  );
   const name = user ? displayNameFromUser(user) : null;
   const nextTheme = toggleThemePreference(preference);
   const themeLabel =
@@ -28,6 +51,60 @@ export function GeralSettingsClient() {
   async function onSignOut() {
     await signOut();
     router.replace("/login");
+  }
+
+  async function onOptimizePhotos() {
+    setOptimizeStatus("running");
+    let processedTotal = 0;
+    let bytesBeforeTotal = 0;
+    let bytesAfterTotal = 0;
+    let round = 0;
+
+    try {
+      while (round < MAX_OPTIMIZE_ROUNDS) {
+        round++;
+        const response = await fetch("/api/media/optimize-legacy", {
+          method: "POST",
+        });
+        if (!response.ok) {
+          const body = (await response.json().catch(() => null)) as {
+            error?: string;
+          } | null;
+          throw new Error(body?.error ?? `Falha ao otimizar (${response.status}).`);
+        }
+        const result = (await response.json()) as OptimizeBatchResult;
+        processedTotal += result.processed;
+        bytesBeforeTotal += result.bytesBefore;
+        bytesAfterTotal += result.bytesAfter;
+
+        if (processedTotal > 0) {
+          setOptimizeHint(
+            `Otimizando… ${processedTotal} fotos reduzidas, ${formatMegabytes(
+              bytesBeforeTotal - bytesAfterTotal,
+            )} economizados até agora`,
+          );
+        }
+
+        // No progress this round (only unfixable photos left) — stop instead
+        // of retrying the same ones forever.
+        if (result.processed === 0) break;
+        if (!result.remaining) break;
+      }
+
+      setOptimizeStatus("done");
+      setOptimizeHint(
+        processedTotal > 0
+          ? `Concluído: ${processedTotal} fotos reduzidas, ${formatMegabytes(
+              bytesBeforeTotal - bytesAfterTotal,
+            )} economizados`
+          : "Nenhuma foto precisava de otimização",
+      );
+    } catch (err) {
+      setOptimizeStatus("error");
+      setOptimizeHint(
+        err instanceof Error ? err.message : "Erro ao otimizar fotos.",
+      );
+    }
   }
 
   return (
@@ -76,6 +153,27 @@ export function GeralSettingsClient() {
               ›
             </span>
           </Link>
+        </li>
+      </ul>
+
+      <p className={styles.sectionLabel}>Armazenamento</p>
+      <ul className={styles.list}>
+        <li>
+          <button
+            aria-label="Otimizar fotos antigas"
+            className={styles.row}
+            disabled={optimizeStatus === "running"}
+            onClick={() => void onOptimizePhotos()}
+            type="button"
+          >
+            <div className={styles.rowMeta}>
+              <p className={styles.rowLabel}>Otimizar fotos antigas</p>
+              <p className={styles.rowHint}>{optimizeHint}</p>
+            </div>
+            <span aria-hidden className={styles.rowAction}>
+              {optimizeStatus === "running" ? "…" : "›"}
+            </span>
+          </button>
         </li>
       </ul>
 

@@ -2,11 +2,33 @@
 
 import { useEffect, useRef, useState } from "react";
 
+/** On an album page this resolves the short /a/{code} link; anything else
+ * (not the owner, no short link, request failed) falls back to the full URL. */
+async function resolveShareUrl(albumId: string | undefined): Promise<string> {
+  if (albumId) {
+    try {
+      const response = await fetch(`/api/albums/${albumId}/short-link`);
+      if (response.ok) {
+        const payload = (await response.json()) as { readonly url?: string };
+        if (payload.url) return payload.url;
+      }
+    } catch {
+      // Fall through to the full URL.
+    }
+  }
+  return window.location.href;
+}
+
 /**
  * Copies the current page URL — needed in standalone/PWA mode where Safari’s
  * address bar (and share sheet) are not available.
  */
-export function CopyPageLinkButton() {
+export function CopyPageLinkButton({
+  albumId,
+}: {
+  /** On an album page, copy that album's short /a/{code} link instead. */
+  readonly albumId?: string;
+} = {}) {
   const [copied, setCopied] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -17,7 +39,7 @@ export function CopyPageLinkButton() {
   }, []);
 
   async function copyCurrentUrl() {
-    const url = window.location.href;
+    const url = await resolveShareUrl(albumId);
     try {
       if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(url);

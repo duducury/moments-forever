@@ -100,7 +100,7 @@ export default async function ProfileTripAlbumPage({
     <main className="page-shell" data-bottom-nav="true">
       <nav className="topbar" aria-label="Navegação">
         <AppWordmark />
-        <AuthStatus />
+        <AuthStatus albumId={albumId} />
       </nav>
       <AlbumFolderView
         albumId={albumId}

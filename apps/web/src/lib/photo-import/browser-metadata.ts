@@ -128,7 +128,7 @@ export const DEFAULT_THUMBNAIL_EDGE = 640;
 /** MVP display/lightbox/cover asset — phone-first preview (docs/photo-storage.md). */
 export const DEFAULT_PREVIEW_EDGE = 1600;
 
-const DEFAULT_THUMBNAIL_QUALITY = 0.88;
+const DEFAULT_THUMBNAIL_QUALITY = 0.78;
 const DEFAULT_PREVIEW_QUALITY = 0.82;
 
 async function encodeDisplayDerivative(

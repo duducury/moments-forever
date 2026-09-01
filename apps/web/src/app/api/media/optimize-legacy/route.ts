@@ -18,7 +18,7 @@ const BATCH_SIZE = 3;
 const FULL_EDGE = 1600;
 const FULL_QUALITY = 82;
 const THUMBNAIL_EDGE = 640;
-const THUMBNAIL_QUALITY = 88;
+const THUMBNAIL_QUALITY = 78;
 const MIN_BYTES = 500_000;
 /** Only overwrite when the recompressed file is at least 10% smaller. */
 const MAX_KEPT_RATIO = 0.9;

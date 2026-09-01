@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 
 import { AppBottomNav } from "@/components/app-bottom-nav";
 import { AuthStatus } from "@/components/auth-status";
+import { SignalPwaBootReady } from "@/components/signal-pwa-boot-ready";
 import { TripMap } from "@/app/trip/[slug]/trip-map";
 import { displayNameFromUser } from "@/lib/auth/display-name";
 import { loadOwnerMapPhotos } from "@/lib/experiences/load-owner-map-photos";
@@ -54,6 +55,7 @@ export default async function OwnerMapPage() {
 
   return (
     <main className={styles.page} data-bottom-nav="true">
+      <SignalPwaBootReady />
       <header className={styles.top} data-reveal>
         <div className={styles.titleBlock}>
           <p className={styles.eyebrow}>Mapa</p>

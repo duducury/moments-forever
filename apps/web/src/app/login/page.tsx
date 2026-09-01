@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { AuthForm } from "@/components/auth-form";
+import { SignalPwaBootReady } from "@/components/signal-pwa-boot-ready";
 import { ThemeSelector } from "@/components/theme-selector";
 
 import styles from "./login.module.css";
@@ -8,6 +9,7 @@ import styles from "./login.module.css";
 export default function LoginPage() {
   return (
     <main className={`page-shell ${styles.page}`}>
+      <SignalPwaBootReady />
       <nav className="topbar" aria-label="Navegação">
         <Link className="wordmark" href="/">
           Moments Forever

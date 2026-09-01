@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { AppWordmark } from "@/components/app-wordmark";
 import { AuthStatus } from "@/components/auth-status";
 import { ProfileHomeProvider } from "@/components/profile-home";
+import { SignalPwaBootReady } from "@/components/signal-pwa-boot-ready";
 import { AlbumFolderView } from "@/app/trip/[slug]/album/[albumId]/album-folder-view";
 import { loadTripPageData } from "@/lib/experiences/load-trip-page-data";
 import {
@@ -98,6 +99,7 @@ export default async function ProfileTripAlbumPage({
 
   const page = (
     <main className="page-shell" data-bottom-nav="true">
+      <SignalPwaBootReady />
       <nav className="topbar" aria-label="Navegação">
         <AppWordmark />
         <AuthStatus albumId={albumId} />

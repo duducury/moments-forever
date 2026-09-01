@@ -16,7 +16,6 @@ import {
 } from "@moments-forever/shared";
 
 import { AppBottomNav } from "@/components/app-bottom-nav";
-import { CopyAlbumShortLinkButton } from "@/components/copy-album-short-link-button";
 import { ExperienceCoverThumb } from "@/components/experience-cover-thumb";
 import {
   deleteLocalPhotoBlob,
@@ -772,10 +771,6 @@ export function AlbumFolderView({
             >
               Renomear
             </button>
-            <CopyAlbumShortLinkButton
-              albumId={albumId}
-              className={styles.albumToolButton}
-            />
             <button
               aria-expanded={organizePhotos}
               className={styles.albumToolButton}

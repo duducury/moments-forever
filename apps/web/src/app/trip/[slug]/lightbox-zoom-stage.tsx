@@ -20,7 +20,7 @@ const DISMISS_DISTANCE_PX = 96;
 const DISMISS_VELOCITY = 0.55;
 const SWIPE_DISTANCE_PX = 48;
 const SWIPE_VELOCITY = 0.4;
-const SLIDE_MS = 280;
+const SLIDE_MS = 200;
 
 function distance(
   a: { readonly clientX: number; readonly clientY: number },

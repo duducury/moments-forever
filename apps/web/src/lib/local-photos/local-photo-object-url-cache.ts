@@ -213,7 +213,7 @@ type PrefetchQueued = {
 let prefetchQueue: PrefetchQueued[] = [];
 let prefetchActive = 0;
 /** Keep low so the open photo wins the network. */
-const PREFETCH_CONCURRENCY = 2;
+const PREFETCH_CONCURRENCY = 3;
 
 async function preloadFullForPhoto(photoId: string): Promise<void> {
   if (preloadedFullIds.has(photoId)) return;

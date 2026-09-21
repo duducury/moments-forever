@@ -28,9 +28,9 @@ async function resolvePhotoAccess(
   if (!supabase) return null;
 
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  if (!session?.user) return null;
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
 
   const ownerKeys = await loadReadablePhotoKeys(supabase, photoId);
   if (!ownerKeys) return null;

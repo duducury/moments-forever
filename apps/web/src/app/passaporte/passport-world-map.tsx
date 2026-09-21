@@ -9,11 +9,16 @@ import styles from "./passaporte.module.css";
 const COUNTRIES_GEOJSON =
   "https://d2ad6b4ur7yvpq.cloudfront.net/naturalearth-3.3.0/ne_110m_admin_0_countries.geojson";
 
-const TILES =
-  "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png";
+/**
+ * OpenStreetMap standard raster tiles — free, no API key. Carto's
+ * basemaps.cartocdn.com now requires a key for anonymous access, so this no
+ * longer uses their dark_all style; the dark look comes from a CSS filter
+ * on the map canvas instead (see .worldMap in passaporte.module.css).
+ */
+const TILES = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
 
 function tileUrls(): string[] {
-  return ["a", "b", "c", "d"].map((sub) => TILES.replace("{s}", sub));
+  return ["a", "b", "c"].map((sub) => TILES.replace("{s}", sub));
 }
 
 function isoFromFeature(properties: Record<string, unknown> | null): string | null {
@@ -56,7 +61,7 @@ export function PassportWorldMap({
             tiles: tileUrls(),
             tileSize: 256,
             attribution:
-              '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+              '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
           },
           countries: {
             type: "geojson",

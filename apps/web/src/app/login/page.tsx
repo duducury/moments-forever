@@ -30,11 +30,7 @@ export default function LoginPage() {
           src="/brand/apple-touch-icon.png"
           width={88}
         />
-        <p className="eyebrow">Sua coleção privada</p>
         <h1>Entre para guardar o que importa.</h1>
-        <p className="lead">
-          Novas memórias permanecem privadas até você decidir publicá-las.
-        </p>
         <AuthForm />
       </section>
     </main>

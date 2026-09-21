@@ -290,6 +290,12 @@
   height: 100%;
 }
 
+/* OSM tiles are light; fake the previous dark_all look with a CSS filter
+   (invert + hue-rotate keeps overlay colors close to their original hue). */
+.worldMap :global(.maplibregl-canvas) {
+  filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.95);
+}
+
 .worldExplore {
   position: relative;
   display: grid;

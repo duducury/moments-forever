@@ -11,6 +11,30 @@ import { signalPwaBootReady } from "./pwa-splash-dismiss";
 
 type Mode = "sign-in" | "sign-up";
 
+/**
+ * Supabase's own error text can reveal whether an email is registered
+ * ("Invalid login credentials" vs "User already registered"-shaped errors)
+ * — normalize the ones that matter for account enumeration to a generic
+ * message. Everything else (weak password, invalid email, rate limit) is
+ * left as-is since it doesn't leak account existence and the user needs it
+ * to fix their input.
+ */
+function authErrorMessage(
+  mode: Mode,
+  error: { readonly code?: string; readonly message: string },
+): string {
+  if (mode === "sign-in") {
+    if (error.code === "invalid_credentials" || error.code === "user_not_found") {
+      return "Email ou senha inválidos.";
+    }
+    return error.message;
+  }
+  if (error.code === "user_already_exists" || error.code === "email_exists") {
+    return "Conta criada. Verifique seu e-mail, se solicitado.";
+  }
+  return error.message;
+}
+
 export function AuthForm() {
   const router = useRouter();
   const { session, loading: authLoading, configured } = useAuth();
@@ -65,7 +89,7 @@ export function AuthForm() {
         : await authClient.auth.signUp({ email, password });
 
     if (result.error) {
-      setMessage(result.error.message);
+      setMessage(authErrorMessage(mode, result.error));
       setBusy(false);
       return;
     }

@@ -17,12 +17,14 @@ import { photosWithGps, type TripPhoto } from "./album-types";
 import styles from "./trip.module.css";
 
 const GLOBE_TILES =
-  // Colorful Carto Voyager (same family as the flat maps). Keep MapLibre `sky`
-  // off — atmosphere turns the night hemisphere into opaque white.
-  "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png";
+  // OpenStreetMap standard raster tiles — free, no API key. Carto's
+  // basemaps.cartocdn.com now requires a key for anonymous access, so this
+  // no longer uses their Voyager style. Keep MapLibre `sky` off — atmosphere
+  // turns the night hemisphere into opaque white.
+  "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
 
 function globeTileUrls(): string[] {
-  return ["a", "b", "c", "d"].map((sub) => GLOBE_TILES.replace("{s}", sub));
+  return ["a", "b", "c"].map((sub) => GLOBE_TILES.replace("{s}", sub));
 }
 
 function clusterLocationLabel(photos: readonly TripPhoto[]): string | null {
@@ -168,7 +170,7 @@ export function GlobeMapCanvas({
             tiles: globeTileUrls(),
             tileSize: 256,
             attribution:
-              '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+              '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
           },
         },
         layers: [

@@ -24,12 +24,14 @@ import type {
 } from "./trip-map";
 import styles from "./trip.module.css";
 
-/** Light, non-topographic basemap (no peak/elevation markers). Always light. */
-const LIGHT_TILE_URL =
-  "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
+/**
+ * OpenStreetMap standard raster tiles — free, no API key. Carto's
+ * basemaps.cartocdn.com now requires a key for anonymous access.
+ */
+const LIGHT_TILE_URL = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
 const LIGHT_TILE_ATTRIBUTION =
-  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>';
-const LIGHT_TILE_SUBDOMAINS = "abcd";
+  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+const LIGHT_TILE_SUBDOMAINS = "abc";
 
 function MapThumb({
   photo,

@@ -6,8 +6,8 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 /**
  * Recompresses one small batch of the caller's own oversized legacy photos
- * per call (RLS scopes everything to `auth.uid()` — no service-role key
- * needed) and reports whether more candidates remain, so the client can
+ * per call (scoped explicitly to experiences the caller owns — see note
+ * below) and reports whether more candidates remain, so the client can
  * drive this in a loop from a button click. See
  * apps/web/scripts/reprocess-legacy-photos.ts for the equivalent local/
  * bulk tool this mirrors.
@@ -62,9 +62,38 @@ export async function POST() {
     return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
   }
 
+  // `photos` has no owner_id column of its own — its public-profile SELECT
+  // RLS policy would let this query see (and this route then overwrite in
+  // R2) any public-profile user's oversized photos, not just the caller's.
+  // Scope explicitly to experiences the caller owns rather than leaning on
+  // that read policy to gate a write.
+  const { data: ownedExperiences, error: experiencesError } = await supabase
+    .from("experiences")
+    .select("id")
+    .eq("owner_id", user.id);
+  if (experiencesError) {
+    return NextResponse.json(
+      { error: experiencesError.message },
+      { status: 500 },
+    );
+  }
+  const experienceIds = (ownedExperiences ?? []).map((row) => row.id as string);
+  if (experienceIds.length === 0) {
+    return NextResponse.json({
+      processed: 0,
+      skipped: 0,
+      failed: 0,
+      bytesBefore: 0,
+      bytesAfter: 0,
+      remaining: false,
+      errors: [],
+    });
+  }
+
   const { data, error } = await supabase
     .from("photos")
     .select("id, storage_key, thumbnail_storage_key, width, height, bytes")
+    .in("experience_id", experienceIds)
     .not("storage_key", "is", null)
     .or(`bytes.gt.${MIN_BYTES},width.gt.${FULL_EDGE},height.gt.${FULL_EDGE}`)
     .order("created_at", { ascending: true })

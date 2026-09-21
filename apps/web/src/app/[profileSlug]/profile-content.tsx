@@ -129,17 +129,16 @@ export async function PublicProfileContent({
     );
   }
 
-  const [profile, sessionResult] = await Promise.all([
+  const [profile, userResult] = await Promise.all([
     lookupPublicProfile(supabase, profileSlug),
-    supabase.auth.getSession(),
+    supabase.auth.getUser(),
   ]);
   if (!profile) {
     notFound();
   }
 
   const isOwner = Boolean(
-    sessionResult.data.session?.user.id &&
-      sessionResult.data.session.user.id === profile.id,
+    userResult.data.user?.id && userResult.data.user.id === profile.id,
   );
   const identity = profileViewIdentity(profile, isOwner);
 

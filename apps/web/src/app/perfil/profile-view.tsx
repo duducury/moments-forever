@@ -88,7 +88,7 @@ export function ProfileView({
             </NewTripButton>
           ) : null}
           {isAdmin ? (
-            <Link className="text-link hide-when-bottom-nav" href="/admin">
+            <Link className="text-link" href="/admin">
               Admin
             </Link>
           ) : null}

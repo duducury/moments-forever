@@ -12,9 +12,10 @@ import styles from "./ativar.module.css";
 
 type Mode = "sign-up" | "sign-in";
 
-interface ActivatedPlan {
-  readonly name: string;
-  readonly maxNfcTags: number;
+interface ActivatedResult {
+  readonly planName: string;
+  /** Running total across every code the account has redeemed — codes stack. */
+  readonly totalNfcTags: number;
 }
 
 function formatCodeInput(raw: string): string {
@@ -36,7 +37,7 @@ export function ActivationForm() {
   const [code, setCode] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [activated, setActivated] = useState<ActivatedPlan | null>(null);
+  const [activated, setActivated] = useState<ActivatedResult | null>(null);
 
   if (!client) {
     return (
@@ -63,11 +64,15 @@ export function ActivationForm() {
     const data = (await response.json().catch(() => ({}))) as {
       error?: string;
       plan?: { name: string; maxNfcTags: number };
+      total?: { maxNfcTags: number } | null;
     };
     if (!response.ok || !data.plan) {
       throw new Error(data.error ?? "Não foi possível ativar sua conta agora.");
     }
-    setActivated({ name: data.plan.name, maxNfcTags: data.plan.maxNfcTags });
+    setActivated({
+      planName: data.plan.name,
+      totalNfcTags: data.total?.maxNfcTags ?? data.plan.maxNfcTags,
+    });
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -125,19 +130,23 @@ export function ActivationForm() {
   if (activated) {
     return (
       <div className="auth-card">
-        <p className="eyebrow">Moments Forever ativado</p>
-        <h1>Seu Moments Forever está ativado.</h1>
+        <p className="eyebrow">✅ Código ativado com sucesso</p>
+        <h1>
+          {session
+            ? "Código ativado com sucesso!"
+            : "Seu Moments Forever está ativado."}
+        </h1>
         <p className={styles.successStat}>
-          Você possui {activated.maxNfcTags} tag
-          {activated.maxNfcTags === 1 ? "" : "s"} NFC disponíve
-          {activated.maxNfcTags === 1 ? "l" : "is"}.
+          Plano {activated.planName} adicionado. Você tem{" "}
+          {activated.totalNfcTags} tag
+          {activated.totalNfcTags === 1 ? "" : "s"} NFC no total.
         </p>
         <button
           className="button primary"
-          onClick={() => router.replace("/perfil")}
+          onClick={() => router.replace(session ? "/geral" : "/perfil")}
           type="button"
         >
-          Começar minha jornada
+          {session ? "Voltar" : "Começar minha jornada"}
         </button>
       </div>
     );

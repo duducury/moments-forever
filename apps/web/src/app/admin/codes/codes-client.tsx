@@ -24,6 +24,12 @@ const STATUS_LABEL: Record<string, string> = {
   revoked: "Revogado",
 };
 
+const STATUS_TONE: Record<string, "success" | "accent" | "danger"> = {
+  available: "success",
+  activated: "accent",
+  revoked: "danger",
+};
+
 export function CodesClient({ plans }: { readonly plans: readonly PlanOption[] }) {
   const [codes, setCodes] = useState<readonly CodeRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -163,7 +169,14 @@ export function CodesClient({ plans }: { readonly plans: readonly PlanOption[] }
                     </button>
                   </td>
                   <td>{row.planName}</td>
-                  <td>{STATUS_LABEL[row.status] ?? row.status}</td>
+                  <td>
+                    <span
+                      className={styles.badge}
+                      data-tone={STATUS_TONE[row.status] ?? "neutral"}
+                    >
+                      {STATUS_LABEL[row.status] ?? row.status}
+                    </span>
+                  </td>
                   <td>{row.userLabel ?? "—"}</td>
                   <td>{new Date(row.createdAt).toLocaleDateString("pt-BR")}</td>
                 </tr>

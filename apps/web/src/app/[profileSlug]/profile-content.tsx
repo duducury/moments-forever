@@ -5,6 +5,7 @@ import { AppWordmark } from "@/components/app-wordmark";
 import { ProfileCarousel } from "@/app/perfil/profile-carousel";
 import { loadOwnerCarouselPhotos } from "@/lib/experiences/load-owner-carousel-photos";
 import { loadOwnerPlaceCards } from "@/lib/experiences/load-owner-place-cards";
+import { isAdminUser } from "@/lib/licensing/require-admin";
 import {
   isReservedProfileSlug,
   lookupPublicProfile,
@@ -18,7 +19,11 @@ import perfilStyles from "../perfil/perfil.module.css";
 import { ProfileView } from "../perfil/profile-view";
 import { ProfileMapSection } from "./profile-map-section";
 
-function profileViewIdentity(profile: PublicProfile, isOwner: boolean) {
+function profileViewIdentity(
+  profile: PublicProfile,
+  isOwner: boolean,
+  isAdmin: boolean,
+) {
   return {
     avatarPhotoId: profile.avatarPhotoId,
     avatarRemoteSrc: profile.hasPermanentAvatar
@@ -28,6 +33,9 @@ function profileViewIdentity(profile: PublicProfile, isOwner: boolean) {
     displayName: profile.displayName?.trim() || profile.profileSlug,
     homeHref: publicProfilePath(profile.profileSlug),
     isOwner,
+    // Only meaningful (and only ever computed) when isOwner is also true —
+    // the admin link must never show on someone else's profile.
+    isAdmin: isOwner && isAdmin,
     ownerId: profile.id,
   };
 }
@@ -42,16 +50,18 @@ async function ProfileCarouselSection({ ownerId }: { readonly ownerId: string })
 
 async function ProfilePlacesBody({
   isOwner,
+  isAdmin,
   profile,
 }: {
   readonly isOwner: boolean;
+  readonly isAdmin: boolean;
   readonly profile: PublicProfile;
 }) {
   const supabase = await createSupabaseServerClient();
   if (!supabase) {
     return (
       <ProfileView
-        {...profileViewIdentity(profile, isOwner)}
+        {...profileViewIdentity(profile, isOwner, isAdmin)}
         loadError="Não foi possível carregar as viagens deste perfil."
         places={[]}
       />
@@ -60,7 +70,7 @@ async function ProfilePlacesBody({
 
   const result = await loadOwnerPlaceCards(supabase, profile.id);
   const hasPlaces = (result.places?.length ?? 0) > 0;
-  const identity = profileViewIdentity(profile, isOwner);
+  const identity = profileViewIdentity(profile, isOwner, isAdmin);
 
   return (
     <ProfileView
@@ -140,7 +150,11 @@ export async function PublicProfileContent({
   const isOwner = Boolean(
     userResult.data.user?.id && userResult.data.user.id === profile.id,
   );
-  const identity = profileViewIdentity(profile, isOwner);
+  const isAdmin =
+    isOwner && userResult.data.user
+      ? await isAdminUser(supabase, userResult.data.user.id)
+      : false;
+  const identity = profileViewIdentity(profile, isOwner, isAdmin);
 
   return (
     <Suspense
@@ -148,7 +162,7 @@ export async function PublicProfileContent({
         <ProfileView {...identity} gridPending loadError={null} places={[]} />
       }
     >
-      <ProfilePlacesBody isOwner={isOwner} profile={profile} />
+      <ProfilePlacesBody isOwner={isOwner} isAdmin={isAdmin} profile={profile} />
     </Suspense>
   );
 }

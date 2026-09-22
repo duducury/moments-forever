@@ -1,10 +1,13 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { publicProfilePath } from "@/lib/profile/profile-slug";
 import { profilePath } from "@/lib/routes/app-routes";
 import { requireAdminUser } from "@/lib/licensing/require-admin";
 
 import { AdminNav } from "../admin-nav";
 import styles from "../admin.module.css";
+import { UserPlanSelect } from "./user-plan-select";
 
 export const dynamic = "force-dynamic";
 
@@ -22,37 +25,31 @@ export default async function AdminUsersPage() {
     .limit(PAGE_SIZE);
 
   const userIds = (users.data ?? []).map((row) => row.id as string);
+  const safeIds =
+    userIds.length > 0 ? userIds : ["00000000-0000-0000-0000-000000000000"];
 
-  const [licenses, experiences, nfcTags] = await Promise.all([
+  const [licenses, experiences, nfcTags, allPlans] = await Promise.all([
     supabase
       .from("licenses")
       .select("user_id, plan_id")
       .eq("status", "active")
-      .in("user_id", userIds.length > 0 ? userIds : ["00000000-0000-0000-0000-000000000000"]),
+      .in("user_id", safeIds),
+    supabase.from("experiences").select("id, owner_id").in("owner_id", safeIds),
+    supabase.from("nfc_tags").select("user_id").in("user_id", safeIds),
     supabase
-      .from("experiences")
-      .select("id, owner_id")
-      .in("owner_id", userIds.length > 0 ? userIds : ["00000000-0000-0000-0000-000000000000"]),
-    supabase
-      .from("nfc_tags")
-      .select("user_id")
-      .in("user_id", userIds.length > 0 ? userIds : ["00000000-0000-0000-0000-000000000000"]),
+      .from("plans")
+      .select("id, name")
+      .order("max_nfc_tags", { ascending: true }),
   ]);
 
-  const planIds = [
-    ...new Set((licenses.data ?? []).map((row) => row.plan_id as string)),
-  ];
-  const plans =
-    planIds.length > 0
-      ? await supabase.from("plans").select("id, name").in("id", planIds)
-      : { data: [] as { id: string; name: string }[] };
-  const planNameById = new Map(
-    (plans.data ?? []).map((row) => [row.id as string, row.name as string]),
-  );
-  const planByUser = new Map(
+  const planOptions = (allPlans.data ?? []).map((plan) => ({
+    id: plan.id as string,
+    name: plan.name as string,
+  }));
+  const licenseByUser = new Map(
     (licenses.data ?? []).map((row) => [
       row.user_id as string,
-      planNameById.get(row.plan_id as string) ?? "—",
+      row.plan_id as string,
     ]),
   );
 
@@ -106,25 +103,34 @@ export default async function AdminUsersPage() {
               <th>Fotos</th>
               <th>Criado em</th>
               <th>Status</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
             {(users.data ?? []).map((user) => {
               const id = user.id as string;
+              const slug = user.profile_slug as string | null;
               const experienceIds = experienceIdsByUser.get(id) ?? [];
               const photoCount = experienceIds.reduce(
                 (sum, experienceId) =>
                   sum + (photoCountByExperience.get(experienceId) ?? 0),
                 0,
               );
+              const currentPlanId = licenseByUser.get(id) ?? null;
               return (
                 <tr key={id}>
                   <td>
                     {(user.display_name as string | null) ||
-                      (user.profile_slug as string | null) ||
+                      slug ||
                       id.slice(0, 8)}
                   </td>
-                  <td>{planByUser.get(id) ?? "—"}</td>
+                  <td>
+                    <UserPlanSelect
+                      currentPlanId={currentPlanId}
+                      plans={planOptions}
+                      userId={id}
+                    />
+                  </td>
                   <td>{nfcCountByUser.get(id) ?? 0}</td>
                   <td>{experienceIds.length}</td>
                   <td>{photoCount}</td>
@@ -133,7 +139,25 @@ export default async function AdminUsersPage() {
                       "pt-BR",
                     )}
                   </td>
-                  <td>{user.is_admin ? "Admin" : "Ativo"}</td>
+                  <td>
+                    <span
+                      className={styles.badge}
+                      data-tone={user.is_admin ? "accent" : "neutral"}
+                    >
+                      {user.is_admin ? "Admin" : "Ativo"}
+                    </span>
+                  </td>
+                  <td>
+                    {slug ? (
+                      <Link
+                        className="text-link"
+                        href={publicProfilePath(slug)}
+                        target="_blank"
+                      >
+                        Ver perfil
+                      </Link>
+                    ) : null}
+                  </td>
                 </tr>
               );
             })}

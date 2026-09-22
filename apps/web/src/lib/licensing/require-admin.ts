@@ -35,6 +35,19 @@ async function bootstrapAdminFromAllowlist(
   await supabase.from("users").update({ is_admin: true }).eq("id", user.id);
 }
 
+/** Plain is_admin check — no bootstrap, safe to call from any page that already has a supabase client + user id. */
+export async function isAdminUser(
+  supabase: ServerSupabase,
+  userId: string,
+): Promise<boolean> {
+  const profile = await supabase
+    .from("users")
+    .select("is_admin")
+    .eq("id", userId)
+    .maybeSingle();
+  return Boolean(profile.data?.is_admin);
+}
+
 /**
  * Server-side admin gate. Returns the admin user, or null when the caller
  * is unauthenticated or not an admin — callers must redirect/404 on null
@@ -54,12 +67,7 @@ export async function requireAdminUser(): Promise<{
 
   await bootstrapAdminFromAllowlist(supabase, user);
 
-  const profile = await supabase
-    .from("users")
-    .select("is_admin")
-    .eq("id", user.id)
-    .maybeSingle();
-  if (profile.error || !profile.data?.is_admin) return null;
+  if (!(await isAdminUser(supabase, user.id))) return null;
 
   return { supabase, user };
 }

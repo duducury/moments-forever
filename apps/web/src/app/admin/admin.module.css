@@ -217,6 +217,44 @@
   color: var(--muted);
 }
 
+.inlineSelect {
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--foreground);
+  font-size: 0.88rem;
+}
+
+.badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.badge[data-tone="neutral"] {
+  color: var(--muted);
+  background: color-mix(in srgb, var(--muted) 14%, transparent);
+}
+
+.badge[data-tone="accent"] {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.badge[data-tone="success"] {
+  color: #3f9b5a;
+  background: color-mix(in srgb, #3f9b5a 16%, transparent);
+}
+
+.badge[data-tone="danger"] {
+  color: #c0503e;
+  background: color-mix(in srgb, #c0503e 16%, transparent);
+}
+
 .codeCopy {
   font-family: ui-monospace, monospace;
   cursor: pointer;

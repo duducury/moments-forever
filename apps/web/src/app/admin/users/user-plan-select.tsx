@@ -10,13 +10,17 @@ interface PlanOption {
   readonly name: string;
 }
 
+/**
+ * Admin override action — always a reset ("definir plano"), never a
+ * reflection of "the" current plan, since a user can hold several active
+ * licenses at once (activation codes stack). Selecting here revokes all of
+ * a user's active licenses and grants exactly this one plan instead.
+ */
 export function UserPlanSelect({
   userId,
-  currentPlanId,
   plans,
 }: {
   readonly userId: string;
-  readonly currentPlanId: string | null;
   readonly plans: readonly PlanOption[];
 }) {
   const router = useRouter();
@@ -24,7 +28,14 @@ export function UserPlanSelect({
   const [error, setError] = useState<string | null>(null);
 
   async function onChange(planId: string) {
-    if (!planId || planId === currentPlanId) return;
+    if (!planId) return;
+    if (
+      !window.confirm(
+        "Isso substitui todas as licenças ativas desta conta por este único plano. Continuar?",
+      )
+    ) {
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -35,11 +46,11 @@ export function UserPlanSelect({
       });
       const payload = (await response.json()) as { readonly error?: string };
       if (!response.ok) {
-        throw new Error(payload.error ?? "Falha ao alterar plano.");
+        throw new Error(payload.error ?? "Falha ao definir plano.");
       }
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Falha ao alterar plano.");
+      setError(err instanceof Error ? err.message : "Falha ao definir plano.");
     } finally {
       setBusy(false);
     }
@@ -48,15 +59,16 @@ export function UserPlanSelect({
   return (
     <div>
       <select
-        aria-label="Alterar plano"
+        aria-label="Definir plano (substitui as licenças atuais)"
         className={styles.inlineSelect}
-        defaultValue={currentPlanId ?? ""}
         disabled={busy}
-        onChange={(event) => void onChange(event.target.value)}
+        onChange={(event) => {
+          void onChange(event.target.value);
+          event.target.value = "";
+        }}
+        value=""
       >
-        <option disabled value="">
-          Sem plano
-        </option>
+        <option value="">Definir plano…</option>
         {plans.map((plan) => (
           <option key={plan.id} value={plan.id}>
             {plan.name}

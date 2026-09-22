@@ -30,6 +30,25 @@
   list-style: none;
 }
 
+.adminNavRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+
+.backToProfile {
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-weight: 650;
+}
+
+.backToProfile:hover {
+  color: var(--accent);
+}
+
 /* Tab strip — same grouped-pill treatment as the sign-in/sign-up toggle. */
 .adminNav {
   display: flex;
@@ -37,7 +56,6 @@
   width: fit-content;
   max-width: 100%;
   gap: 4px;
-  margin-bottom: 28px;
   border-radius: 999px;
   padding: 4px;
   background: var(--surface-secondary);

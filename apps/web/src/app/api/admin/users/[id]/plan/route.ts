@@ -6,7 +6,12 @@ interface PatchBody {
   readonly planId?: string;
 }
 
-/** Admin override: grant or change a user's plan directly, no activation code. */
+/**
+ * Admin override: reset a user's licenses to exactly this one plan, no
+ * activation code needed. This replaces — it does not stack the way
+ * redeeming an additional code does; that's the deliberate distinction
+ * between an admin "set the plan" action and a customer "buy another pack".
+ */
 export async function PATCH(
   request: Request,
   context: { readonly params: Promise<{ readonly id: string }> },
@@ -38,27 +43,13 @@ export async function PATCH(
     return NextResponse.json({ error: "Plano inválido." }, { status: 400 });
   }
 
-  const existing = await admin.supabase
+  const revoked = await admin.supabase
     .from("licenses")
-    .select("id")
+    .update({ status: "revoked" })
     .eq("user_id", userId)
-    .eq("status", "active")
-    .maybeSingle();
-
-  if (existing.data) {
-    const updated = await admin.supabase
-      .from("licenses")
-      .update({ plan_id: planId })
-      .eq("id", existing.data.id as string)
-      .select("id, plan_id")
-      .single();
-    if (updated.error || !updated.data) {
-      return NextResponse.json(
-        { error: updated.error?.message ?? "Falha ao atualizar plano." },
-        { status: 400 },
-      );
-    }
-    return NextResponse.json({ license: updated.data });
+    .eq("status", "active");
+  if (revoked.error) {
+    return NextResponse.json({ error: revoked.error.message }, { status: 400 });
   }
 
   const created = await admin.supabase

@@ -38,7 +38,7 @@ export default async function AdminUsersPage() {
     supabase.from("nfc_tags").select("user_id").in("user_id", safeIds),
     supabase
       .from("plans")
-      .select("id, name")
+      .select("id, name, max_nfc_tags")
       .order("max_nfc_tags", { ascending: true }),
   ]);
 
@@ -46,12 +46,22 @@ export default async function AdminUsersPage() {
     id: plan.id as string,
     name: plan.name as string,
   }));
-  const licenseByUser = new Map(
-    (licenses.data ?? []).map((row) => [
-      row.user_id as string,
-      row.plan_id as string,
+  const planById = new Map(
+    (allPlans.data ?? []).map((plan) => [
+      plan.id as string,
+      { name: plan.name as string, maxNfcTags: plan.max_nfc_tags as number },
     ]),
   );
+
+  // A user can hold several active licenses at once (codes stack) — group
+  // by user and summarize instead of assuming exactly one.
+  const licensesByUser = new Map<string, string[]>();
+  for (const row of licenses.data ?? []) {
+    const userId = row.user_id as string;
+    const list = licensesByUser.get(userId) ?? [];
+    list.push(row.plan_id as string);
+    licensesByUser.set(userId, list);
+  }
 
   const experienceIdsByUser = new Map<string, string[]>();
   for (const row of experiences.data ?? []) {
@@ -116,7 +126,14 @@ export default async function AdminUsersPage() {
                   sum + (photoCountByExperience.get(experienceId) ?? 0),
                 0,
               );
-              const currentPlanId = licenseByUser.get(id) ?? null;
+              const planIds = licensesByUser.get(id) ?? [];
+              const totalNfc = planIds.reduce(
+                (sum, planId) => sum + (planById.get(planId)?.maxNfcTags ?? 0),
+                0,
+              );
+              const planNames = planIds
+                .map((planId) => planById.get(planId)?.name)
+                .filter((name): name is string => Boolean(name));
               return (
                 <tr key={id}>
                   <td>
@@ -125,11 +142,12 @@ export default async function AdminUsersPage() {
                       id.slice(0, 8)}
                   </td>
                   <td>
-                    <UserPlanSelect
-                      currentPlanId={currentPlanId}
-                      plans={planOptions}
-                      userId={id}
-                    />
+                    <p className={styles.statLabel}>
+                      {planNames.length > 0
+                        ? `${planNames.join(" + ")} (${totalNfc} NFC)`
+                        : "Sem licença ativa"}
+                    </p>
+                    <UserPlanSelect plans={planOptions} userId={id} />
                   </td>
                   <td>{nfcCountByUser.get(id) ?? 0}</td>
                   <td>{experienceIds.length}</td>

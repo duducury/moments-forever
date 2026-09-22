@@ -1,39 +1,47 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import type { UserLicense } from "./types";
+import type { UserLicenseSummary } from "./types";
 
 /**
- * The caller's active license + plan limits, or null when they have none
- * (free sign-up accounts, or any account created before this feature
- * shipped that the backfill migration didn't reach). Callers must treat
- * null as "no plan-based limits to show", not as an error.
+ * Aggregate over every active license the user holds, or null when they
+ * have none (free sign-up accounts, or any pre-existing account the
+ * backfill migration didn't reach). Callers must treat null as "no
+ * plan-based limits to show", not as an error.
  */
 export async function getUserLicense(
   supabase: SupabaseClient,
   userId: string,
-): Promise<UserLicense | null> {
-  const license = await supabase
+): Promise<UserLicenseSummary | null> {
+  const licenses = await supabase
     .from("licenses")
-    .select("id, plan_id")
+    .select("plan_id")
     .eq("user_id", userId)
-    .eq("status", "active")
-    .maybeSingle();
+    .eq("status", "active");
 
-  if (license.error || !license.data) return null;
+  if (licenses.error || !licenses.data || licenses.data.length === 0) {
+    return null;
+  }
 
-  const plan = await supabase
+  const planIds = [...new Set(licenses.data.map((row) => row.plan_id as string))];
+  const plans = await supabase
     .from("plans")
     .select("id, name, max_nfc_tags, max_photos_per_trip")
-    .eq("id", license.data.plan_id as string)
-    .maybeSingle();
+    .in("id", planIds);
 
-  if (plan.error || !plan.data) return null;
+  if (plans.error || !plans.data) return null;
 
-  return {
-    id: license.data.id as string,
-    planId: plan.data.id as string,
-    planName: plan.data.name as string,
-    maxNfcTags: plan.data.max_nfc_tags as number,
-    maxPhotosPerTrip: plan.data.max_photos_per_trip as number,
-  };
+  const planById = new Map(plans.data.map((row) => [row.id as string, row]));
+
+  let maxNfcTags = 0;
+  let maxPhotosPerTrip = 0;
+  const planNames: string[] = [];
+  for (const license of licenses.data) {
+    const plan = planById.get(license.plan_id as string);
+    if (!plan) continue;
+    maxNfcTags += plan.max_nfc_tags as number;
+    maxPhotosPerTrip = Math.max(maxPhotosPerTrip, plan.max_photos_per_trip as number);
+    planNames.push(plan.name as string);
+  }
+
+  return { maxNfcTags, maxPhotosPerTrip, planNames };
 }

@@ -15,17 +15,22 @@ export function AdminNav({
   ];
 
   return (
-    <nav className={styles.adminNav} aria-label="Admin">
-      {items.map((item) => (
-        <Link
-          className={styles.adminNavLink}
-          data-active={item.key === active ? "true" : "false"}
-          href={item.href}
-          key={item.key}
-        >
-          {item.label}
-        </Link>
-      ))}
-    </nav>
+    <div className={styles.adminNavRow}>
+      <nav className={styles.adminNav} aria-label="Admin">
+        {items.map((item) => (
+          <Link
+            className={styles.adminNavLink}
+            data-active={item.key === active ? "true" : "false"}
+            href={item.href}
+            key={item.key}
+          >
+            {item.label}
+          </Link>
+        ))}
+      </nav>
+      <Link className={styles.backToProfile} href="/perfil">
+        ← Meu perfil
+      </Link>
+    </div>
   );
 }

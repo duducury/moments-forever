@@ -32,7 +32,12 @@ interface AlbumOption {
   readonly photo_count: number;
 }
 
-type DialogTab = "card" | "delete";
+type DialogTab = "card" | "nfc" | "delete";
+
+interface NfcTagInfo {
+  readonly token: string;
+  readonly url: string;
+}
 
 async function ensureRootAlbumId(
   experienceId: string,
@@ -76,6 +81,87 @@ export function EditTripDialog({
   const [photos, setPhotos] = useState<readonly PhotoOption[]>([]);
   const [albums, setAlbums] = useState<readonly AlbumOption[]>([]);
   const [coverPhotoId, setCoverPhotoId] = useState(experience.coverPhotoId);
+  const [nfcTag, setNfcTag] = useState<NfcTagInfo | null>(null);
+  const [nfcLoading, setNfcLoading] = useState(false);
+  const [nfcLimit, setNfcLimit] = useState<{
+    readonly used: number;
+    readonly max: number | null;
+  } | null>(null);
+  const [nfcCopied, setNfcCopied] = useState(false);
+
+  useEffect(() => {
+    if (tab !== "nfc") return;
+    let cancelled = false;
+    async function run() {
+      setNfcLoading(true);
+      try {
+        const response = await fetch(
+          `/api/nfc-tags?experienceId=${encodeURIComponent(experience.id)}`,
+        );
+        const payload = (await response.json()) as {
+          tag?: NfcTagInfo | null;
+          usedCount?: number;
+          maxNfcTags?: number | null;
+        };
+        if (cancelled) return;
+        setNfcTag(payload.tag ?? null);
+        setNfcLimit({
+          used: payload.usedCount ?? 0,
+          max: payload.maxNfcTags ?? null,
+        });
+      } catch {
+        if (!cancelled) {
+          setError("Não foi possível carregar o status da tag NFC.");
+        }
+      } finally {
+        if (!cancelled) setNfcLoading(false);
+      }
+    }
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [experience.id, tab]);
+
+  async function linkNfcTag() {
+    setNfcLoading(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/nfc-tags", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ experienceId: experience.id }),
+      });
+      const payload = (await response.json()) as {
+        readonly token?: string;
+        readonly url?: string;
+        readonly error?: string;
+      };
+      if (!response.ok || !payload.token || !payload.url) {
+        throw new Error(payload.error ?? "Não foi possível vincular a tag NFC.");
+      }
+      setNfcTag({ token: payload.token, url: payload.url });
+      setNfcLimit((current) =>
+        current ? { ...current, used: current.used + 1 } : current,
+      );
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Falha ao vincular a tag NFC.",
+      );
+    } finally {
+      setNfcLoading(false);
+    }
+  }
+
+  async function copyNfcUrl(url: string) {
+    try {
+      await navigator.clipboard.writeText(url);
+      setNfcCopied(true);
+      setTimeout(() => setNfcCopied(false), 2000);
+    } catch {
+      window.prompt("Copie o link:", url);
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -395,6 +481,16 @@ export function EditTripDialog({
             Card e capa
           </button>
           <button
+            aria-selected={tab === "nfc"}
+            className={styles.dialogTab}
+            data-active={tab === "nfc" ? "true" : "false"}
+            onClick={() => setTab("nfc")}
+            role="tab"
+            type="button"
+          >
+            NFC
+          </button>
+          <button
             aria-selected={tab === "delete"}
             className={styles.dialogTab}
             data-active={tab === "delete" ? "true" : "false"}
@@ -405,6 +501,76 @@ export function EditTripDialog({
             Excluir
           </button>
         </div>
+
+        {tab === "nfc" ? (
+          <div className={styles.deletePanel}>
+            <p className={styles.fieldHint}>
+              Use uma tag NFC para abrir esta viagem rapidamente. Encoste o
+              celular na tag física e ela leva direto para cá.
+            </p>
+
+            {nfcLoading && !nfcTag ? (
+              <p className={styles.fieldHint}>Carregando…</p>
+            ) : nfcTag ? (
+              <div className={styles.deleteTripBox}>
+                <div>
+                  <h3 className={styles.deleteSectionTitle}>Tag vinculada</h3>
+                  <p className={styles.fieldHint}>{nfcTag.url}</p>
+                </div>
+                <button
+                  className="button secondary"
+                  onClick={() => void copyNfcUrl(nfcTag.url)}
+                  type="button"
+                >
+                  {nfcCopied ? "Copiado" : "Copiar"}
+                </button>
+              </div>
+            ) : (
+              <div className={styles.deleteTripBox}>
+                <div>
+                  <h3 className={styles.deleteSectionTitle}>
+                    Nenhuma tag vinculada
+                  </h3>
+                  {nfcLimit ? (
+                    <p className={styles.fieldHint}>
+                      {nfcLimit.max === null
+                        ? `${nfcLimit.used} tags NFC criadas.`
+                        : `${nfcLimit.used} de ${nfcLimit.max} tags NFC do seu plano em uso.`}
+                    </p>
+                  ) : null}
+                </div>
+                <button
+                  className="button primary"
+                  disabled={
+                    nfcLoading ||
+                    (nfcLimit?.max !== null &&
+                      nfcLimit !== null &&
+                      nfcLimit.used >= (nfcLimit.max ?? 0))
+                  }
+                  onClick={() => void linkNfcTag()}
+                  type="button"
+                >
+                  {nfcLoading ? "Vinculando…" : "🏷️ Vincular NFC"}
+                </button>
+              </div>
+            )}
+            {nfcLimit && nfcLimit.max !== null && nfcLimit.used >= nfcLimit.max && !nfcTag ? (
+              <p className={styles.fieldHint}>
+                Você atingiu o limite de {nfcLimit.max} tags NFC do seu plano.
+              </p>
+            ) : null}
+
+            <div className={styles.dialogActions}>
+              <button
+                className="button secondary"
+                onClick={onClose}
+                type="button"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        ) : null}
 
         {tab === "card" ? (
           <form className={styles.dialogForm} onSubmit={(e) => void onSubmit(e)}>
@@ -505,7 +671,9 @@ export function EditTripDialog({
               </button>
             </div>
           </form>
-        ) : (
+        ) : null}
+
+        {tab === "delete" ? (
           <div className={styles.deletePanel}>
             <p className={styles.fieldHint}>
               Excluir remove metadados no servidor e os pixels deste
@@ -598,7 +766,7 @@ export function EditTripDialog({
               </button>
             </div>
           </div>
-        )}
+        ) : null}
 
         {error ? (
           <p className={styles.dialogError} role="alert">

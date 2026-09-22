@@ -1,0 +1,211 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useState, type FormEvent } from "react";
+
+import { AppBootSplash } from "@/components/app-boot-splash";
+import { useAuth } from "@/components/auth-provider";
+import { signalPwaBootReady } from "@/components/pwa-splash-dismiss";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+
+import styles from "./ativar.module.css";
+
+type Mode = "sign-up" | "sign-in";
+
+interface ActivatedPlan {
+  readonly name: string;
+  readonly maxNfcTags: number;
+}
+
+function formatCodeInput(raw: string): string {
+  const cleaned = raw.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  const withoutPrefix = cleaned.startsWith("MF") ? cleaned.slice(2) : cleaned;
+  const groups = [
+    withoutPrefix.slice(0, 4),
+    withoutPrefix.slice(4, 8),
+    withoutPrefix.slice(8, 10),
+  ].filter(Boolean);
+  return groups.length > 0 ? `MF-${groups.join("-")}` : "";
+}
+
+export function ActivationForm() {
+  const router = useRouter();
+  const { session, loading: authLoading } = useAuth();
+  const client = createSupabaseBrowserClient();
+  const [mode, setMode] = useState<Mode>("sign-up");
+  const [code, setCode] = useState("");
+  const [message, setMessage] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [activated, setActivated] = useState<ActivatedPlan | null>(null);
+
+  if (!client) {
+    return (
+      <div className="notice" role="status">
+        Configure NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY para
+        habilitar a ativação.
+      </div>
+    );
+  }
+
+  if (authLoading) {
+    signalPwaBootReady();
+    return <AppBootSplash hint="Abrindo a ativação…" overlay />;
+  }
+
+  const authClient = client;
+
+  async function redeemCode(): Promise<void> {
+    const response = await fetch("/api/activation/redeem", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code }),
+    });
+    const data = (await response.json().catch(() => ({}))) as {
+      error?: string;
+      plan?: { name: string; maxNfcTags: number };
+    };
+    if (!response.ok || !data.plan) {
+      throw new Error(data.error ?? "Não foi possível ativar sua conta agora.");
+    }
+    setActivated({ name: data.plan.name, maxNfcTags: data.plan.maxNfcTags });
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setBusy(true);
+    setMessage(null);
+
+    const trimmedCode = code.trim().toUpperCase();
+    if (!/^MF-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{2}$/.test(trimmedCode)) {
+      setMessage("Digite o código no formato MF-XXXX-XXXX-XX.");
+      setBusy(false);
+      return;
+    }
+
+    try {
+      if (session) {
+        await redeemCode();
+        setBusy(false);
+        return;
+      }
+
+      const data = new FormData(event.currentTarget);
+      const email = String(data.get("email") ?? "");
+      const password = String(data.get("password") ?? "");
+      const result =
+        mode === "sign-up"
+          ? await authClient.auth.signUp({ email, password })
+          : await authClient.auth.signInWithPassword({ email, password });
+
+      if (result.error) {
+        setMessage(result.error.message);
+        setBusy(false);
+        return;
+      }
+      if (!result.data.session) {
+        setMessage(
+          "Verifique seu e-mail para confirmar a conta e depois volte para ativar.",
+        );
+        setBusy(false);
+        return;
+      }
+
+      await redeemCode();
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível ativar sua conta agora.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (activated) {
+    return (
+      <div className="auth-card">
+        <p className="eyebrow">Moments Forever ativado</p>
+        <h1>Seu Moments Forever está ativado.</h1>
+        <p className={styles.successStat}>
+          Você possui {activated.maxNfcTags} tag
+          {activated.maxNfcTags === 1 ? "" : "s"} NFC disponíve
+          {activated.maxNfcTags === 1 ? "l" : "is"}.
+        </p>
+        <button
+          className="button primary"
+          onClick={() => router.replace("/perfil")}
+          type="button"
+        >
+          Começar minha jornada
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="auth-card">
+      {!session ? (
+        <div className="segmented" aria-label="Tipo de acesso">
+          <button
+            className={mode === "sign-up" ? "active" : ""}
+            onClick={() => setMode("sign-up")}
+            type="button"
+          >
+            Criar conta
+          </button>
+          <button
+            className={mode === "sign-in" ? "active" : ""}
+            onClick={() => setMode("sign-in")}
+            type="button"
+          >
+            Já tenho conta
+          </button>
+        </div>
+      ) : null}
+      <form onSubmit={handleSubmit}>
+        <label htmlFor="code">Código de ativação</label>
+        <input
+          className={styles.codeInput}
+          id="code"
+          name="code"
+          onChange={(event) => setCode(formatCodeInput(event.target.value))}
+          placeholder="MF-____-____-__"
+          required
+          value={code}
+        />
+        {!session ? (
+          <>
+            <label htmlFor="email">E-mail</label>
+            <input
+              autoComplete="email"
+              id="email"
+              name="email"
+              required
+              type="email"
+            />
+            <label htmlFor="password">Senha</label>
+            <input
+              autoComplete={
+                mode === "sign-up" ? "new-password" : "current-password"
+              }
+              id="password"
+              minLength={8}
+              name="password"
+              required
+              type="password"
+            />
+          </>
+        ) : null}
+        <button className="button primary" disabled={busy} type="submit">
+          {busy ? "Ativando…" : "Ativar"}
+        </button>
+      </form>
+      {message ? (
+        <p className="form-message" role="status">
+          {message}
+        </p>
+      ) : null}
+    </div>
+  );
+}

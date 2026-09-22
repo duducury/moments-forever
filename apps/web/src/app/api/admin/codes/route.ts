@@ -51,26 +51,41 @@ export async function GET() {
           .select("id, display_name, profile_slug")
           .in("id", userIds)
       : { data: [] as { id: string; display_name: string | null; profile_slug: string | null }[] };
-  const userLabelById = new Map(
+  const userById = new Map(
     (users.data ?? []).map((row) => [
       row.id as string,
-      (row.display_name as string | null) ||
-        (row.profile_slug as string | null) ||
-        (row.id as string).slice(0, 8),
+      {
+        label:
+          (row.display_name as string | null) ||
+          (row.profile_slug as string | null) ||
+          (row.id as string).slice(0, 8),
+        profileSlug: (row.profile_slug as string | null) ?? null,
+      },
     ]),
   );
 
+  const counts = { available: 0, activated: 0, revoked: 0 };
+  for (const row of codes.data ?? []) {
+    const status = row.status as keyof typeof counts;
+    if (status in counts) counts[status] += 1;
+  }
+
   return NextResponse.json({
-    codes: (codes.data ?? []).map((row) => ({
-      id: row.id as string,
-      code: row.code as string,
-      status: row.status as string,
-      planName: planNameById.get(row.plan_id as string) ?? "—",
-      userLabel: row.user_id
-        ? userLabelById.get(row.user_id as string) ?? "—"
-        : null,
-      createdAt: row.created_at as string,
-    })),
+    counts,
+    codes: (codes.data ?? []).map((row) => {
+      const user = row.user_id
+        ? (userById.get(row.user_id as string) ?? null)
+        : null;
+      return {
+        id: row.id as string,
+        code: row.code as string,
+        status: row.status as string,
+        planName: planNameById.get(row.plan_id as string) ?? "—",
+        userLabel: user?.label ?? null,
+        userProfileSlug: user?.profileSlug ?? null,
+        createdAt: row.created_at as string,
+      };
+    }),
   });
 }
 
@@ -101,7 +116,7 @@ export async function POST(request: Request) {
 
   const plan = await admin.supabase
     .from("plans")
-    .select("id")
+    .select("id, name")
     .eq("id", planId)
     .maybeSingle();
   if (plan.error || !plan.data) {
@@ -126,7 +141,10 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.json(
-    { codes: created.data.map((row) => row.code as string) },
+    {
+      codes: created.data.map((row) => row.code as string),
+      planName: plan.data.name as string,
+    },
     { status: 201 },
   );
 }

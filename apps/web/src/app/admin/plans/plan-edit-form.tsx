@@ -46,7 +46,10 @@ export function PlanEditForm({ plan }: { readonly plan: PlanRow }) {
   }
 
   return (
-    <form className={styles.formRow} onSubmit={(e) => void onSubmit(e)}>
+    <form
+      className={`${styles.panel} ${styles.formRow}`}
+      onSubmit={(e) => void onSubmit(e)}
+    >
       <div className={styles.formField}>
         <label htmlFor={`nfc-${plan.id}`}>{plan.name} — Max NFC</label>
         <input

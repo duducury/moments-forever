@@ -19,6 +19,10 @@ export interface UserRow {
   readonly tripsLimit: number;
   readonly photoCount: number;
   readonly plans: readonly { readonly name: string; readonly count: number }[];
+  readonly redeemedCodes: readonly {
+    readonly planName: string;
+    readonly code: string | null;
+  }[];
 }
 
 interface UsersTableProps {
@@ -179,11 +183,27 @@ export function UsersTable({ rows, plans, emailLookupFailed }: UsersTableProps) 
                       )}
                     </button>
                     {editingPlanFor === row.id ? (
-                      <UserPlanSelect
-                        onDone={() => setEditingPlanFor(null)}
-                        plans={plans}
-                        userId={row.id}
-                      />
+                      <div className={styles.planEditor}>
+                        {row.redeemedCodes.length > 0 ? (
+                          <ul className={styles.redeemedCodesList}>
+                            {row.redeemedCodes.map((entry, entryIndex) => (
+                              <li key={`${entry.code ?? "admin"}-${entryIndex}`}>
+                                <span className={styles.codeCopy}>
+                                  {entry.code ?? "Atribuído pelo admin"}
+                                </span>
+                                <span className={styles.miniListMeta}>
+                                  {entry.planName}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : null}
+                        <UserPlanSelect
+                          onDone={() => setEditingPlanFor(null)}
+                          plans={plans}
+                          userId={row.id}
+                        />
+                      </div>
                     ) : null}
                   </td>
                   <td>

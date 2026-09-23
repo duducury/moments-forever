@@ -14,6 +14,7 @@ import {
   type PublicProfile,
 } from "@/lib/profile/profile-slug";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { visitorMoreNavProps } from "@/lib/routes/app-routes";
 
 import perfilStyles from "../perfil/perfil.module.css";
 import { ProfileView } from "../perfil/profile-view";
@@ -23,6 +24,7 @@ function profileViewIdentity(
   profile: PublicProfile,
   isOwner: boolean,
   isAdmin: boolean,
+  viewerHasSession: boolean,
 ) {
   return {
     avatarPhotoId: profile.avatarPhotoId,
@@ -37,6 +39,7 @@ function profileViewIdentity(
     // the admin link must never show on someone else's profile.
     isAdmin: isOwner && isAdmin,
     ownerId: profile.id,
+    ...visitorMoreNavProps(isOwner, viewerHasSession),
   };
 }
 
@@ -51,17 +54,19 @@ async function ProfileCarouselSection({ ownerId }: { readonly ownerId: string })
 async function ProfilePlacesBody({
   isOwner,
   isAdmin,
+  viewerHasSession,
   profile,
 }: {
   readonly isOwner: boolean;
   readonly isAdmin: boolean;
+  readonly viewerHasSession: boolean;
   readonly profile: PublicProfile;
 }) {
   const supabase = await createSupabaseServerClient();
   if (!supabase) {
     return (
       <ProfileView
-        {...profileViewIdentity(profile, isOwner, isAdmin)}
+        {...profileViewIdentity(profile, isOwner, isAdmin, viewerHasSession)}
         loadError="Não foi possível carregar as viagens deste perfil."
         places={[]}
       />
@@ -70,7 +75,7 @@ async function ProfilePlacesBody({
 
   const result = await loadOwnerPlaceCards(supabase, profile.id);
   const hasPlaces = (result.places?.length ?? 0) > 0;
-  const identity = profileViewIdentity(profile, isOwner, isAdmin);
+  const identity = profileViewIdentity(profile, isOwner, isAdmin, viewerHasSession);
 
   return (
     <ProfileView
@@ -147,6 +152,7 @@ export async function PublicProfileContent({
     notFound();
   }
 
+  const viewerHasSession = Boolean(userResult.data.user);
   const isOwner = Boolean(
     userResult.data.user?.id && userResult.data.user.id === profile.id,
   );
@@ -154,7 +160,12 @@ export async function PublicProfileContent({
     isOwner && userResult.data.user
       ? await isAdminUser(supabase, userResult.data.user.id)
       : false;
-  const identity = profileViewIdentity(profile, isOwner, isAdmin);
+  const identity = profileViewIdentity(
+    profile,
+    isOwner,
+    isAdmin,
+    viewerHasSession,
+  );
 
   return (
     <Suspense
@@ -162,7 +173,12 @@ export async function PublicProfileContent({
         <ProfileView {...identity} gridPending loadError={null} places={[]} />
       }
     >
-      <ProfilePlacesBody isOwner={isOwner} isAdmin={isAdmin} profile={profile} />
+      <ProfilePlacesBody
+        isAdmin={isAdmin}
+        isOwner={isOwner}
+        profile={profile}
+        viewerHasSession={viewerHasSession}
+      />
     </Suspense>
   );
 }

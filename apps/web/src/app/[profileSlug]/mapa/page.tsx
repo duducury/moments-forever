@@ -10,6 +10,7 @@ import {
   lookupPublicProfile,
   publicProfilePath,
 } from "@/lib/profile/profile-slug";
+import { visitorMoreNavProps } from "@/lib/routes/app-routes";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import styles from "../../mapa/mapa.module.css";
@@ -43,6 +44,7 @@ export default async function PublicProfileMapPage({
     data: { user },
   } = await supabase.auth.getUser();
   const isOwner = Boolean(user && user.id === profile.id);
+  const moreNavProps = visitorMoreNavProps(isOwner, Boolean(user));
   const homeHref = publicProfilePath(profile.profileSlug);
   const photos = await loadOwnerMapPhotos(supabase, profile.id);
   const gpsCount = photos.length;
@@ -77,6 +79,7 @@ export default async function PublicProfileMapPage({
         mapHref={`${homeHref}/mapa`}
         passaporteHref={isOwner ? "/passaporte" : `${homeHref}/passaporte`}
         showCreate={isOwner}
+        {...moreNavProps}
       />
     </main>
   );

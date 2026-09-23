@@ -35,6 +35,8 @@ export function ProfileView({
   mapSlot = null,
   carouselSlot = null,
   gridPending = false,
+  moreHref,
+  moreLabel,
 }: {
   readonly ownerId: string;
   readonly displayName: string;
@@ -55,6 +57,9 @@ export function ProfileView({
   readonly carouselSlot?: ReactNode;
   /** Header is ready; place cards are still streaming. */
   readonly gridPending?: boolean;
+  /** From visitorMoreNavProps() — undefined keeps AppBottomNav's owner default (Mais -> /geral). */
+  readonly moreHref?: string;
+  readonly moreLabel?: string;
 }) {
   const totalPhotos = places.reduce((sum, item) => sum + item.photoCount, 0);
   const visitedCountryCodes = (() => {
@@ -167,6 +172,8 @@ export function ProfileView({
       <AppBottomNav
         homeHref={homeHref}
         mapHref={isOwner ? "/mapa" : `${homeHref}/mapa`}
+        moreHref={moreHref}
+        moreLabel={moreLabel}
         passaporteHref={isOwner ? "/passaporte" : `${homeHref}/passaporte`}
         showCreate={isOwner}
       />

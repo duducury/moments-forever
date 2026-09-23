@@ -337,8 +337,18 @@
 .planBadges {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 6px;
-  margin-bottom: 6px;
+  border: none;
+  padding: 2px;
+  margin: -2px -2px 6px;
+  background: none;
+  cursor: pointer;
+  border-radius: 12px;
+}
+
+.planBadges:hover {
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
 }
 
 .userCell {
@@ -347,7 +357,8 @@
   gap: 10px;
 }
 
-.avatar {
+.avatar,
+.avatarImage {
   display: flex;
   flex: 0 0 auto;
   align-items: center;
@@ -355,10 +366,25 @@
   width: 32px;
   height: 32px;
   border-radius: 50%;
+  object-fit: cover;
+  background: var(--surface-secondary);
+}
+
+.avatar {
   color: #fff;
   font-family: Georgia, "Times New Roman", serif;
   font-size: 0.9rem;
   font-weight: 600;
+}
+
+.emailWarning {
+  margin-bottom: 16px;
+  color: #c0503e;
+  font-size: 0.88rem;
+}
+
+.emailWarning code {
+  font-family: ui-monospace, monospace;
 }
 
 .codeCopy {

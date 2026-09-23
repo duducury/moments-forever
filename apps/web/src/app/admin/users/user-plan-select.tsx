@@ -19,9 +19,11 @@ interface PlanOption {
 export function UserPlanSelect({
   userId,
   plans,
+  onDone,
 }: {
   readonly userId: string;
   readonly plans: readonly PlanOption[];
+  readonly onDone?: () => void;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -49,6 +51,7 @@ export function UserPlanSelect({
         throw new Error(payload.error ?? "Falha ao definir plano.");
       }
       router.refresh();
+      onDone?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Falha ao definir plano.");
     } finally {

@@ -21,6 +21,13 @@ export interface UserRow {
   readonly plans: readonly { readonly name: string; readonly count: number }[];
 }
 
+interface UsersTableProps {
+  readonly rows: readonly UserRow[];
+  readonly plans: readonly PlanOption[];
+  /** True when the email RPC failed outright (e.g. its migration hasn't been run yet) — every row's email is unknown for that reason, not because it's genuinely blank. */
+  readonly emailLookupFailed?: boolean;
+}
+
 interface PlanOption {
   readonly id: string;
   readonly name: string;
@@ -58,14 +65,9 @@ function matchesQuery(row: UserRow, query: string): boolean {
   return haystack.includes(query);
 }
 
-export function UsersTable({
-  rows,
-  plans,
-}: {
-  readonly rows: readonly UserRow[];
-  readonly plans: readonly PlanOption[];
-}) {
+export function UsersTable({ rows, plans, emailLookupFailed }: UsersTableProps) {
   const [query, setQuery] = useState("");
+  const [editingPlanFor, setEditingPlanFor] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     const trimmed = query.trim().toLowerCase();
@@ -90,6 +92,12 @@ export function UsersTable({
           </p>
         ) : null}
       </div>
+      {emailLookupFailed ? (
+        <p className={styles.emailWarning} role="alert">
+          Não foi possível carregar os e-mails — provavelmente falta rodar a
+          migration <code>admin_list_user_emails</code> no Supabase.
+        </p>
+      ) : null}
       <div className={styles.tableWrap}>
         <table className={styles.table}>
           <thead>
@@ -116,20 +124,43 @@ export function UsersTable({
                   <td className={styles.rowNumber}>{index + 1}</td>
                   <td>
                     <div className={styles.userCell}>
-                      <span
-                        className={styles.avatar}
-                        style={{ background: avatarColor(row.id) }}
-                      >
-                        {(row.displayName || row.email || row.profileSlug || "?")
-                          .charAt(0)
-                          .toUpperCase()}
-                      </span>
+                      {row.profileSlug ? (
+                        // eslint-disable-next-line @next/next/no-img-element -- served from our own API route, not next/image-optimizable
+                        <img
+                          alt=""
+                          className={styles.avatarImage}
+                          loading="lazy"
+                          onError={(event) => {
+                            event.currentTarget.style.display = "none";
+                          }}
+                          src={`/api/profile/${row.profileSlug}/avatar`}
+                        />
+                      ) : (
+                        <span
+                          className={styles.avatar}
+                          style={{ background: avatarColor(row.id) }}
+                        >
+                          {(row.displayName || row.email || "?")
+                            .charAt(0)
+                            .toUpperCase()}
+                        </span>
+                      )}
                       {row.displayName || row.profileSlug || row.id.slice(0, 8)}
                     </div>
                   </td>
-                  <td className={styles.emailCell}>{row.email ?? "—"}</td>
+                  <td className={styles.emailCell}>
+                    {row.email ?? (emailLookupFailed ? "?" : "—")}
+                  </td>
                   <td>
-                    <div className={styles.planBadges}>
+                    <button
+                      className={styles.planBadges}
+                      onClick={() =>
+                        setEditingPlanFor((current) =>
+                          current === row.id ? null : row.id,
+                        )
+                      }
+                      type="button"
+                    >
                       {row.plans.length > 0 ? (
                         row.plans.map((plan) => (
                           <span
@@ -146,8 +177,14 @@ export function UsersTable({
                           Sem licença
                         </span>
                       )}
-                    </div>
-                    <UserPlanSelect plans={plans} userId={row.id} />
+                    </button>
+                    {editingPlanFor === row.id ? (
+                      <UserPlanSelect
+                        onDone={() => setEditingPlanFor(null)}
+                        plans={plans}
+                        userId={row.id}
+                      />
+                    ) : null}
                   </td>
                   <td>
                     {row.tripsUsed}/{row.tripsLimit}

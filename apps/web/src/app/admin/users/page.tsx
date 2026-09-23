@@ -132,7 +132,11 @@ export default async function AdminUsersPage() {
         </div>
       </div>
       <AdminNav active="users" />
-      <UsersTable plans={planOptions} rows={rows} />
+      <UsersTable
+        emailLookupFailed={Boolean(emails.error)}
+        plans={planOptions}
+        rows={rows}
+      />
     </main>
   );
 }

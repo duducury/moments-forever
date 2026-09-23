@@ -1,7 +1,5 @@
 "use client";
 
-import Link from "next/link";
-
 import { useAuth } from "@/components/auth-provider";
 
 import styles from "./home.module.css";
@@ -16,8 +14,16 @@ export interface PricingPlanRow {
   readonly highlight: boolean;
 }
 
+/** Digits only (country code + number), no "+" or formatting — wa.me's format. */
+const SALES_WHATSAPP_NUMBER = "12033947243";
+
 function titleCase(name: string): string {
   return name.charAt(0) + name.slice(1).toLowerCase();
+}
+
+function whatsappHref(planName: string): string {
+  const message = `Olá, tenho interesse no plano ${titleCase(planName)}!`;
+  return `https://wa.me/${SALES_WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
 }
 
 export function PricingSection({
@@ -71,9 +77,14 @@ export function PricingSection({
               </li>
               <li>{plan.nfcTags} tags NFC inclusas</li>
             </ul>
-            <Link className="button secondary" href="/login">
+            <a
+              className="button secondary"
+              href={whatsappHref(plan.name)}
+              rel="noopener noreferrer"
+              target="_blank"
+            >
               Começar
-            </Link>
+            </a>
           </li>
         ))}
       </ul>

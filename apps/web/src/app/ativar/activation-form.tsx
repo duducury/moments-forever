@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import { AppBootSplash } from "@/components/app-boot-splash";
 import { useAuth } from "@/components/auth-provider";
@@ -17,6 +17,13 @@ interface ActivatedResult {
   /** Running total across every code the account has redeemed — codes stack. */
   readonly totalNfcTags: number;
 }
+
+/**
+ * OAuth sign-up leaves the page entirely (Apple/Google/Facebook), so the
+ * typed code can't just live in React state across that redirect — it has
+ * to survive in sessionStorage until /auth/callback brings the user back.
+ */
+const PENDING_CODE_KEY = "mf-pending-activation-code";
 
 function formatCodeInput(raw: string): string {
   const cleaned = raw.toUpperCase().replace(/[^A-Z0-9]/g, "");
@@ -38,6 +45,32 @@ export function ActivationForm() {
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [activated, setActivated] = useState<ActivatedResult | null>(null);
+  const redeemedPendingRef = useRef(false);
+
+  useEffect(() => {
+    if (!session || redeemedPendingRef.current) return;
+    const pending = sessionStorage.getItem(PENDING_CODE_KEY);
+    if (!pending) return;
+    redeemedPendingRef.current = true;
+
+    async function run() {
+      setCode(pending!);
+      setBusy(true);
+      sessionStorage.removeItem(PENDING_CODE_KEY);
+      try {
+        await redeemCode(pending!);
+      } catch (error) {
+        setMessage(
+          error instanceof Error
+            ? error.message
+            : "Não foi possível ativar sua conta agora.",
+        );
+      } finally {
+        setBusy(false);
+      }
+    }
+    void run();
+  }, [session]);
 
   if (!client) {
     return (
@@ -55,11 +88,11 @@ export function ActivationForm() {
 
   const authClient = client;
 
-  async function redeemCode(): Promise<void> {
+  async function redeemCode(codeToRedeem: string): Promise<void> {
     const response = await fetch("/api/activation/redeem", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code }),
+      body: JSON.stringify({ code: codeToRedeem }),
     });
     const data = (await response.json().catch(() => ({}))) as {
       error?: string;
@@ -73,6 +106,31 @@ export function ActivationForm() {
       planName: data.plan.name,
       totalNfcTags: data.total?.maxNfcTags ?? data.plan.maxNfcTags,
     });
+  }
+
+  async function handleOAuth(provider: "apple" | "google" | "facebook") {
+    const trimmedCode = code.trim().toUpperCase();
+    if (!/^MF-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{2}$/.test(trimmedCode)) {
+      setMessage("Digite o código no formato MF-XXXX-XXXX-XX.");
+      return;
+    }
+    setBusy(true);
+    setMessage(null);
+    sessionStorage.setItem(PENDING_CODE_KEY, trimmedCode);
+    const redirectTo = `${window.location.origin}/auth/callback?next=/ativar`;
+    const { error } = await authClient.auth.signInWithOAuth({
+      provider,
+      options: { redirectTo },
+    });
+    if (error) {
+      sessionStorage.removeItem(PENDING_CODE_KEY);
+      setMessage(
+        error.message.includes("provider is not enabled")
+          ? "Login com esse provedor ainda não está disponível."
+          : error.message,
+      );
+      setBusy(false);
+    }
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -89,7 +147,7 @@ export function ActivationForm() {
 
     try {
       if (session) {
-        await redeemCode();
+        await redeemCode(trimmedCode);
         setBusy(false);
         return;
       }
@@ -115,7 +173,7 @@ export function ActivationForm() {
         return;
       }
 
-      await redeemCode();
+      await redeemCode(trimmedCode);
     } catch (error) {
       setMessage(
         error instanceof Error
@@ -210,6 +268,37 @@ export function ActivationForm() {
           {busy ? "Ativando…" : "Ativar"}
         </button>
       </form>
+      {!session ? (
+        <>
+          <div className="divider">
+            <span>ou</span>
+          </div>
+          <button
+            className="button secondary"
+            disabled={busy}
+            onClick={() => void handleOAuth("apple")}
+            type="button"
+          >
+            Continuar com Apple
+          </button>
+          <button
+            className="button secondary"
+            disabled={busy}
+            onClick={() => void handleOAuth("google")}
+            type="button"
+          >
+            Continuar com Google
+          </button>
+          <button
+            className="button secondary"
+            disabled={busy}
+            onClick={() => void handleOAuth("facebook")}
+            type="button"
+          >
+            Continuar com Facebook
+          </button>
+        </>
+      ) : null}
       {message ? (
         <p className="form-message" role="status">
           {message}

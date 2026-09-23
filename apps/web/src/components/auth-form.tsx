@@ -108,15 +108,23 @@ export function AuthForm() {
     setBusy(false);
   }
 
-  async function handleApple() {
+  async function handleOAuth(provider: "apple" | "google" | "facebook") {
     setBusy(true);
+    setMessage(null);
     const redirectTo = `${window.location.origin}/auth/callback`;
     const { error } = await authClient.auth.signInWithOAuth({
-      provider: "apple",
+      provider,
       options: { redirectTo },
     });
     if (error) {
-      setMessage(error.message);
+      // Supabase's own message here ("Unsupported provider: provider is not
+      // enabled") is meant for the developer, not the end user — it means
+      // this provider isn't turned on in the Supabase dashboard yet.
+      setMessage(
+        error.message.includes("provider is not enabled")
+          ? "Login com esse provedor ainda não está disponível."
+          : error.message,
+      );
       setBusy(false);
     }
   }
@@ -156,8 +164,29 @@ export function AuthForm() {
         </button>
       </form>
       <div className="divider"><span>ou</span></div>
-      <button className="button secondary" disabled={busy} onClick={handleApple}>
+      <button
+        className="button secondary"
+        disabled={busy}
+        onClick={() => void handleOAuth("apple")}
+        type="button"
+      >
         Continuar com Apple
+      </button>
+      <button
+        className="button secondary"
+        disabled={busy}
+        onClick={() => void handleOAuth("google")}
+        type="button"
+      >
+        Continuar com Google
+      </button>
+      <button
+        className="button secondary"
+        disabled={busy}
+        onClick={() => void handleOAuth("facebook")}
+        type="button"
+      >
+        Continuar com Facebook
       </button>
       {message ? <p className="form-message" role="status">{message}</p> : null}
     </div>

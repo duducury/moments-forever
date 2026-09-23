@@ -14,7 +14,9 @@ export default async function AdminPlansPage() {
 
   const plans = await admin.supabase
     .from("plans")
-    .select("id, name, max_nfc_tags, max_photos_per_trip, active")
+    .select(
+      "id, name, max_nfc_tags, max_photos_per_trip, active, price_label, price_note, highlight",
+    )
     .order("max_nfc_tags", { ascending: true });
 
   const rows: PlanRow[] = (plans.data ?? []).map((plan) => ({
@@ -23,6 +25,9 @@ export default async function AdminPlansPage() {
     maxNfcTags: plan.max_nfc_tags as number,
     maxPhotosPerTrip: plan.max_photos_per_trip as number,
     active: plan.active as boolean,
+    priceLabel: plan.price_label as string | null,
+    priceNote: plan.price_note as string,
+    highlight: plan.highlight as boolean,
   }));
   const sellablePlans = rows.filter((plan) => plan.name !== "LEGACY");
   const legacyPlans = rows.filter((plan) => plan.name === "LEGACY");
@@ -33,8 +38,8 @@ export default async function AdminPlansPage() {
         <div>
           <h1 className={styles.title}>Planos</h1>
           <p className={styles.subtitle}>
-            Limites usados por toda ativação/checagem — nada fica fixo no
-            código.
+            Limites usados por toda ativação/checagem, e o preço mostrado na
+            home para visitantes — nada fica fixo no código.
           </p>
         </div>
       </div>

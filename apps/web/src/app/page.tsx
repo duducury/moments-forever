@@ -2,9 +2,10 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { AppCreditFooter } from "@/components/app-credit-footer";
+import { createSupabaseAnonClient } from "@/lib/supabase/anon";
 import { HomePrimaryCta } from "./home-cta";
 import { HomeHeader } from "./home-header";
-import { PricingSection } from "./pricing-section";
+import { PricingSection, type PricingPlanRow } from "./pricing-section";
 import styles from "./home.module.css";
 
 const MEMORY_PHOTOS = [
@@ -40,7 +41,35 @@ const MEMORY_PHOTOS = [
   },
 ] as const;
 
-export default function Home() {
+export const dynamic = "force-dynamic";
+
+async function getPricingPlans(): Promise<readonly PricingPlanRow[]> {
+  const supabase = createSupabaseAnonClient();
+  if (!supabase) return [];
+
+  const { data } = await supabase
+    .from("plans")
+    .select(
+      "name, max_nfc_tags, max_photos_per_trip, price_label, price_note, highlight",
+    )
+    .neq("name", "LEGACY")
+    .not("price_label", "is", null)
+    .order("max_nfc_tags", { ascending: true });
+
+  return (data ?? []).map((plan) => ({
+    name: plan.name as string,
+    priceLabel: plan.price_label as string,
+    priceNote: plan.price_note as string,
+    trips: plan.max_nfc_tags as number,
+    photosPerTrip: plan.max_photos_per_trip as number,
+    nfcTags: plan.max_nfc_tags as number,
+    highlight: plan.highlight as boolean,
+  }));
+}
+
+export default async function Home() {
+  const pricingPlans = await getPricingPlans();
+
   return (
     <main className={styles.home}>
       <HomeHeader />
@@ -196,7 +225,7 @@ export default function Home() {
           </ol>
         </section>
 
-        <PricingSection />
+        <PricingSection plans={pricingPlans} />
 
         <section aria-labelledby="home-finale-title" className={styles.finale}>
           <div className={styles.finaleBackdrop} aria-hidden="true">

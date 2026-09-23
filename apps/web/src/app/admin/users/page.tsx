@@ -1,13 +1,11 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { publicProfilePath } from "@/lib/profile/profile-slug";
 import { profilePath } from "@/lib/routes/app-routes";
 import { requireAdminUser } from "@/lib/licensing/require-admin";
 
 import { AdminNav } from "../admin-nav";
 import styles from "../admin.module.css";
-import { UserPlanSelect } from "./user-plan-select";
+import { UsersTable, type UserRow } from "./users-table";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +26,7 @@ export default async function AdminUsersPage() {
   const safeIds =
     userIds.length > 0 ? userIds : ["00000000-0000-0000-0000-000000000000"];
 
-  const [licenses, experiences, allPlans] = await Promise.all([
+  const [licenses, experiences, allPlans, emails] = await Promise.all([
     supabase
       .from("licenses")
       .select("user_id, plan_id")
@@ -39,6 +37,7 @@ export default async function AdminUsersPage() {
       .from("plans")
       .select("id, name, max_nfc_tags")
       .order("max_nfc_tags", { ascending: true }),
+    supabase.rpc("admin_list_user_emails", { p_user_ids: userIds }),
   ]);
 
   const planOptions = (allPlans.data ?? []).map((plan) => ({
@@ -50,6 +49,11 @@ export default async function AdminUsersPage() {
       plan.id as string,
       { name: plan.name as string, maxNfcTags: plan.max_nfc_tags as number },
     ]),
+  );
+  const emailById = new Map(
+    ((emails.data as { id: string; email: string }[] | null) ?? []).map(
+      (row) => [row.id, row.email],
+    ),
   );
 
   // A user can hold several active licenses at once (codes stack) — group
@@ -84,97 +88,51 @@ export default async function AdminUsersPage() {
     );
   }
 
+  const rows: UserRow[] = (users.data ?? []).map((user) => {
+    const id = user.id as string;
+    const slug = user.profile_slug as string | null;
+    const experienceIds = experienceIdsByUser.get(id) ?? [];
+    const photoCount = experienceIds.reduce(
+      (sum, experienceId) => sum + (photoCountByExperience.get(experienceId) ?? 0),
+      0,
+    );
+    const planIds = licensesByUser.get(id) ?? [];
+    const totalTrips = planIds.reduce(
+      (sum, planId) => sum + (planById.get(planId)?.maxNfcTags ?? 0),
+      0,
+    );
+    const planCounts = new Map<string, number>();
+    for (const planId of planIds) {
+      const name = planById.get(planId)?.name;
+      if (!name) continue;
+      planCounts.set(name, (planCounts.get(name) ?? 0) + 1);
+    }
+    return {
+      id,
+      displayName: (user.display_name as string | null) || null,
+      email: emailById.get(id) ?? null,
+      profileSlug: slug,
+      isAdmin: Boolean(user.is_admin),
+      createdAt: user.created_at as string,
+      tripsUsed: experienceIds.length,
+      tripsLimit: totalTrips,
+      photoCount,
+      plans: [...planCounts.entries()].map(([name, count]) => ({ name, count })),
+    };
+  });
+
   return (
     <main className={`page-shell ${styles.page}`}>
       <div className={styles.header}>
         <div>
           <h1 className={styles.title}>Usuários</h1>
           <p className={styles.subtitle}>
-            {users.data?.length ?? 0} conta{(users.data?.length ?? 0) === 1 ? "" : "s"}
+            {rows.length} conta{rows.length === 1 ? "" : "s"}
           </p>
         </div>
       </div>
       <AdminNav active="users" />
-      <div className={styles.tableWrap}>
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              <th>Usuário</th>
-              <th>Plano</th>
-              <th>Viagens</th>
-              <th>Fotos</th>
-              <th>Criado em</th>
-              <th>Status</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {(users.data ?? []).map((user) => {
-              const id = user.id as string;
-              const slug = user.profile_slug as string | null;
-              const experienceIds = experienceIdsByUser.get(id) ?? [];
-              const photoCount = experienceIds.reduce(
-                (sum, experienceId) =>
-                  sum + (photoCountByExperience.get(experienceId) ?? 0),
-                0,
-              );
-              const planIds = licensesByUser.get(id) ?? [];
-              const totalNfc = planIds.reduce(
-                (sum, planId) => sum + (planById.get(planId)?.maxNfcTags ?? 0),
-                0,
-              );
-              const planNames = planIds
-                .map((planId) => planById.get(planId)?.name)
-                .filter((name): name is string => Boolean(name));
-              return (
-                <tr key={id}>
-                  <td>
-                    {(user.display_name as string | null) ||
-                      slug ||
-                      id.slice(0, 8)}
-                  </td>
-                  <td>
-                    <p className={styles.statLabel}>
-                      {planNames.length > 0
-                        ? `${planNames.join(" + ")} (${totalNfc} NFC)`
-                        : "Sem licença ativa"}
-                    </p>
-                    <UserPlanSelect plans={planOptions} userId={id} />
-                  </td>
-                  <td>
-                    {experienceIds.length}/{totalNfc}
-                  </td>
-                  <td>{photoCount}</td>
-                  <td>
-                    {new Date(user.created_at as string).toLocaleDateString(
-                      "pt-BR",
-                    )}
-                  </td>
-                  <td>
-                    <span
-                      className={styles.badge}
-                      data-tone={user.is_admin ? "accent" : "neutral"}
-                    >
-                      {user.is_admin ? "Admin" : "Ativo"}
-                    </span>
-                  </td>
-                  <td>
-                    {slug ? (
-                      <Link
-                        className="text-link"
-                        href={publicProfilePath(slug)}
-                        target="_blank"
-                      >
-                        Ver perfil
-                      </Link>
-                    ) : null}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      <UsersTable plans={planOptions} rows={rows} />
     </main>
   );
 }

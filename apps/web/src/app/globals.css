@@ -374,6 +374,12 @@ footer {
   text-align: center;
 }
 
+.app-credit a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .narrow {
   padding: 72px 0;
 }

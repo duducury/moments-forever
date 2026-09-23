@@ -134,6 +134,25 @@ export async function POST(request: Request) {
       error instanceof Error
         ? error.message
         : "Falha ao criar experiência.";
+    if (message.includes("no_active_license")) {
+      return NextResponse.json(
+        {
+          error: "Você precisa ativar uma key para criar uma viagem.",
+          code: "no_active_license",
+        },
+        { status: 403 },
+      );
+    }
+    if (message.includes("trip_limit_reached")) {
+      return NextResponse.json(
+        {
+          error:
+            "Você atingiu o limite de viagens do seu plano. Ative outra key para continuar.",
+          code: "trip_limit_reached",
+        },
+        { status: 403 },
+      );
+    }
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }

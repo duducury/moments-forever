@@ -11,6 +11,19 @@ import {
 } from "@/lib/photo-import/browser-metadata";
 import { uploadManyPhotoBlobsToR2 } from "@/lib/storage/upload-photo-to-r2";
 
+export type TripLicenseErrorCode = "no_active_license" | "trip_limit_reached";
+
+/** Thrown when the server blocks trip creation for a licensing reason, so callers can offer to activate a code instead of just showing a generic error. */
+export class TripLicenseError extends Error {
+  constructor(
+    readonly code: TripLicenseErrorCode,
+    message: string,
+  ) {
+    super(message);
+    this.name = "TripLicenseError";
+  }
+}
+
 /**
  * Creates one trip + one named album and uploads the chosen photos.
  * Skips the GPS group / “juntar lugares” review — destination choice is final.
@@ -114,8 +127,15 @@ export async function createNamedTripFromFiles(input: {
     readonly id?: string;
     readonly slug?: string;
     readonly error?: string;
+    readonly code?: string;
   };
   if (!response.ok || !body.id || !body.slug) {
+    if (body.code === "no_active_license" || body.code === "trip_limit_reached") {
+      throw new TripLicenseError(
+        body.code,
+        body.error ?? "Você precisa ativar uma key para criar uma viagem.",
+      );
+    }
     throw new Error(body.error ?? "Não foi possível criar o álbum.");
   }
 

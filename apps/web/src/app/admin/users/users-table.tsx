@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 
 import { publicProfilePath } from "@/lib/profile/profile-slug";
 
+import { ActionMenu } from "../action-menu";
 import styles from "../admin.module.css";
 import { DeleteUserButton } from "./delete-user-button";
 import { UserPlanSelect } from "./user-plan-select";
@@ -42,7 +43,7 @@ const PLAN_TONE: Record<string, string> = {
   BASIC: "success",
   PLUS: "info",
   PREMIUM: "premium",
-  LEGACY: "neutral",
+  LEGACY: "gold",
 };
 
 const AVATAR_COLORS = [
@@ -70,6 +71,109 @@ function matchesQuery(row: UserRow, query: string): boolean {
   return haystack.includes(query);
 }
 
+function Avatar({ row }: { readonly row: UserRow }) {
+  if (row.profileSlug) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element -- served from our own API route, not next/image-optimizable
+      <img
+        alt=""
+        className={styles.avatarImage}
+        loading="lazy"
+        onError={(event) => {
+          event.currentTarget.style.display = "none";
+        }}
+        src={`/api/profile/${row.profileSlug}/avatar`}
+      />
+    );
+  }
+  return (
+    <span className={styles.avatar} style={{ background: avatarColor(row.id) }}>
+      {(row.displayName || row.email || "?").charAt(0).toUpperCase()}
+    </span>
+  );
+}
+
+function PlanBadges({
+  row,
+  onToggle,
+}: {
+  readonly row: UserRow;
+  readonly onToggle: () => void;
+}) {
+  return (
+    <button className={styles.planBadges} onClick={onToggle} type="button">
+      {row.plans.length > 0 ? (
+        row.plans.map((plan) => (
+          <span
+            className={styles.badge}
+            data-tone={PLAN_TONE[plan.name] ?? "neutral"}
+            key={plan.name}
+          >
+            {plan.name}
+            {plan.count > 1 ? ` ×${plan.count}` : ""}
+          </span>
+        ))
+      ) : (
+        <span className={styles.badge} data-tone="neutral">
+          Sem licença
+        </span>
+      )}
+    </button>
+  );
+}
+
+function PlanEditorPanel({
+  row,
+  plans,
+  onDone,
+}: {
+  readonly row: UserRow;
+  readonly plans: readonly PlanOption[];
+  readonly onDone: () => void;
+}) {
+  return (
+    <div className={styles.planEditor}>
+      {row.redeemedCodes.length > 0 ? (
+        <ul className={styles.redeemedCodesList}>
+          {row.redeemedCodes.map((entry, entryIndex) => (
+            <li key={`${entry.code ?? "admin"}-${entryIndex}`}>
+              <span className={styles.codeCopy}>
+                {entry.code ?? "Atribuído pelo admin"}
+              </span>
+              <span className={styles.miniListMeta}>{entry.planName}</span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      <UserPlanSelect onDone={onDone} plans={plans} userId={row.id} />
+    </div>
+  );
+}
+
+function RowActions({ row }: { readonly row: UserRow }) {
+  return (
+    <ActionMenu>
+      {row.profileSlug ? (
+        <Link
+          className={styles.actionMenuItem}
+          href={publicProfilePath(row.profileSlug)}
+          target="_blank"
+        >
+          Ver perfil
+        </Link>
+      ) : null}
+      {!row.isAdmin ? (
+        <DeleteUserButton
+          userId={row.id}
+          userLabel={
+            row.displayName || row.email || row.profileSlug || row.id.slice(0, 8)
+          }
+        />
+      ) : null}
+    </ActionMenu>
+  );
+}
+
 export function UsersTable({ rows, plans, emailLookupFailed }: UsersTableProps) {
   const [query, setQuery] = useState("");
   const [editingPlanFor, setEditingPlanFor] = useState<string | null>(null);
@@ -79,6 +183,10 @@ export function UsersTable({ rows, plans, emailLookupFailed }: UsersTableProps) 
     if (!trimmed) return rows;
     return rows.filter((row) => matchesQuery(row, trimmed));
   }, [rows, query]);
+
+  function togglePlanEditor(id: string) {
+    setEditingPlanFor((current) => (current === id ? null : id));
+  }
 
   return (
     <>
@@ -103,6 +211,10 @@ export function UsersTable({ rows, plans, emailLookupFailed }: UsersTableProps) 
           migration <code>admin_list_user_emails</code> no Supabase.
         </p>
       ) : null}
+
+      {/* Desktop / tablet: table. Below the breakpoint, admin.module.css hides
+          this and shows .userCardList instead — same `filtered` data, no
+          separate fetch or state. */}
       <div className={styles.tableWrap}>
         <table className={styles.table}>
           <thead>
@@ -129,27 +241,7 @@ export function UsersTable({ rows, plans, emailLookupFailed }: UsersTableProps) 
                   <td className={styles.rowNumber}>{index + 1}</td>
                   <td>
                     <div className={styles.userCell}>
-                      {row.profileSlug ? (
-                        // eslint-disable-next-line @next/next/no-img-element -- served from our own API route, not next/image-optimizable
-                        <img
-                          alt=""
-                          className={styles.avatarImage}
-                          loading="lazy"
-                          onError={(event) => {
-                            event.currentTarget.style.display = "none";
-                          }}
-                          src={`/api/profile/${row.profileSlug}/avatar`}
-                        />
-                      ) : (
-                        <span
-                          className={styles.avatar}
-                          style={{ background: avatarColor(row.id) }}
-                        >
-                          {(row.displayName || row.email || "?")
-                            .charAt(0)
-                            .toUpperCase()}
-                        </span>
-                      )}
+                      <Avatar row={row} />
                       {row.displayName || row.profileSlug || row.id.slice(0, 8)}
                     </div>
                   </td>
@@ -157,63 +249,23 @@ export function UsersTable({ rows, plans, emailLookupFailed }: UsersTableProps) 
                     {row.email ?? (emailLookupFailed ? "?" : "—")}
                   </td>
                   <td>
-                    <button
-                      className={styles.planBadges}
-                      onClick={() =>
-                        setEditingPlanFor((current) =>
-                          current === row.id ? null : row.id,
-                        )
-                      }
-                      type="button"
-                    >
-                      {row.plans.length > 0 ? (
-                        row.plans.map((plan) => (
-                          <span
-                            className={styles.badge}
-                            data-tone={PLAN_TONE[plan.name] ?? "neutral"}
-                            key={plan.name}
-                          >
-                            {plan.name}
-                            {plan.count > 1 ? ` ×${plan.count}` : ""}
-                          </span>
-                        ))
-                      ) : (
-                        <span className={styles.badge} data-tone="neutral">
-                          Sem licença
-                        </span>
-                      )}
-                    </button>
+                    <PlanBadges
+                      onToggle={() => togglePlanEditor(row.id)}
+                      row={row}
+                    />
                     {editingPlanFor === row.id ? (
-                      <div className={styles.planEditor}>
-                        {row.redeemedCodes.length > 0 ? (
-                          <ul className={styles.redeemedCodesList}>
-                            {row.redeemedCodes.map((entry, entryIndex) => (
-                              <li key={`${entry.code ?? "admin"}-${entryIndex}`}>
-                                <span className={styles.codeCopy}>
-                                  {entry.code ?? "Atribuído pelo admin"}
-                                </span>
-                                <span className={styles.miniListMeta}>
-                                  {entry.planName}
-                                </span>
-                              </li>
-                            ))}
-                          </ul>
-                        ) : null}
-                        <UserPlanSelect
-                          onDone={() => setEditingPlanFor(null)}
-                          plans={plans}
-                          userId={row.id}
-                        />
-                      </div>
+                      <PlanEditorPanel
+                        onDone={() => setEditingPlanFor(null)}
+                        plans={plans}
+                        row={row}
+                      />
                     ) : null}
                   </td>
                   <td>
                     {row.tripsUsed}/{row.tripsLimit}
                   </td>
                   <td>{row.photoCount}</td>
-                  <td>
-                    {new Date(row.createdAt).toLocaleDateString("pt-BR")}
-                  </td>
+                  <td>{new Date(row.createdAt).toLocaleDateString("pt-BR")}</td>
                   <td>
                     <span
                       className={styles.badge}
@@ -223,28 +275,7 @@ export function UsersTable({ rows, plans, emailLookupFailed }: UsersTableProps) 
                     </span>
                   </td>
                   <td>
-                    <div className={styles.rowActions}>
-                      {row.profileSlug ? (
-                        <Link
-                          className="text-link"
-                          href={publicProfilePath(row.profileSlug)}
-                          target="_blank"
-                        >
-                          Ver perfil
-                        </Link>
-                      ) : null}
-                      {!row.isAdmin ? (
-                        <DeleteUserButton
-                          userId={row.id}
-                          userLabel={
-                            row.displayName ||
-                            row.email ||
-                            row.profileSlug ||
-                            row.id.slice(0, 8)
-                          }
-                        />
-                      ) : null}
-                    </div>
+                    <RowActions row={row} />
                   </td>
                 </tr>
               ))
@@ -252,6 +283,55 @@ export function UsersTable({ rows, plans, emailLookupFailed }: UsersTableProps) 
           </tbody>
         </table>
       </div>
+
+      <ul className={styles.userCardList}>
+        {filtered.length === 0 ? (
+          <li className={styles.empty}>Nenhum usuário encontrado.</li>
+        ) : (
+          filtered.map((row) => (
+            <li className={styles.userCard} key={row.id}>
+              <div className={styles.userCardTop}>
+                <div className={styles.userCell}>
+                  <Avatar row={row} />
+                  <div>
+                    <p className={styles.userCardName}>
+                      {row.displayName || row.profileSlug || row.id.slice(0, 8)}
+                    </p>
+                    <p className={styles.emailCell}>
+                      {row.email ?? (emailLookupFailed ? "?" : "—")}
+                    </p>
+                  </div>
+                </div>
+                <RowActions row={row} />
+              </div>
+
+              <PlanBadges onToggle={() => togglePlanEditor(row.id)} row={row} />
+              {editingPlanFor === row.id ? (
+                <PlanEditorPanel
+                  onDone={() => setEditingPlanFor(null)}
+                  plans={plans}
+                  row={row}
+                />
+              ) : null}
+
+              <div className={styles.userCardStats}>
+                <span>
+                  <strong>{row.tripsUsed}/{row.tripsLimit}</strong> viagens
+                </span>
+                <span>
+                  <strong>{row.photoCount}</strong> fotos
+                </span>
+                <span
+                  className={styles.badge}
+                  data-tone={row.isAdmin ? "accent" : "neutral"}
+                >
+                  {row.isAdmin ? "Admin" : "Ativo"}
+                </span>
+              </div>
+            </li>
+          ))
+        )}
+      </ul>
     </>
   );
 }

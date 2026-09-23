@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import { profilePath } from "@/lib/routes/app-routes";
 import { requireAdminUser } from "@/lib/licensing/require-admin";
 
-import { AdminNav } from "../admin-nav";
 import styles from "../admin.module.css";
 import { CodesClient } from "./codes-client";
 
@@ -29,7 +28,6 @@ export default async function AdminCodesPage() {
           </p>
         </div>
       </div>
-      <AdminNav active="codes" />
       <CodesClient
         plans={(plans.data ?? []).map((plan) => ({
           id: plan.id as string,

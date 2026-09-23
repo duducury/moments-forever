@@ -1,0 +1,257 @@
+.shell {
+  /* Column, always: .sidebar is position:fixed (out of flow either way),
+     but .mobileHeader and .content are real flex siblings here — row
+     would place the mobile top bar beside the content instead of above
+     it. Desktop only ever shows .content (mobileHeader is display:none),
+     so column vs row makes no visible difference there; .content's own
+     margin-left handles the sidebar offset. */
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  min-height: 100vh;
+  background: var(--background);
+}
+
+/* ------------------------------------------------------------------ */
+/* Sidebar — fixed on desktop, off-canvas drawer on mobile             */
+/* ------------------------------------------------------------------ */
+
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: var(--z-drawer);
+  display: flex;
+  flex-direction: column;
+  width: 272px;
+  height: 100dvh;
+  height: 100vh;
+  padding: 28px 20px 24px;
+  border-right: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 96%, black 4%);
+  transform: translateX(-100%);
+  transition: transform 220ms ease;
+}
+
+@media (min-width: 1024px) {
+  .sidebar {
+    transform: translateX(0);
+  }
+}
+
+.sidebar[data-open="true"] {
+  transform: translateX(0);
+  box-shadow: 20px 0 48px color-mix(in srgb, var(--shadow) 60%, transparent);
+}
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--z-drawer) - 1);
+  background: color-mix(in srgb, black 55%, transparent);
+  animation: fadeIn 180ms ease;
+}
+
+@media (min-width: 1024px) {
+  .backdrop {
+    display: none;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.closeDrawer {
+  position: absolute;
+  top: 18px;
+  right: 16px;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: var(--surface-secondary);
+  color: var(--text);
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+@media (min-width: 1024px) {
+  .closeDrawer {
+    display: none;
+  }
+}
+
+.brand {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 28px;
+  padding-right: 40px;
+}
+
+.brandName {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.25rem;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.brandEyebrow {
+  color: var(--accent);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.navLink {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  border-radius: 13px;
+  color: var(--muted);
+  font-size: 0.92rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.navLink:hover {
+  color: var(--text);
+  background: color-mix(in srgb, var(--surface-secondary) 70%, transparent);
+}
+
+.navLink[data-active="true"] {
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 16%, var(--surface-secondary));
+  box-shadow: inset 2.5px 0 0 var(--accent);
+}
+
+.navIcon {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+}
+
+.navIcon svg {
+  width: 19px;
+  height: 19px;
+}
+
+.navDivider {
+  height: 1px;
+  margin: 18px 2px;
+  background: var(--border);
+}
+
+.brandFooter {
+  position: relative;
+  margin-top: auto;
+  overflow: hidden;
+  border-radius: 18px;
+  padding: 20px 18px;
+  background:
+    linear-gradient(
+      165deg,
+      color-mix(in srgb, var(--accent) 30%, transparent),
+      color-mix(in srgb, var(--surface-secondary) 60%, transparent)
+    );
+}
+
+.brandTagline {
+  position: relative;
+  z-index: 1;
+  max-width: 12ch;
+  color: var(--text);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.1rem;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+/* ------------------------------------------------------------------ */
+/* Mobile top bar                                                      */
+/* ------------------------------------------------------------------ */
+
+.mobileHeader {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--background) 92%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+@media (min-width: 1024px) {
+  .mobileHeader {
+    display: none;
+  }
+}
+
+.hamburger {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.mobileBrand {
+  color: var(--text);
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.mobileBrand em {
+  margin-left: 6px;
+  color: var(--accent);
+  font-size: 0.7rem;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* ------------------------------------------------------------------ */
+/* Content area                                                        */
+/* ------------------------------------------------------------------ */
+
+.content {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (min-width: 1024px) {
+  .content {
+    margin-left: 272px;
+  }
+}

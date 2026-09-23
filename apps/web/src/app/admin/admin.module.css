@@ -1,7 +1,7 @@
 .page {
-  width: min(100%, 980px);
+  width: min(100%, 1120px);
   margin: 0 auto;
-  padding: 32px 0 72px;
+  padding: 40px 24px 72px;
 }
 
 .header {
@@ -10,11 +10,13 @@
   align-items: flex-end;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 20px;
+  margin-bottom: 28px;
 }
 
 .title {
-  font-size: clamp(1.9rem, 6vw, 2.6rem);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.9rem, 4vw, 2.4rem);
+  font-weight: 500;
   line-height: 1.1;
 }
 
@@ -25,9 +27,9 @@
 }
 
 .sectionTitle {
-  margin: 28px 0 12px;
+  margin: 32px 0 14px;
   font-family: Georgia, "Times New Roman", serif;
-  font-size: 1.3rem;
+  font-size: 1.25rem;
   font-weight: 500;
 }
 
@@ -41,51 +43,73 @@
   list-style: none;
 }
 
-.adminNavRow {
+/* ------------------------------------------------------------------ */
+/* Dashboard greeting                                                  */
+/* ------------------------------------------------------------------ */
+
+.greetingHeader {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
+  gap: 20px;
   margin-bottom: 28px;
 }
 
-.backToProfile {
-  color: var(--muted);
-  font-size: 0.88rem;
-  font-weight: 650;
+.greetingTitle {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.7rem, 4vw, 2.2rem);
+  font-weight: 500;
+  line-height: 1.15;
 }
 
-.backToProfile:hover {
-  color: var(--accent);
-}
-
-/* Tab strip — same grouped-pill treatment as the sign-in/sign-up toggle. */
-.adminNav {
+.greetingRight {
   display: flex;
-  flex-wrap: wrap;
-  width: fit-content;
-  max-width: 100%;
-  gap: 4px;
-  border-radius: 999px;
-  padding: 4px;
-  background: var(--surface-secondary);
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
 }
 
-.adminNavLink {
-  padding: 9px 18px;
-  border-radius: 999px;
+.greetingDate {
   color: var(--muted);
-  font-size: 0.9rem;
-  font-weight: 650;
-  text-decoration: none;
-  transition: background-color 140ms ease, color 140ms ease;
+  font-size: 0.82rem;
+  text-transform: capitalize;
 }
 
-.adminNavLink[data-active="true"] {
+.greetingWho {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.85rem;
+}
+
+.greetingWho strong {
+  display: block;
   color: var(--text);
-  background: var(--surface);
-  box-shadow: 0 2px 8px var(--shadow);
+}
+
+.greetingRole {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.greetingAvatar,
+.greetingAvatarFallback {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--accent);
+}
+
+.greetingAvatarFallback {
+  color: #fff;
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 600;
 }
 
 .quickActions {
@@ -97,9 +121,21 @@
 
 .statsGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 12px;
-  margin-bottom: 24px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+  margin-bottom: 28px;
+}
+
+@media (min-width: 640px) {
+  .statsGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .statsGrid {
+    grid-template-columns: repeat(5, 1fr);
+  }
 }
 
 .statCard,
@@ -107,43 +143,68 @@
   position: relative;
   min-width: 0;
   border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 18px 20px;
-  background: color-mix(in srgb, var(--surface) 92%, transparent);
-  box-shadow: 0 10px 28px var(--shadow);
+  border-radius: 16px;
+  padding: 16px 18px;
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  box-shadow: 0 8px 22px var(--shadow);
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
 }
 
 .statCardLink {
   display: block;
   color: inherit;
   text-decoration: none;
-  transition: transform 140ms ease, box-shadow 140ms ease;
 }
 
 .statCardLink:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 14px 34px var(--shadow);
+  transform: translateY(-3px);
+  box-shadow: 0 16px 32px var(--shadow);
   border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
 }
 
 .statIcon {
   display: inline-flex;
-  margin-bottom: 8px;
-  font-size: 1.3rem;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  margin-bottom: 12px;
+  border-radius: 11px;
+  font-size: 1.05rem;
   line-height: 1;
+}
+
+.statIcon[data-tone="accent"] {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.statIcon[data-tone="success"] {
+  background: color-mix(in srgb, #3f9b5a 18%, transparent);
+}
+
+.statIcon[data-tone="info"] {
+  background: color-mix(in srgb, #3b7ec4 18%, transparent);
+}
+
+.statIcon[data-tone="premium"] {
+  background: color-mix(in srgb, #8a5fc4 18%, transparent);
+}
+
+.statIcon[data-tone="gold"] {
+  background: color-mix(in srgb, #b08a2e 18%, transparent);
 }
 
 .statValue {
   font-family: Georgia, "Times New Roman", serif;
-  font-size: 2rem;
+  font-size: 1.7rem;
   font-weight: 500;
   line-height: 1.1;
 }
 
 .statLabel {
-  margin: 6px 0 0;
+  margin: 4px 0 0;
   color: var(--muted);
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 550;
 }
 
@@ -155,10 +216,32 @@
 
 .panelHeader {
   display: flex;
-  align-items: baseline;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 14px;
+}
+
+.panelHeader .sectionTitle {
+  margin: 0;
+}
+
+.panelSubtitle {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.panelLink {
+  flex: 0 0 auto;
+  color: var(--accent);
+  font-size: 0.85rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.panelLink:hover {
+  text-decoration: underline;
 }
 
 .miniList {
@@ -384,6 +467,11 @@
   background: color-mix(in srgb, #8a5fc4 18%, transparent);
 }
 
+.badge[data-tone="gold"] {
+  color: #b08a2e;
+  background: color-mix(in srgb, #b08a2e 18%, transparent);
+}
+
 .searchRow {
   display: flex;
   flex-wrap: wrap;
@@ -506,17 +594,40 @@
 }
 
 .dangerLink {
-  padding: 0;
+  width: 100%;
+  padding: 9px 12px;
   border: none;
+  border-radius: 9px;
   background: none;
   color: #c0503e;
-  font-weight: 700;
-  font-size: inherit;
+  font-weight: 650;
+  font-size: 0.88rem;
+  text-align: left;
   cursor: pointer;
 }
 
 .dangerLink:hover {
+  background: color-mix(in srgb, #c0503e 10%, transparent);
+}
+
+.subtleDangerLink {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.subtleDangerLink:hover:not(:disabled) {
+  color: #c0503e;
   text-decoration: underline;
+}
+
+.subtleDangerLink:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .deleteConfirm {
@@ -567,9 +678,280 @@
   opacity: 0.5;
 }
 
+/* ------------------------------------------------------------------ */
+/* Action menu — "⋮" trigger + popover, used in table rows and cards   */
+/* ------------------------------------------------------------------ */
+
+.actionMenu {
+  position: relative;
+  display: inline-flex;
+}
+
+.actionMenuTrigger {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: none;
+  color: var(--muted);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.actionMenuTrigger:hover {
+  border-color: var(--border);
+  color: var(--text);
+  background: var(--surface-secondary);
+}
+
+.actionMenuPanel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 6;
+  display: grid;
+  gap: 2px;
+  width: max-content;
+  min-width: 180px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: 0 16px 36px var(--shadow);
+}
+
+.actionMenuItem {
+  display: block;
+  padding: 9px 12px;
+  border-radius: 9px;
+  color: var(--text);
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.actionMenuItem:hover {
+  background: var(--surface-secondary);
+}
+
+/* ------------------------------------------------------------------ */
+/* Users — mobile card list (replaces the table below the breakpoint)  */
+/* ------------------------------------------------------------------ */
+
+.userCardList {
+  display: none;
+  gap: 12px;
+  list-style: none;
+}
+
+.userCard {
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  box-shadow: 0 8px 22px var(--shadow);
+}
+
+.userCardTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.userCardName {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.userCardStats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.userCardStats strong {
+  color: var(--text);
+}
+
+/* ------------------------------------------------------------------ */
+/* Códigos — highlighted generator card                                */
+/* ------------------------------------------------------------------ */
+
+.generatorCard {
+  border: 1px solid color-mix(in srgb, var(--accent) 38%, var(--border));
+  border-radius: 18px;
+  padding: 22px;
+  margin-bottom: 20px;
+  background:
+    linear-gradient(
+      165deg,
+      color-mix(in srgb, var(--accent) 12%, transparent),
+      color-mix(in srgb, var(--surface) 94%, transparent)
+    );
+  box-shadow: 0 10px 28px var(--shadow);
+}
+
+.generatorHeader {
+  margin-bottom: 16px;
+}
+
+.generatorForm {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: flex-end;
+}
+
+.generatorButton {
+  min-height: 48px;
+  padding: 0 24px;
+}
+
+/* ------------------------------------------------------------------ */
+/* Plans — colored cards + unified save bar                            */
+/* ------------------------------------------------------------------ */
+
+.plansEditorWrap {
+  margin-bottom: 8px;
+}
+
+.planGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.planCard {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  box-shadow: 0 8px 22px var(--shadow);
+  transition: border-color 180ms ease;
+}
+
+.planCard[data-dirty="true"] {
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
+}
+
+.planCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.planCardName {
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.92rem;
+}
+
+.planCardName[data-tone="success"] {
+  color: #3f9b5a;
+  background: color-mix(in srgb, #3f9b5a 16%, transparent);
+}
+
+.planCardName[data-tone="info"] {
+  color: #3b7ec4;
+  background: color-mix(in srgb, #3b7ec4 16%, transparent);
+}
+
+.planCardName[data-tone="premium"] {
+  color: #8a5fc4;
+  background: color-mix(in srgb, #8a5fc4 16%, transparent);
+}
+
+.planCardName[data-tone="gold"] {
+  color: #b08a2e;
+  background: color-mix(in srgb, #b08a2e 16%, transparent);
+}
+
+.planActiveToggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.planActiveToggle input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+}
+
+.planActiveDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--border);
+}
+
+.planActiveDot[data-on="true"] {
+  background: #3f9b5a;
+  box-shadow: 0 0 0 3px color-mix(in srgb, #3f9b5a 22%, transparent);
+}
+
+.planCardField {
+  display: grid;
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.planCardField label {
+  margin-top: 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 650;
+}
+
+.plansSaveBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+}
+
+.plansSaveError {
+  color: #c0503e;
+  font-size: 0.88rem;
+}
+
+@media (max-width: 760px) {
+  .tableWrap {
+    display: none;
+  }
+
+  .userCardList {
+    display: grid;
+  }
+}
+
 @media (max-width: 640px) {
   .page {
-    padding-top: 20px;
+    padding: 20px 16px 56px;
   }
 
   .table th,
@@ -577,7 +959,37 @@
     padding: 11px 14px;
   }
 
-  .statsGrid {
-    grid-template-columns: repeat(2, 1fr);
+  .greetingHeader {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .greetingRight {
+    align-items: flex-start;
+    width: 100%;
+  }
+
+  .quickActions .button,
+  .quickActions a {
+    flex: 1 1 auto;
+    text-align: center;
+  }
+
+  .generatorForm {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .generatorForm .formField {
+    width: 100%;
+  }
+
+  .generatorForm input,
+  .generatorForm select {
+    width: 100%;
+  }
+
+  .generatorButton {
+    width: 100%;
   }
 }

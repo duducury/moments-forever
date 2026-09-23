@@ -521,6 +521,104 @@
   line-height: 1.55;
 }
 
+/* —— Pricing —— */
+
+.pricingGrid {
+  display: grid;
+  gap: 16px;
+  list-style: none;
+}
+
+.pricingCard {
+  position: relative;
+  display: grid;
+  gap: 16px;
+  align-content: start;
+  padding: 24px 22px;
+  border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
+  border-radius: var(--home-radius);
+  background: var(--surface);
+}
+
+.pricingCard[data-highlight="true"] {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  background: color-mix(in srgb, var(--accent) 6%, var(--surface));
+  box-shadow: 0 14px 32px color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.pricingBadge {
+  position: absolute;
+  top: -11px;
+  left: 22px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-contrast, #fff);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.pricingName {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.3rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+.pricingPrice {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: -8px 0 0;
+  font-size: 1.9rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.pricingPrice span {
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.pricingFeatures {
+  display: grid;
+  gap: 9px;
+  margin: 0;
+  padding: 14px 0 0;
+  border-top: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
+  list-style: none;
+  color: var(--text-secondary);
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+
+.pricingFeatures li {
+  padding-left: 18px;
+  position: relative;
+}
+
+.pricingFeatures li::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.pricingFeatures li span {
+  color: color-mix(in srgb, var(--text-secondary) 78%, transparent);
+  font-size: 0.85rem;
+}
+
+.pricingCard :global(.button) {
+  width: 100%;
+  margin-top: 4px;
+}
+
 /* —— Final CTA —— */
 
 .finale {
@@ -807,6 +905,11 @@
 
   .conceptCopy h3 {
     font-size: 1.4rem;
+  }
+
+  .pricingGrid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
   }
 
   .finaleInner {

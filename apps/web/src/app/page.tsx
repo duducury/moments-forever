@@ -4,6 +4,7 @@ import Link from "next/link";
 import { AppCreditFooter } from "@/components/app-credit-footer";
 import { HomePrimaryCta } from "./home-cta";
 import { HomeHeader } from "./home-header";
+import { PricingSection } from "./pricing-section";
 import styles from "./home.module.css";
 
 const MEMORY_PHOTOS = [
@@ -194,6 +195,8 @@ export default function Home() {
             </li>
           </ol>
         </section>
+
+        <PricingSection />
 
         <section aria-labelledby="home-finale-title" className={styles.finale}>
           <div className={styles.finaleBackdrop} aria-hidden="true">

@@ -29,8 +29,11 @@
 }
 
 .list {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  /* flex instead of a fixed 5-column grid: a non-owner visitor's bar has
+     4 tabs (no "+"), and a hardcoded column count left an empty 5th slot,
+     throwing the row off-center. flex + flex:1 on each .item adapts to
+     however many tabs actually render. */
+  display: flex;
   align-items: stretch;
   width: 100%;
   margin: 0;
@@ -41,6 +44,7 @@
 
 .item {
   display: flex;
+  flex: 1 1 0;
   min-width: 0;
   margin: 0;
   padding: 0;

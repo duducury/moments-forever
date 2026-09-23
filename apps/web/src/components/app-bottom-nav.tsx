@@ -104,6 +104,8 @@ export function AppBottomNav({
   mapHref = "/mapa",
   passaporteHref = "/passaporte",
   showCreate = true,
+  moreHref = "/geral",
+  moreLabel = "Mais",
 }: {
   readonly homeHref: string;
   readonly mapHref?: string;
@@ -111,6 +113,9 @@ export function AppBottomNav({
   readonly passaporteHref?: string;
   /** False for a non-owner viewing someone else's public profile — they can look, not add. */
   readonly showCreate?: boolean;
+  /** For a non-owner: their own profile if signed in, /login otherwise — see visitorMoreNavProps(). */
+  readonly moreHref?: string;
+  readonly moreLabel?: string;
 }) {
   const pathname = usePathname();
 
@@ -121,7 +126,9 @@ export function AppBottomNav({
   const passportActive =
     pathname.startsWith("/passaporte") || pathname === passaporteHref;
   const moreActive =
-    pathname.startsWith("/geral") || pathname.startsWith("/privacidade");
+    pathname === moreHref ||
+    pathname.startsWith("/geral") ||
+    pathname.startsWith("/privacidade");
   const homeActive =
     !mapActive &&
     !passportActive &&
@@ -195,12 +202,12 @@ export function AppBottomNav({
             aria-current={moreActive ? "page" : undefined}
             className={styles.tab}
             data-active={moreActive ? "true" : "false"}
-            href="/geral"
+            href={moreHref}
           >
             <span className={styles.icon}>
               <MoreIcon />
             </span>
-            <span className={styles.label}>Mais</span>
+            <span className={styles.label}>{moreLabel}</span>
           </Link>
         </li>
       </ul>

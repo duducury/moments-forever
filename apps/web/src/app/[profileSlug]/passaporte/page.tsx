@@ -12,6 +12,7 @@ import {
   profileAvatarPublicPath,
   publicProfilePath,
 } from "@/lib/profile/profile-slug";
+import { visitorMoreNavProps } from "@/lib/routes/app-routes";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import { PassaporteClient } from "../../passaporte/passaporte-client";
@@ -46,6 +47,10 @@ export default async function PublicProfilePassportPage({
 
   const isOwner = Boolean(
     userResult.data.user?.id && userResult.data.user.id === profile.id,
+  );
+  const moreNavProps = visitorMoreNavProps(
+    isOwner,
+    Boolean(userResult.data.user),
   );
   const homeHref = publicProfilePath(profile.profileSlug);
   const placesResult = await loadOwnerPlaceCards(supabase, profile.id);
@@ -83,6 +88,7 @@ export default async function PublicProfilePassportPage({
         mapHref={`${homeHref}/mapa`}
         passaporteHref={isOwner ? "/passaporte" : `${homeHref}/passaporte`}
         showCreate={isOwner}
+        {...moreNavProps}
       />
     </main>
   );

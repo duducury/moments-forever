@@ -16,6 +16,7 @@ import {
 } from "@moments-forever/shared";
 
 import { AppBottomNav } from "@/components/app-bottom-nav";
+import { useAuth } from "@/components/auth-provider";
 import { ExperienceCoverThumb } from "@/components/experience-cover-thumb";
 import {
   deleteLocalPhotoBlob,
@@ -31,7 +32,11 @@ import {
   confirmRemovePhotoLocation,
   removeLocationFromPhotos,
 } from "@/lib/privacy/remove-location";
-import { profilePath, profileTripPath } from "@/lib/routes/app-routes";
+import {
+  profilePath,
+  profileTripPath,
+  visitorMoreNavProps,
+} from "@/lib/routes/app-routes";
 
 import { AddPhotosPanel } from "../../add-photos-panel";
 import {
@@ -124,6 +129,8 @@ export function AlbumFolderView({
   initialPrivacyMode = false,
 }: Props) {
   const router = useRouter();
+  const { user } = useAuth();
+  const moreNavProps = visitorMoreNavProps(isOwner, Boolean(user));
   const [albums, setAlbums] = useState(initialAlbums);
   const [photos, setPhotos] = useState(initialPhotos);
   const [foldersOpen, setFoldersOpen] = useState(false);
@@ -1112,6 +1119,7 @@ export function AlbumFolderView({
               : "/passaporte"
         }
         showCreate={isOwner}
+        {...moreNavProps}
       />
     </>
   );

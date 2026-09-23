@@ -27,6 +27,22 @@ export function profilePath(): string {
   return "/perfil";
 }
 
+/**
+ * What the bottom nav's "Mais" tab should be for a non-owner visitor:
+ * back to their own profile if they're signed in, otherwise to login.
+ * Owner keeps the default (Mais -> /geral) by getting {} back, so callers
+ * can just spread the result onto AppBottomNav's optional props.
+ */
+export function visitorMoreNavProps(
+  isOwner: boolean,
+  viewerHasSession: boolean,
+): { readonly moreHref?: string; readonly moreLabel?: string } {
+  if (isOwner) return {};
+  return viewerHasSession
+    ? { moreHref: profilePath(), moreLabel: "Meu perfil" }
+    : { moreHref: "/login", moreLabel: "Entrar" };
+}
+
 export function profileTripPath(slug: string): string {
   return `/perfil/${encodeURIComponent(slug)}`;
 }

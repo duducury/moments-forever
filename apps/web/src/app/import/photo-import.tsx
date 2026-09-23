@@ -756,6 +756,12 @@ export function PhotoImport() {
     });
   }
 
+  // No longer reachable from the default "add photos" flow — ImportDestination
+  // now always handles new/existing trip choice itself, without this
+  // grouping/review screen. Left in place (not deleted) since it's a real,
+  // separate power-user feature (EXIF-based multi-group review for bulk
+  // imports) that a future "advanced import" entry point could re-wire to.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   function beginAnalysis(files: readonly File[]): void {
     const chosen = files.filter(isSupportedImageFile);
     if (chosen.length === 0) {
@@ -838,16 +844,6 @@ export function PhotoImport() {
     if (chosen.length === 0) return;
     setChoiceFiles(chosen);
     setScreen("destination");
-  }
-
-  function startNewTripFromChoice(details?: {
-    readonly name: string;
-    readonly story: string;
-  }): void {
-    if (!choiceFiles || choiceFiles.length === 0) return;
-    setNewAlbumName(details?.name.trim() ?? "");
-    setNewAlbumStory(details?.story.trim() ?? "");
-    beginAnalysis(choiceFiles);
   }
 
   function createGroupFromReviewSelection(): void {
@@ -936,10 +932,7 @@ export function PhotoImport() {
       </nav>
 
       {screen === "destination" && choiceFiles && choiceFiles.length > 0 ? (
-        <ImportDestination
-          files={choiceFiles}
-          onNewTrip={startNewTripFromChoice}
-        />
+        <ImportDestination files={choiceFiles} />
       ) : null}
 
       {screen === "start" ? (

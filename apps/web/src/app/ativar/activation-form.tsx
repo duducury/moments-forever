@@ -273,14 +273,7 @@ export function ActivationForm() {
           <div className="divider">
             <span>ou</span>
           </div>
-          <button
-            className="button secondary"
-            disabled={busy}
-            onClick={() => void handleOAuth("apple")}
-            type="button"
-          >
-            Continuar com Apple
-          </button>
+          {/* Apple exige conta paga de desenvolvedor — oculto até ser ativado. */}
           <button
             className="button secondary"
             disabled={busy}

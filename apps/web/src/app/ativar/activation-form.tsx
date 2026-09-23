@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import { AppBootSplash } from "@/components/app-boot-splash";
 import { useAuth } from "@/components/auth-provider";
+import { OAuthButtons } from "@/components/oauth-buttons";
 import { signalPwaBootReady } from "@/components/pwa-splash-dismiss";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
@@ -108,7 +109,7 @@ export function ActivationForm() {
     });
   }
 
-  async function handleOAuth(provider: "apple" | "google" | "facebook") {
+  async function handleOAuth(provider: "google" | "facebook") {
     const trimmedCode = code.trim().toUpperCase();
     if (!/^MF-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{2}$/.test(trimmedCode)) {
       setMessage("Digite o código no formato MF-XXXX-XXXX-XX.");
@@ -273,23 +274,10 @@ export function ActivationForm() {
           <div className="divider">
             <span>ou</span>
           </div>
-          {/* Apple exige conta paga de desenvolvedor — oculto até ser ativado. */}
-          <button
-            className="button secondary"
-            disabled={busy}
-            onClick={() => void handleOAuth("google")}
-            type="button"
-          >
-            Continuar com Google
-          </button>
-          <button
-            className="button secondary"
-            disabled={busy}
-            onClick={() => void handleOAuth("facebook")}
-            type="button"
-          >
-            Continuar com Facebook
-          </button>
+          <OAuthButtons
+            busy={busy}
+            onSelect={(provider) => void handleOAuth(provider)}
+          />
         </>
       ) : null}
       {message ? (

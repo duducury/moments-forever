@@ -3,9 +3,8 @@ import { redirect } from "next/navigation";
 import { profilePath } from "@/lib/routes/app-routes";
 import { requireAdminUser } from "@/lib/licensing/require-admin";
 
-import { AdminNav } from "../admin-nav";
 import styles from "../admin.module.css";
-import { PlanEditForm } from "./plan-edit-form";
+import { PlansEditor, type PlanRow } from "./plans-editor";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +17,7 @@ export default async function AdminPlansPage() {
     .select("id, name, max_nfc_tags, max_photos_per_trip, active")
     .order("max_nfc_tags", { ascending: true });
 
-  const rows = (plans.data ?? []).map((plan) => ({
+  const rows: PlanRow[] = (plans.data ?? []).map((plan) => ({
     id: plan.id as string,
     name: plan.name as string,
     maxNfcTags: plan.max_nfc_tags as number,
@@ -39,13 +38,10 @@ export default async function AdminPlansPage() {
           </p>
         </div>
       </div>
-      <AdminNav active="plans" />
+
       <h2 className={styles.sectionTitle}>Planos à venda</h2>
-      <div className={styles.list}>
-        {sellablePlans.map((plan) => (
-          <PlanEditForm key={plan.id} plan={plan} />
-        ))}
-      </div>
+      <PlansEditor plans={sellablePlans} />
+
       {legacyPlans.length > 0 ? (
         <>
           <h2 className={styles.sectionTitle}>Interno / legado</h2>
@@ -53,11 +49,7 @@ export default async function AdminPlansPage() {
             Nunca vendido — usado só para migrar contas que já existiam
             antes do sistema de ativação.
           </p>
-          <div className={styles.list}>
-            {legacyPlans.map((plan) => (
-              <PlanEditForm key={plan.id} plan={plan} />
-            ))}
-          </div>
+          <PlansEditor plans={legacyPlans} />
         </>
       ) : null}
     </main>

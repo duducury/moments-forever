@@ -179,8 +179,12 @@ export function CodesClient({ plans }: { readonly plans: readonly PlanOption[] }
         </div>
       ) : null}
 
-      <div className={styles.panel}>
-        <form className={styles.formRow} onSubmit={(e) => void onGenerate(e)}>
+      <div className={styles.generatorCard}>
+        <div className={styles.generatorHeader}>
+          <h2 className={styles.sectionTitle}>Gerar novo código</h2>
+          <p className={styles.panelSubtitle}>Crie um novo código de ativação.</p>
+        </div>
+        <form className={styles.generatorForm} onSubmit={(e) => void onGenerate(e)}>
           <div className={styles.formField}>
             <label htmlFor="quantity">Quantidade</label>
             <input
@@ -206,7 +210,7 @@ export function CodesClient({ plans }: { readonly plans: readonly PlanOption[] }
               ))}
             </select>
           </div>
-          <button className="button primary" disabled={busy} type="submit">
+          <button className={`button primary ${styles.generatorButton}`} disabled={busy} type="submit">
             {busy
               ? "Gerando…"
               : quantity === 1
@@ -314,7 +318,7 @@ export function CodesClient({ plans }: { readonly plans: readonly PlanOption[] }
                   <td>
                     {row.status === "available" ? (
                       <button
-                        className="link-button"
+                        className={styles.subtleDangerLink}
                         disabled={revokingId === row.id}
                         onClick={() => void revokeCode(row)}
                         type="button"

@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import { profilePath } from "@/lib/routes/app-routes";
 import { requireAdminUser } from "@/lib/licensing/require-admin";
 
-import { AdminNav } from "../admin-nav";
 import styles from "../admin.module.css";
 import { UsersTable, type UserRow } from "./users-table";
 
@@ -165,7 +164,6 @@ export default async function AdminUsersPage() {
           </p>
         </div>
       </div>
-      <AdminNav active="users" />
       <UsersTable
         emailLookupFailed={Boolean(emails.error)}
         plans={planOptions}

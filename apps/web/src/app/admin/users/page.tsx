@@ -28,14 +28,13 @@ export default async function AdminUsersPage() {
   const safeIds =
     userIds.length > 0 ? userIds : ["00000000-0000-0000-0000-000000000000"];
 
-  const [licenses, experiences, nfcTags, allPlans] = await Promise.all([
+  const [licenses, experiences, allPlans] = await Promise.all([
     supabase
       .from("licenses")
       .select("user_id, plan_id")
       .eq("status", "active")
       .in("user_id", safeIds),
     supabase.from("experiences").select("id, owner_id").in("owner_id", safeIds),
-    supabase.from("nfc_tags").select("user_id").in("user_id", safeIds),
     supabase
       .from("plans")
       .select("id, name, max_nfc_tags")
@@ -85,12 +84,6 @@ export default async function AdminUsersPage() {
     );
   }
 
-  const nfcCountByUser = new Map<string, number>();
-  for (const row of nfcTags.data ?? []) {
-    const userId = row.user_id as string;
-    nfcCountByUser.set(userId, (nfcCountByUser.get(userId) ?? 0) + 1);
-  }
-
   return (
     <main className={`page-shell ${styles.page}`}>
       <div className={styles.header}>
@@ -108,7 +101,6 @@ export default async function AdminUsersPage() {
             <tr>
               <th>Usuário</th>
               <th>Plano</th>
-              <th>NFCs</th>
               <th>Viagens</th>
               <th>Fotos</th>
               <th>Criado em</th>
@@ -149,8 +141,9 @@ export default async function AdminUsersPage() {
                     </p>
                     <UserPlanSelect plans={planOptions} userId={id} />
                   </td>
-                  <td>{nfcCountByUser.get(id) ?? 0}</td>
-                  <td>{experienceIds.length}</td>
+                  <td>
+                    {experienceIds.length}/{totalNfc}
+                  </td>
                   <td>{photoCount}</td>
                   <td>
                     {new Date(user.created_at as string).toLocaleDateString(

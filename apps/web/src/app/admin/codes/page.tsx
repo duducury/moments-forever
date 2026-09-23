@@ -16,6 +16,7 @@ export default async function AdminCodesPage() {
   const plans = await admin.supabase
     .from("plans")
     .select("id, name")
+    .neq("name", "LEGACY")
     .order("max_nfc_tags", { ascending: true });
 
   return (

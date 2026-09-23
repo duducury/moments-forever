@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { countryCodeFromPlaceLabel } from "@moments-forever/shared";
@@ -26,6 +27,7 @@ export function ProfileView({
   avatarPhotoId,
   avatarRemoteSrc = null,
   isOwner,
+  isAdmin = false,
   places,
   carouselPhotos = [],
   loadError,
@@ -40,6 +42,8 @@ export function ProfileView({
   readonly avatarPhotoId: string | null;
   readonly avatarRemoteSrc?: string | null;
   readonly isOwner: boolean;
+  /** Only ever true when isOwner is also true — never shows on someone else's profile. */
+  readonly isAdmin?: boolean;
   readonly places: readonly OwnerPlaceCardItem[];
   readonly carouselPhotos?: readonly ProfileCarouselPhoto[];
   readonly loadError: string | null;
@@ -82,6 +86,11 @@ export function ProfileView({
             >
               Nova viagem
             </NewTripButton>
+          ) : null}
+          {isAdmin ? (
+            <Link className="text-link" href="/admin">
+              Admin
+            </Link>
           ) : null}
           <AuthStatus hideUserName={isOwner} />
         </div>

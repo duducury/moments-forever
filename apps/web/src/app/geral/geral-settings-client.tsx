@@ -139,6 +139,23 @@ export function GeralSettingsClient() {
         </li>
       </ul>
 
+      <p className={styles.sectionLabel}>Licença</p>
+      <ul className={styles.list}>
+        <li>
+          <Link className={styles.row} href="/ativar">
+            <div className={styles.rowMeta}>
+              <p className={styles.rowLabel}>Ativar código</p>
+              <p className={styles.rowHint}>
+                Comprou mais tags NFC? Ative o código aqui.
+              </p>
+            </div>
+            <span aria-hidden className={styles.rowAction}>
+              ›
+            </span>
+          </Link>
+        </li>
+      </ul>
+
       <p className={styles.sectionLabel}>Privacidade</p>
       <ul className={styles.list}>
         <li>

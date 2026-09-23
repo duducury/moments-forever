@@ -462,6 +462,41 @@ form .button {
   width: 100%;
 }
 
+.oauth-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.oauth-google,
+.oauth-facebook {
+  gap: 10px;
+}
+
+.oauth-icon {
+  flex: 0 0 auto;
+}
+
+.oauth-google {
+  border: 1px solid var(--border);
+  color: var(--text);
+  background: var(--surface);
+}
+
+.oauth-google:hover:not(:disabled) {
+  background: var(--surface-secondary);
+}
+
+.oauth-facebook {
+  border-color: transparent;
+  color: #fff;
+  background: #1877f2;
+}
+
+.oauth-facebook:hover:not(:disabled) {
+  background: #1461d1;
+}
+
 .form-message,
 .notice {
   margin-top: 16px;

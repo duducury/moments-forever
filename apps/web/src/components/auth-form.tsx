@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { OAuthButtons } from "@/components/oauth-buttons";
 
 import { AppBootSplash } from "./app-boot-splash";
 import { useAuth } from "./auth-provider";
@@ -108,7 +109,7 @@ export function AuthForm() {
     setBusy(false);
   }
 
-  async function handleOAuth(provider: "apple" | "google" | "facebook") {
+  async function handleOAuth(provider: "google" | "facebook") {
     setBusy(true);
     setMessage(null);
     const redirectTo = `${window.location.origin}/auth/callback`;
@@ -164,23 +165,7 @@ export function AuthForm() {
         </button>
       </form>
       <div className="divider"><span>ou</span></div>
-      {/* Apple exige conta paga de desenvolvedor — oculto até ser ativado. */}
-      <button
-        className="button secondary"
-        disabled={busy}
-        onClick={() => void handleOAuth("google")}
-        type="button"
-      >
-        Continuar com Google
-      </button>
-      <button
-        className="button secondary"
-        disabled={busy}
-        onClick={() => void handleOAuth("facebook")}
-        type="button"
-      >
-        Continuar com Facebook
-      </button>
+      <OAuthButtons busy={busy} onSelect={(provider) => void handleOAuth(provider)} />
       {message ? <p className="form-message" role="status">{message}</p> : null}
     </div>
   );

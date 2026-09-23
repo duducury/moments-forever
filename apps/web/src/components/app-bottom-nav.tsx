@@ -94,19 +94,22 @@ function MoreIcon() {
 }
 
 /**
- * App tabs: Álbuns · Mapa · + · Passaporte · Mais
- * Always show all five so Safari on iPhone matches the installed app,
- * even before the client session hydrates.
+ * App tabs: Álbuns · Mapa · (+ when showCreate) · Passaporte · Mais.
+ * Show all five for the owner so Safari on iPhone matches the installed
+ * app, even before the client session hydrates. A non-owner viewing
+ * someone else's public profile gets four — no "+", they can't add.
  */
 export function AppBottomNav({
   homeHref,
   mapHref = "/mapa",
   passaporteHref = "/passaporte",
+  showCreate = true,
 }: {
   readonly homeHref: string;
   readonly mapHref?: string;
   /** Owner's own passport is /passaporte; a visitor needs {profileHomeHref}/passaporte. */
   readonly passaporteHref?: string;
+  /** False for a non-owner viewing someone else's public profile — they can look, not add. */
   readonly showCreate?: boolean;
 }) {
   const pathname = usePathname();
@@ -159,16 +162,18 @@ export function AppBottomNav({
           </Link>
         </li>
 
-        <li className={styles.item}>
-          <span className={styles.createWrap}>
-            <NewTripButton className={styles.create}>
-              <span className={styles.icon}>
-                <PlusIcon />
-              </span>
-              <span className={styles.label}>Nova viagem</span>
-            </NewTripButton>
-          </span>
-        </li>
+        {showCreate ? (
+          <li className={styles.item}>
+            <span className={styles.createWrap}>
+              <NewTripButton className={styles.create}>
+                <span className={styles.icon}>
+                  <PlusIcon />
+                </span>
+                <span className={styles.label}>Nova viagem</span>
+              </NewTripButton>
+            </span>
+          </li>
+        ) : null}
 
         <li className={styles.item}>
           <Link

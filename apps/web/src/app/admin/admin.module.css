@@ -286,6 +286,81 @@
   background: color-mix(in srgb, #c0503e 18%, transparent);
 }
 
+.badge[data-tone="info"] {
+  color: #3b7ec4;
+  background: color-mix(in srgb, #3b7ec4 18%, transparent);
+}
+
+.badge[data-tone="premium"] {
+  color: #8a5fc4;
+  background: color-mix(in srgb, #8a5fc4 18%, transparent);
+}
+
+.searchRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.searchInput {
+  min-height: 46px;
+  width: min(100%, 340px);
+  padding: 0 18px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+.searchInput::placeholder {
+  color: var(--muted);
+}
+
+.searchCount {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.rowNumber {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.emailCell {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.planBadges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.userCell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.avatar {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: #fff;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
 .codeCopy {
   font-family: ui-monospace, monospace;
   cursor: pointer;

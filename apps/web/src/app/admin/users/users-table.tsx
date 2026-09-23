@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import { publicProfilePath } from "@/lib/profile/profile-slug";
 
 import styles from "../admin.module.css";
+import { DeleteUserButton } from "./delete-user-button";
 import { UserPlanSelect } from "./user-plan-select";
 
 export interface UserRow {
@@ -222,15 +223,28 @@ export function UsersTable({ rows, plans, emailLookupFailed }: UsersTableProps) 
                     </span>
                   </td>
                   <td>
-                    {row.profileSlug ? (
-                      <Link
-                        className="text-link"
-                        href={publicProfilePath(row.profileSlug)}
-                        target="_blank"
-                      >
-                        Ver perfil
-                      </Link>
-                    ) : null}
+                    <div className={styles.rowActions}>
+                      {row.profileSlug ? (
+                        <Link
+                          className="text-link"
+                          href={publicProfilePath(row.profileSlug)}
+                          target="_blank"
+                        >
+                          Ver perfil
+                        </Link>
+                      ) : null}
+                      {!row.isAdmin ? (
+                        <DeleteUserButton
+                          userId={row.id}
+                          userLabel={
+                            row.displayName ||
+                            row.email ||
+                            row.profileSlug ||
+                            row.id.slice(0, 8)
+                          }
+                        />
+                      ) : null}
+                    </div>
                   </td>
                 </tr>
               ))

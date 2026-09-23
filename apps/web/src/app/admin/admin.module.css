@@ -498,6 +498,75 @@
   color: var(--muted);
 }
 
+.rowActions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.dangerLink {
+  padding: 0;
+  border: none;
+  background: none;
+  color: #c0503e;
+  font-weight: 700;
+  font-size: inherit;
+  cursor: pointer;
+}
+
+.dangerLink:hover {
+  text-decoration: underline;
+}
+
+.deleteConfirm {
+  display: grid;
+  gap: 8px;
+  width: 260px;
+  padding: 14px;
+  border: 1px solid #c0503e;
+  border-radius: 16px;
+  background: color-mix(in srgb, #c0503e 8%, var(--surface));
+  white-space: normal;
+}
+
+.deleteWarning {
+  color: var(--text);
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.deleteConfirm label {
+  margin-top: 0;
+  font-size: 0.8rem;
+  font-weight: 650;
+  color: var(--muted);
+}
+
+.deleteActions {
+  display: flex;
+  gap: 8px;
+}
+
+.dangerButton {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 14px;
+  border: none;
+  border-radius: 999px;
+  background: #c0503e;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.dangerButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 @media (max-width: 640px) {
   .page {
     padding-top: 20px;

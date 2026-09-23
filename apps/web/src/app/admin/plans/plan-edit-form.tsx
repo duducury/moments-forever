@@ -51,7 +51,9 @@ export function PlanEditForm({ plan }: { readonly plan: PlanRow }) {
       onSubmit={(e) => void onSubmit(e)}
     >
       <div className={styles.formField}>
-        <label htmlFor={`nfc-${plan.id}`}>{plan.name} — Max NFC</label>
+        <label htmlFor={`nfc-${plan.id}`}>
+          {plan.name} — Limite de viagens
+        </label>
         <input
           defaultValue={plan.maxNfcTags}
           id={`nfc-${plan.id}`}

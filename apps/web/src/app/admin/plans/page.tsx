@@ -18,6 +18,16 @@ export default async function AdminPlansPage() {
     .select("id, name, max_nfc_tags, max_photos_per_trip, active")
     .order("max_nfc_tags", { ascending: true });
 
+  const rows = (plans.data ?? []).map((plan) => ({
+    id: plan.id as string,
+    name: plan.name as string,
+    maxNfcTags: plan.max_nfc_tags as number,
+    maxPhotosPerTrip: plan.max_photos_per_trip as number,
+    active: plan.active as boolean,
+  }));
+  const sellablePlans = rows.filter((plan) => plan.name !== "LEGACY");
+  const legacyPlans = rows.filter((plan) => plan.name === "LEGACY");
+
   return (
     <main className={`page-shell ${styles.page}`}>
       <div className={styles.header}>
@@ -30,20 +40,26 @@ export default async function AdminPlansPage() {
         </div>
       </div>
       <AdminNav active="plans" />
+      <h2 className={styles.sectionTitle}>Planos à venda</h2>
       <div className={styles.list}>
-        {(plans.data ?? []).map((plan) => (
-          <PlanEditForm
-            key={plan.id as string}
-            plan={{
-              id: plan.id as string,
-              name: plan.name as string,
-              maxNfcTags: plan.max_nfc_tags as number,
-              maxPhotosPerTrip: plan.max_photos_per_trip as number,
-              active: plan.active as boolean,
-            }}
-          />
+        {sellablePlans.map((plan) => (
+          <PlanEditForm key={plan.id} plan={plan} />
         ))}
       </div>
+      {legacyPlans.length > 0 ? (
+        <>
+          <h2 className={styles.sectionTitle}>Interno / legado</h2>
+          <p className={styles.subtitle}>
+            Nunca vendido — usado só para migrar contas que já existiam
+            antes do sistema de ativação.
+          </p>
+          <div className={styles.list}>
+            {legacyPlans.map((plan) => (
+              <PlanEditForm key={plan.id} plan={plan} />
+            ))}
+          </div>
+        </>
+      ) : null}
     </main>
   );
 }

@@ -49,6 +49,7 @@ export function CodesClient({ plans }: { readonly plans: readonly PlanOption[] }
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [revokingId, setRevokingId] = useState<string | null>(null);
   const [justGenerated, setJustGenerated] = useState<{
     readonly codes: readonly string[];
     readonly planName: string;
@@ -118,6 +119,34 @@ export function CodesClient({ plans }: { readonly plans: readonly PlanOption[] }
       setError(err instanceof Error ? err.message : "Falha ao gerar códigos.");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function revokeCode(row: CodeRow) {
+    if (
+      !window.confirm(
+        `Revogar o código ${row.code}? Ele não poderá mais ser ativado por ninguém.`,
+      )
+    ) {
+      return;
+    }
+    setRevokingId(row.id);
+    setError(null);
+    try {
+      const response = await fetch(`/api/admin/codes/${row.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action: "revoke" }),
+      });
+      const payload = (await response.json()) as { readonly error?: string };
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Não foi possível revogar o código.");
+      }
+      await loadCodes();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Falha ao revogar código.");
+    } finally {
+      setRevokingId(null);
     }
   }
 
@@ -231,16 +260,17 @@ export function CodesClient({ plans }: { readonly plans: readonly PlanOption[] }
               <th>Status</th>
               <th>Usuário</th>
               <th>Data</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={5}>Carregando…</td>
+                <td colSpan={6}>Carregando…</td>
               </tr>
             ) : codes.length === 0 ? (
               <tr>
-                <td colSpan={5}>Nenhum código gerado ainda.</td>
+                <td colSpan={6}>Nenhum código gerado ainda.</td>
               </tr>
             ) : (
               codes.map((row) => (
@@ -281,6 +311,18 @@ export function CodesClient({ plans }: { readonly plans: readonly PlanOption[] }
                     )}
                   </td>
                   <td>{new Date(row.createdAt).toLocaleDateString("pt-BR")}</td>
+                  <td>
+                    {row.status === "available" ? (
+                      <button
+                        className="link-button"
+                        disabled={revokingId === row.id}
+                        onClick={() => void revokeCode(row)}
+                        type="button"
+                      >
+                        {revokingId === row.id ? "Revogando…" : "Revogar"}
+                      </button>
+                    ) : null}
+                  </td>
                 </tr>
               ))
             )}

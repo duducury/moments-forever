@@ -11,12 +11,18 @@ export interface PlanRow {
   readonly maxNfcTags: number;
   readonly maxPhotosPerTrip: number;
   readonly active: boolean;
+  readonly priceLabel: string | null;
+  readonly priceNote: string;
+  readonly highlight: boolean;
 }
 
 interface PlanDraft {
   readonly maxNfcTags: number;
   readonly maxPhotosPerTrip: number;
   readonly active: boolean;
+  readonly priceLabel: string;
+  readonly priceNote: string;
+  readonly highlight: boolean;
 }
 
 const PLAN_TONE: Record<string, string> = {
@@ -31,6 +37,9 @@ function draftFrom(plan: PlanRow): PlanDraft {
     maxNfcTags: plan.maxNfcTags,
     maxPhotosPerTrip: plan.maxPhotosPerTrip,
     active: plan.active,
+    priceLabel: plan.priceLabel ?? "",
+    priceNote: plan.priceNote,
+    highlight: plan.highlight,
   };
 }
 
@@ -38,7 +47,10 @@ function isDirty(plan: PlanRow, draft: PlanDraft): boolean {
   return (
     plan.maxNfcTags !== draft.maxNfcTags ||
     plan.maxPhotosPerTrip !== draft.maxPhotosPerTrip ||
-    plan.active !== draft.active
+    plan.active !== draft.active ||
+    (plan.priceLabel ?? "") !== draft.priceLabel ||
+    plan.priceNote !== draft.priceNote ||
+    plan.highlight !== draft.highlight
   );
 }
 
@@ -93,6 +105,40 @@ function PlanCard({
           value={draft.maxPhotosPerTrip}
         />
       </div>
+
+      <p className={styles.planCardSectionLabel}>Vitrine na home (deslogado)</p>
+
+      <div className={styles.planCardField}>
+        <label htmlFor={`price-${plan.id}`}>Preço exibido</label>
+        <input
+          id={`price-${plan.id}`}
+          onChange={(event) => onChange({ priceLabel: event.target.value })}
+          placeholder="Ex: US$ 8"
+          type="text"
+          value={draft.priceLabel}
+        />
+      </div>
+
+      <div className={styles.planCardField}>
+        <label htmlFor={`price-note-${plan.id}`}>Texto abaixo do preço</label>
+        <input
+          id={`price-note-${plan.id}`}
+          onChange={(event) => onChange({ priceNote: event.target.value })}
+          placeholder="Ex: pagamento único"
+          type="text"
+          value={draft.priceNote}
+        />
+      </div>
+
+      <label className={`${styles.planActiveToggle} ${styles.planCardHighlightToggle}`}>
+        <input
+          checked={draft.highlight}
+          onChange={(event) => onChange({ highlight: event.target.checked })}
+          type="checkbox"
+        />
+        <span className={styles.planActiveDot} data-on={draft.highlight ? "true" : "false"} />
+        Destacar como &quot;Mais popular&quot;
+      </label>
     </div>
   );
 }
@@ -142,6 +188,9 @@ export function PlansEditor({ plans }: { readonly plans: readonly PlanRow[] }) {
               max_nfc_tags: draft.maxNfcTags,
               max_photos_per_trip: draft.maxPhotosPerTrip,
               active: draft.active,
+              price_label: draft.priceLabel.trim() === "" ? null : draft.priceLabel.trim(),
+              price_note: draft.priceNote,
+              highlight: draft.highlight,
             }),
           });
           if (!response.ok) {

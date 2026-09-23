@@ -3,14 +3,31 @@
 import Link from "next/link";
 
 import { useAuth } from "@/components/auth-provider";
-import { PRICING_PLANS } from "@/lib/pricing/pricing-plans";
 
 import styles from "./home.module.css";
 
-export function PricingSection() {
+export interface PricingPlanRow {
+  readonly name: string;
+  readonly priceLabel: string;
+  readonly priceNote: string;
+  readonly trips: number;
+  readonly photosPerTrip: number;
+  readonly nfcTags: number;
+  readonly highlight: boolean;
+}
+
+function titleCase(name: string): string {
+  return name.charAt(0) + name.slice(1).toLowerCase();
+}
+
+export function PricingSection({
+  plans,
+}: {
+  readonly plans: readonly PricingPlanRow[];
+}) {
   const { loading, user } = useAuth();
 
-  if (loading || user) return null;
+  if (loading || user || plans.length === 0) return null;
 
   return (
     <section
@@ -27,7 +44,7 @@ export function PricingSection() {
         </p>
       </div>
       <ul className={styles.pricingGrid}>
-        {PRICING_PLANS.map((plan) => (
+        {plans.map((plan) => (
           <li
             className={styles.pricingCard}
             data-highlight={plan.highlight ? "true" : "false"}
@@ -36,9 +53,9 @@ export function PricingSection() {
             {plan.highlight ? (
               <span className={styles.pricingBadge}>Mais popular</span>
             ) : null}
-            <p className={styles.pricingName}>{plan.name}</p>
+            <p className={styles.pricingName}>{titleCase(plan.name)}</p>
             <p className={styles.pricingPrice}>
-              {plan.price}
+              {plan.priceLabel}
               <span>{plan.priceNote}</span>
             </p>
             <ul className={styles.pricingFeatures}>

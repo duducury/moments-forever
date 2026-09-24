@@ -166,7 +166,10 @@ export function ProfileView({
       </section>
 
       <footer>
-        <AppCreditFooter homeLinkHref={isOwner ? undefined : "/"} />
+        <AppCreditFooter
+          homeLinkHref={isOwner ? undefined : "/"}
+          inicioLinkHref={isOwner ? "/" : undefined}
+        />
       </footer>
 
       <AppBottomNav

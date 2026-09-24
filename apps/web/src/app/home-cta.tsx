@@ -25,6 +25,10 @@ export function HomePrimaryCta({
         <Link className={`button secondary ${secondaryClassName ?? ""}`} href="/login">
           Entrar
         </Link>
+      ) : user && !loading ? (
+        <Link className={`button secondary ${secondaryClassName ?? ""}`} href="/">
+          Início
+        </Link>
       ) : null}
     </div>
   );

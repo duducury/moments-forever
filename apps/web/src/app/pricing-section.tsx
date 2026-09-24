@@ -31,9 +31,9 @@ export function PricingSection({
 }: {
   readonly plans: readonly PricingPlanRow[];
 }) {
-  const { loading, user } = useAuth();
+  const { loading } = useAuth();
 
-  if (loading || user || plans.length === 0) return null;
+  if (loading || plans.length === 0) return null;
 
   return (
     <section

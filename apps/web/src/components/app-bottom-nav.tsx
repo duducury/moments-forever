@@ -83,19 +83,6 @@ function PassportIcon() {
   );
 }
 
-function HomeIcon() {
-  return (
-    <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
-      <path
-        d="M3 12L12 3l9 9v8a2 2 0 0 1-2 2h-2v-5a2 2 0 0 0-2-2h-6a2 2 0 0 0-2 2v5H5a2 2 0 0 1-2-2v-8Z"
-        stroke="currentColor"
-        strokeLinejoin="round"
-        strokeWidth="1.7"
-      />
-    </svg>
-  );
-}
-
 function MoreIcon() {
   return (
     <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
@@ -107,10 +94,10 @@ function MoreIcon() {
 }
 
 /**
- * App tabs: Álbuns · Mapa · (+ when showCreate) · Passaporte · Início · Mais.
- * Show all tabs for the owner so Safari on iPhone matches the installed
+ * App tabs: Álbuns · Mapa · (+ when showCreate) · Passaporte · Mais.
+ * Show all five for the owner so Safari on iPhone matches the installed
  * app, even before the client session hydrates. A non-owner viewing
- * someone else's public profile shows all except the "+", they can't add.
+ * someone else's public profile gets four — no "+", they can't add.
  */
 export function AppBottomNav({
   homeHref,
@@ -132,7 +119,6 @@ export function AppBottomNav({
 }) {
   const pathname = usePathname();
 
-  const inicioActive = pathname === "/";
   const mapActive =
     pathname === "/mapa" ||
     pathname.endsWith("/mapa") ||
@@ -144,7 +130,6 @@ export function AppBottomNav({
     pathname.startsWith("/geral") ||
     pathname.startsWith("/privacidade");
   const homeActive =
-    !inicioActive &&
     !mapActive &&
     !passportActive &&
     !moreActive &&
@@ -209,20 +194,6 @@ export function AppBottomNav({
               <PassportIcon />
             </span>
             <span className={styles.label}>Passaporte</span>
-          </Link>
-        </li>
-
-        <li className={styles.item}>
-          <Link
-            aria-current={inicioActive ? "page" : undefined}
-            className={styles.tab}
-            data-active={inicioActive ? "true" : "false"}
-            href="/"
-          >
-            <span className={styles.icon}>
-              <HomeIcon />
-            </span>
-            <span className={styles.label}>Início</span>
           </Link>
         </li>
 

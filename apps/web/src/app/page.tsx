@@ -1,9 +1,9 @@
 import Image from "next/image";
-import Link from "next/link";
 
 import { AppCreditFooter } from "@/components/app-credit-footer";
 import { createSupabaseAnonClient } from "@/lib/supabase/anon";
 import { HomePrimaryCta } from "./home-cta";
+import { HomeFooterNav } from "./home-footer-nav";
 import { HomeHeader } from "./home-header";
 import { PricingSection, type PricingPlanRow } from "./pricing-section";
 import styles from "./home.module.css";
@@ -251,14 +251,7 @@ export default async function Home() {
           <p className={styles.footerBrand}>Moments Forever</p>
           <AppCreditFooter />
         </div>
-        <nav aria-label="Rodapé" className={styles.footerNav}>
-          <Link className={styles.footerLink} href="/privacidade">
-            Privacidade
-          </Link>
-          <Link className={styles.footerLink} href="/login">
-            Entrar
-          </Link>
-        </nav>
+        <HomeFooterNav />
       </footer>
     </main>
   );

@@ -78,41 +78,29 @@ export default async function Home() {
 
       <div className={styles.main}>
         <section aria-labelledby="home-hero-title" className={styles.hero}>
-          <div className={styles.heroVisual}>
-            <div className={styles.heroPhoto}>
-              <Image
-                alt="Costa Amalfitana ao entardecer"
-                className={styles.heroPhotoImage}
-                height={900}
-                priority
-                sizes="(max-width: 720px) 92vw, 46vw"
-                src="/home/capri.jpg"
-                width={1200}
-              />
+          <div className={styles.heroBanner}>
+            <Image
+              alt="App Moments Forever mostrando uma viagem a Santorini, com o mar e as casas brancas ao entardecer"
+              className={styles.heroBannerImage}
+              fill
+              priority
+              sizes="100vw"
+              src="/home/hero-santorini-app.webp"
+            />
+            <div aria-hidden="true" className={styles.heroBannerScrim} />
+            <div className={styles.heroBannerCopy}>
+              <h1 className={styles.title} id="home-hero-title">
+                Seus souvenirs
+                <br />
+                <span className={styles.heroHighlight}>ganham vida</span>
+                <br />
+                depois da viagem.
+              </h1>
+              <p className={styles.lead}>
+                Aproxime, reviva e mantenha suas memórias sempre por perto.
+              </p>
+              <HomePrimaryCta className={styles.heroBannerCta} />
             </div>
-            <div className={styles.heroMark}>
-              <Image
-                alt="Moments Forever"
-                className={styles.heroLogo}
-                height={1254}
-                priority
-                sizes="120px"
-                src="/brand/logo.png"
-                width={1254}
-              />
-            </div>
-          </div>
-
-          <div className={styles.heroCopy}>
-            <p className={styles.brand}>Moments Forever</p>
-            <h1 className={styles.title} id="home-hero-title">
-              Suas histórias, sempre por perto.
-            </h1>
-            <p className={styles.lead}>
-              Guarde suas viagens. Reviva seus momentos.
-            </p>
-            <HomePrimaryCta className={styles.ctaRow} />
-            <p className={styles.heroAside}>Viagens · Lugares · Momentos</p>
           </div>
         </section>
 

@@ -1,20 +1,29 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import styles from "./home.module.css";
 
-const TOTAL_FRAMES = 80;
-
 export function PremiumSection() {
-  const [frameIndex, setFrameIndex] = useState(0);
   const sectionRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [isInView, setIsInView] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
-      if (!sectionRef.current) return;
+      if (!sectionRef.current || !videoRef.current) return;
 
       const rect = sectionRef.current.getBoundingClientRect();
+      const isVisible = rect.top < window.innerHeight && rect.bottom > 0;
+
+      if (isVisible && !isInView) {
+        setIsInView(true);
+        videoRef.current.play();
+      } else if (!isVisible && isInView) {
+        setIsInView(false);
+        videoRef.current.pause();
+      }
+
+      // Sync video progress with scroll
       const sectionStart = rect.top;
       const sectionHeight = rect.height;
       const windowHeight = window.innerHeight;
@@ -26,17 +35,16 @@ export function PremiumSection() {
       let progress = (scrollStart * -1) / totalScroll;
       progress = Math.max(0, Math.min(1, progress));
 
-      const newFrameIndex = Math.floor(progress * (TOTAL_FRAMES - 1));
-      setFrameIndex(newFrameIndex);
+      if (videoRef.current.duration) {
+        videoRef.current.currentTime = progress * videoRef.current.duration;
+      }
     };
 
     window.addEventListener("scroll", handleScroll, { passive: true });
     handleScroll();
 
     return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  const frameNumber = String(frameIndex + 1).padStart(3, "0");
+  }, [isInView]);
 
   return (
     <section
@@ -46,14 +54,16 @@ export function PremiumSection() {
     >
       <div className={styles.premiumInner}>
         <div className={styles.premiumVisual}>
-          <Image
-            src={`/premium-frames/ezgif-frame-${frameNumber}.jpg`}
-            alt="Animação de apresentação do Moments Forever"
-            width={700}
-            height={800}
-            sizes="(max-width: 720px) 76vw, 390px"
-            priority={frameIndex < 5}
-          />
+          <video
+            ref={videoRef}
+            className={styles.premiumVideo}
+            autoPlay
+            muted
+            playsInline
+            preload="metadata"
+          >
+            <source src="/premium-animation.mp4" type="video/mp4" />
+          </video>
         </div>
 
         <div className={styles.premiumCopy}>

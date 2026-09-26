@@ -83,11 +83,11 @@ export default async function Home() {
               <Image
                 alt="App Moments Forever mostrando uma viagem a Santorini"
                 className={styles.heroPhotoImage}
-                height={1536}
+                height={2000}
                 priority
                 sizes="(max-width: 720px) 92vw, 46vw"
                 src="/home/hero-santorini-app.webp"
-                width={1024}
+                width={1333}
               />
             </div>
             <div className={styles.heroMark}>

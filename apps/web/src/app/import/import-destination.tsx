@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 
 import { countryCodeFromPlaceLabel } from "@moments-forever/shared";
@@ -8,6 +8,7 @@ import { countryCodeFromPlaceLabel } from "@moments-forever/shared";
 import { ExperienceCoverThumb } from "@/components/experience-cover-thumb";
 import { useAuth } from "@/components/auth-provider";
 import { parseBrowserExifFields } from "@/lib/photo-import/browser-metadata";
+import { IMPORT_FILE_ACCEPT } from "@/lib/photo-import/pending-import-files";
 import {
   createNamedTripFromFiles,
   TripLicenseError,
@@ -31,6 +32,85 @@ interface DestinationAlbum {
   readonly photoCount: number;
 }
 
+/** Purely derived from the File's own fields — no impure calls, stable across reorders. */
+function fileKey(file: File): string {
+  return `${file.name}:${file.size}:${file.lastModified}`;
+}
+
+function SelectedPhotoItem({
+  file,
+  isFirst,
+  isLast,
+  isCover,
+  busy,
+  onRemove,
+  onMove,
+  onSetCover,
+}: {
+  readonly file: File;
+  readonly isFirst: boolean;
+  readonly isLast: boolean;
+  readonly isCover: boolean;
+  readonly busy: boolean;
+  readonly onRemove: () => void;
+  readonly onMove: (direction: -1 | 1) => void;
+  readonly onSetCover: () => void;
+}) {
+  const [url] = useState(() => URL.createObjectURL(file));
+  useEffect(() => () => URL.revokeObjectURL(url), [url]);
+
+  return (
+    <li className={styles.selectedPhotoItem}>
+      <div className={styles.selectedPhotoThumb}>
+        {/* eslint-disable-next-line @next/next/no-img-element -- local blob preview */}
+        <img alt="" className={styles.selectedPhotoImage} src={url} />
+        <button
+          aria-label={`Remover ${file.name}`}
+          className={styles.selectedPhotoRemove}
+          disabled={busy}
+          onClick={onRemove}
+          type="button"
+        >
+          ×
+        </button>
+        {isCover ? (
+          <span className={styles.selectedPhotoCoverBadge}>Capa</span>
+        ) : null}
+      </div>
+      <div className={styles.selectedPhotoActions}>
+        <button
+          aria-label="Mover para trás"
+          className={styles.selectedPhotoMoveButton}
+          disabled={busy || isFirst}
+          onClick={() => onMove(-1)}
+          type="button"
+        >
+          ←
+        </button>
+        <button
+          aria-label={isCover ? "Foto de capa" : "Definir como capa"}
+          aria-pressed={isCover}
+          className={styles.selectedPhotoCoverButton}
+          disabled={busy}
+          onClick={onSetCover}
+          type="button"
+        >
+          {isCover ? "★" : "☆"}
+        </button>
+        <button
+          aria-label="Mover para frente"
+          className={styles.selectedPhotoMoveButton}
+          disabled={busy || isLast}
+          onClick={() => onMove(1)}
+          type="button"
+        >
+          →
+        </button>
+      </div>
+    </li>
+  );
+}
+
 function formatActivationCodeInput(raw: string): string {
   const cleaned = raw.toUpperCase().replace(/[^A-Z0-9]/g, "");
   const withoutPrefix = cleaned.startsWith("MF") ? cleaned.slice(2) : cleaned;
@@ -44,8 +124,10 @@ function formatActivationCodeInput(raw: string): string {
 
 export function ImportDestination({
   files,
+  onFilesChange,
 }: {
   readonly files: readonly File[];
+  readonly onFilesChange: (files: File[]) => void;
 }) {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
@@ -62,11 +144,7 @@ export function ImportDestination({
     string | null
   >(null);
   const [detectingLocation, setDetectingLocation] = useState(false);
-  const [coverIndex, setCoverIndex] = useState(0);
-  const coverPreviewUrls = useMemo(
-    () => files.map((file) => URL.createObjectURL(file)),
-    [files],
-  );
+  const [coverFile, setCoverFile] = useState<File | null>(null);
   const nameEditedRef = useRef(false);
   const [licenseBlock, setLicenseBlock] = useState<{
     readonly code: TripLicenseErrorCode;
@@ -78,11 +156,29 @@ export function ImportDestination({
     null,
   );
 
-  useEffect(() => {
-    return () => {
-      coverPreviewUrls.forEach((url) => URL.revokeObjectURL(url));
-    };
-  }, [coverPreviewUrls]);
+  function removeFile(target: File) {
+    onFilesChange(files.filter((file) => file !== target));
+    if (coverFile === target) setCoverFile(null);
+  }
+
+  function moveFile(target: File, direction: -1 | 1) {
+    const index = files.indexOf(target);
+    if (index === -1) return;
+    const nextIndex = index + direction;
+    if (nextIndex < 0 || nextIndex >= files.length) return;
+    const next = [...files];
+    const [moved] = next.splice(index, 1);
+    if (!moved) return;
+    next.splice(nextIndex, 0, moved);
+    onFilesChange(next);
+  }
+
+  function onAddMoreFiles(event: ChangeEvent<HTMLInputElement>) {
+    const added = [...(event.target.files ?? [])];
+    event.target.value = "";
+    if (added.length === 0) return;
+    onFilesChange([...files, ...added]);
+  }
 
   useEffect(() => {
     let alive = true;
@@ -202,9 +298,10 @@ export function ImportDestination({
     setBusy(true);
     setError(null);
     try {
-      const chosenCover = coverIndex > 0 ? files[coverIndex] : undefined;
+      const chosenCover =
+        coverFile && files.includes(coverFile) ? coverFile : null;
       const orderedFiles = chosenCover
-        ? [chosenCover, ...files.filter((_, index) => index !== coverIndex)]
+        ? [chosenCover, ...files.filter((file) => file !== chosenCover)]
         : files;
       const result = await createNamedTripFromFiles({
         files: orderedFiles,
@@ -272,6 +369,43 @@ export function ImportDestination({
       <p className={styles.lead}>
         Crie um álbum novo ou escolha um que você já tem.
       </p>
+
+      <section aria-label="Fotos selecionadas" className={styles.selectedPhotosSection}>
+        <ul className={styles.selectedPhotosGrid}>
+          {files.map((file, index) => (
+            <SelectedPhotoItem
+              busy={busy}
+              file={file}
+              isCover={coverFile ? coverFile === file : index === 0}
+              isFirst={index === 0}
+              isLast={index === files.length - 1}
+              key={fileKey(file)}
+              onMove={(direction) => moveFile(file, direction)}
+              onRemove={() => removeFile(file)}
+              onSetCover={() => setCoverFile(file)}
+            />
+          ))}
+          <li className={styles.selectedPhotoItem}>
+            <label className={styles.selectedPhotoAddMore}>
+              <span aria-hidden="true">+</span>
+              Adicionar
+              <input
+                accept={IMPORT_FILE_ACCEPT}
+                className={styles.hiddenInput}
+                disabled={busy}
+                multiple
+                onChange={onAddMoreFiles}
+                type="file"
+              />
+            </label>
+          </li>
+        </ul>
+        {files.length === 0 ? (
+          <p className={styles.lead}>
+            Nenhuma foto selecionada. Adicione fotos para continuar.
+          </p>
+        ) : null}
+      </section>
 
       {licenseBlock ? (
         <div className={styles.destinationNew}>
@@ -350,39 +484,9 @@ export function ImportDestination({
             rows={5}
             value={newStory}
           />
-          {coverPreviewUrls.length > 1 ? (
-            <>
-              <label>Foto de capa</label>
-              <div
-                aria-label="Escolher foto de capa"
-                className={styles.destinationCoverPicker}
-                role="radiogroup"
-              >
-                {coverPreviewUrls.map((url, index) => (
-                  <button
-                    aria-checked={coverIndex === index}
-                    className={styles.destinationCoverOption}
-                    data-selected={coverIndex === index ? "true" : "false"}
-                    disabled={busy}
-                    key={url}
-                    onClick={() => setCoverIndex(index)}
-                    role="radio"
-                    type="button"
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element -- local blob preview */}
-                    <img
-                      alt=""
-                      className={styles.destinationCoverOptionImage}
-                      src={url}
-                    />
-                  </button>
-                ))}
-              </div>
-            </>
-          ) : null}
           <button
             className="button primary"
-            disabled={busy || !newName.trim()}
+            disabled={busy || !newName.trim() || files.length === 0}
             onClick={() => void createNewAlbum()}
             type="button"
           >
@@ -403,7 +507,7 @@ export function ImportDestination({
               <li key={album.albumId}>
                 <button
                   className={styles.destinationAlbum}
-                  disabled={busy}
+                  disabled={busy || files.length === 0}
                   onClick={() => void addToAlbum(album)}
                   type="button"
                 >

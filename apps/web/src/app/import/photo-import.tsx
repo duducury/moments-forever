@@ -931,8 +931,8 @@ export function PhotoImport() {
         ) : null}
       </nav>
 
-      {screen === "destination" && choiceFiles && choiceFiles.length > 0 ? (
-        <ImportDestination files={choiceFiles} />
+      {screen === "destination" && choiceFiles ? (
+        <ImportDestination files={choiceFiles} onFilesChange={setChoiceFiles} />
       ) : null}
 
       {screen === "start" ? (

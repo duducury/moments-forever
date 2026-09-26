@@ -72,6 +72,10 @@
   letter-spacing: 0;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  transition:
+    color 160ms ease,
+    background 160ms ease,
+    transform 120ms ease;
 }
 
 .tab:hover,
@@ -79,8 +83,13 @@
   color: var(--text);
 }
 
+.tab:active {
+  transform: scale(0.94);
+}
+
 .tab[data-active="true"] {
   color: var(--text);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
 }
 
 .tab:focus-visible,
@@ -124,6 +133,25 @@
 .create:hover {
   color: var(--accent);
   background: color-mix(in srgb, var(--accent) 26%, var(--surface));
+}
+
+.create:active {
+  transform: translateY(-12px) scale(0.94);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tab,
+  .create {
+    transition: none;
+  }
+
+  .tab:active {
+    transform: none;
+  }
+
+  .create:active {
+    transform: translateY(-12px);
+  }
 }
 
 .create .icon svg {

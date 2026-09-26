@@ -7,6 +7,8 @@ import { SignalPwaBootReady } from "@/components/signal-pwa-boot-ready";
 import { displayNameFromUser } from "@/lib/auth/display-name";
 import {
   ensureOwnerProfileSlug,
+  lookupOwnerProfileById,
+  profileAvatarPublicPath,
   publicProfilePath,
 } from "@/lib/profile/profile-slug";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -46,6 +48,7 @@ export default async function GeralPage() {
     displayNameFromUser(user),
   );
   const homeHref = publicProfilePath(slug);
+  const profile = await lookupOwnerProfileById(supabase, user.id);
 
   return (
     <main className="page-shell" data-bottom-nav="true">
@@ -54,7 +57,13 @@ export default async function GeralPage() {
         <AppWordmark />
         <AuthStatus hideUserName />
       </nav>
-      <GeralSettingsClient />
+      <GeralSettingsClient
+        avatarPhotoId={profile?.avatarPhotoId ?? null}
+        avatarRemoteSrc={
+          profile?.hasPermanentAvatar ? profileAvatarPublicPath(slug) : null
+        }
+        profileHref={homeHref}
+      />
       <AppBottomNav homeHref={homeHref} mapHref="/mapa" showCreate />
     </main>
   );

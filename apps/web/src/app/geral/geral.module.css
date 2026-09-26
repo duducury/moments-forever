@@ -4,33 +4,16 @@
   padding: 8px 0 24px;
 }
 
-.header {
-  display: grid;
-  gap: 6px;
-  margin: 8px 0 28px;
-}
-
-.eyebrow {
-  margin: 0;
-  color: var(--text-secondary);
-  font-size: 0.72rem;
-  font-weight: 650;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.title {
-  margin: 0;
-  font-size: 1.65rem;
-  font-weight: 750;
-  letter-spacing: -0.02em;
-}
-
-.lead {
-  margin: 0;
-  color: var(--text-secondary);
-  font-size: 0.95rem;
-  line-height: 1.45;
+.srOnlyTitle {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .list {
@@ -47,10 +30,10 @@
   justify-content: space-between;
   gap: 12px;
   width: 100%;
-  min-height: 56px;
+  min-height: 60px;
   padding: 12px 16px;
-  border: 1px solid var(--border);
-  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
+  border-radius: 18px;
   background: color-mix(in srgb, var(--surface) 94%, transparent);
   color: var(--text);
   text-decoration: none;
@@ -59,10 +42,22 @@
   font-weight: 600;
   cursor: pointer;
   text-align: left;
+  transition:
+    transform 120ms ease,
+    background 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease;
 }
 
 .row:hover {
+  border-color: color-mix(in srgb, var(--accent) 24%, var(--border));
   background: color-mix(in srgb, var(--surface-secondary) 70%, var(--surface));
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--shadow) 22%, transparent);
+}
+
+.row:active {
+  transform: scale(0.985);
+  background: color-mix(in srgb, var(--surface-secondary) 85%, var(--surface));
 }
 
 .row:focus-visible {
@@ -70,14 +65,62 @@
   outline-offset: 2px;
 }
 
+.row:disabled {
+  cursor: wait;
+  opacity: 0.7;
+  transform: none;
+}
+
+.rowIcon {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  color: var(--text);
+}
+
+.rowIcon svg {
+  width: 19px;
+  height: 19px;
+}
+
+.rowIcon[data-tone="neutral"] {
+  color: color-mix(in srgb, var(--text) 82%, var(--text-secondary));
+  background: color-mix(in srgb, var(--text-secondary) 16%, transparent);
+}
+
+.rowIcon[data-tone="info"] {
+  color: #3b7ec4;
+  background: color-mix(in srgb, #3b7ec4 18%, transparent);
+}
+
+.rowIcon[data-tone="gold"] {
+  color: #b08a2e;
+  background: color-mix(in srgb, #b08a2e 18%, transparent);
+}
+
+.rowIcon[data-tone="danger"] {
+  color: #b4453a;
+  background: color-mix(in srgb, #b4453a 16%, transparent);
+}
+
+.rowIcon[data-tone="premium"] {
+  color: #8a5fc4;
+  background: color-mix(in srgb, #8a5fc4 18%, transparent);
+}
+
 .rowMeta {
   display: grid;
   gap: 2px;
   min-width: 0;
+  flex: 1 1 auto;
 }
 
 .rowLabel {
   margin: 0;
+  overflow-wrap: anywhere;
 }
 
 .rowHint {
@@ -85,6 +128,7 @@
   color: var(--text-secondary);
   font-size: 0.82rem;
   font-weight: 500;
+  overflow-wrap: anywhere;
 }
 
 .rowAction {
@@ -106,4 +150,80 @@
   font-weight: 650;
   letter-spacing: 0.03em;
   text-transform: uppercase;
+}
+
+.list:first-of-type,
+.sectionLabel:first-child {
+  margin-top: 8px;
+}
+
+/* —— Account card —— */
+
+.accountCard {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
+  border-radius: 20px;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--accent) 7%, var(--surface)),
+    color-mix(in srgb, var(--surface) 96%, transparent)
+  );
+  color: var(--text);
+  text-decoration: none;
+  transition:
+    transform 120ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.accountCard:hover {
+  border-color: color-mix(in srgb, var(--accent) 32%, var(--border));
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--shadow) 26%, transparent);
+}
+
+.accountCard:active {
+  transform: scale(0.985);
+}
+
+.accountCard:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.accountMeta {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.accountName {
+  margin: 0;
+  font-size: 1.08rem;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+}
+
+.accountHint {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.84rem;
+  font-weight: 500;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .row,
+  .accountCard {
+    transition: none;
+  }
+
+  .row:active,
+  .accountCard:active {
+    transform: none;
+  }
 }

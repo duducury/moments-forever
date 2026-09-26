@@ -10,6 +10,7 @@ import { useTheme } from "@/components/theme-provider";
 import { displayNameFromUser } from "@/lib/auth/display-name";
 import { toggleThemePreference } from "@/lib/theme/theme";
 
+import { ProfileAvatar } from "../perfil/profile-avatar";
 import styles from "./geral.module.css";
 
 interface OptimizeBatchResult {
@@ -28,7 +29,109 @@ function formatMegabytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export function GeralSettingsClient() {
+function ThemeIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
+      <path
+        d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z"
+        stroke="currentColor"
+        strokeLinejoin="round"
+        strokeWidth="1.6"
+      />
+    </svg>
+  );
+}
+
+function NfcIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
+      <path
+        d="M8 15.5a4.5 4.5 0 0 1 8 0"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="1.6"
+      />
+      <path
+        d="M5.2 12.7a8.2 8.2 0 0 1 13.6 0"
+        opacity="0.55"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="1.6"
+      />
+      <circle cx="12" cy="18.3" fill="currentColor" r="1.3" />
+    </svg>
+  );
+}
+
+function KeyIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
+      <circle cx="8.5" cy="8.5" r="3.5" stroke="currentColor" strokeWidth="1.6" />
+      <path
+        d="M11 11 20 20M16.5 15.5 19 13M14 18l2-2"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.6"
+      />
+    </svg>
+  );
+}
+
+function LockIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
+      <rect
+        height="10"
+        rx="2.2"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        width="14"
+        x="5"
+        y="10.5"
+      />
+      <path
+        d="M8 10.5V8a4 4 0 0 1 8 0v2.5"
+        stroke="currentColor"
+        strokeWidth="1.6"
+      />
+    </svg>
+  );
+}
+
+function PhotosIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
+      <rect
+        height="12.5"
+        rx="2"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        width="15"
+        x="4.5"
+        y="7"
+      />
+      <circle cx="9.2" cy="11.3" r="1.35" stroke="currentColor" strokeWidth="1.4" />
+      <path
+        d="m6.5 17 4-3.6 2.6 2.2 3-3.1 2.4 2.5"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.5"
+      />
+    </svg>
+  );
+}
+
+export function GeralSettingsClient({
+  avatarPhotoId = null,
+  avatarRemoteSrc = null,
+  profileHref = "/perfil",
+}: {
+  readonly avatarPhotoId?: string | null;
+  readonly avatarRemoteSrc?: string | null;
+  readonly profileHref?: string;
+} = {}) {
   const router = useRouter();
   const { user, signOut } = useAuth();
   const { preference, setPreference } = useTheme();
@@ -109,15 +212,29 @@ export function GeralSettingsClient() {
 
   return (
     <section className={styles.page} data-reveal>
-      <header className={styles.header}>
-        <p className={styles.eyebrow}>Conta</p>
-        <h1 className={styles.title}>Geral</h1>
-        {name ? (
-          <p className={styles.lead}>Olá, {name}. Ajustes da conta e do app.</p>
-        ) : (
-          <p className={styles.lead}>Ajustes da conta e do app.</p>
-        )}
-      </header>
+      <h1 className={styles.srOnlyTitle}>Geral</h1>
+
+      <p className={styles.sectionLabel}>Conta</p>
+      <ul className={styles.list}>
+        <li>
+          <Link className={styles.accountCard} href={profileHref}>
+            <ProfileAvatar
+              avatarPhotoId={avatarPhotoId}
+              displayName={name ?? "Você"}
+              ownerId={user?.id ?? ""}
+              remoteSrc={avatarRemoteSrc}
+              size="md"
+            />
+            <div className={styles.accountMeta}>
+              <p className={styles.accountName}>{name ?? "Sua conta"}</p>
+              <p className={styles.accountHint}>Ajustes da conta e do app.</p>
+            </div>
+            <span aria-hidden className={styles.rowAction}>
+              ›
+            </span>
+          </Link>
+        </li>
+      </ul>
 
       <p className={styles.sectionLabel}>Preferências</p>
       <ul className={styles.list}>
@@ -128,6 +245,9 @@ export function GeralSettingsClient() {
             onClick={() => setPreference(nextTheme)}
             type="button"
           >
+            <span className={styles.rowIcon} data-tone="neutral">
+              <ThemeIcon />
+            </span>
             <div className={styles.rowMeta}>
               <p className={styles.rowLabel}>Tema</p>
               <p className={styles.rowHint}>{themeHint}</p>
@@ -143,6 +263,9 @@ export function GeralSettingsClient() {
       <ul className={styles.list}>
         <li>
           <Link className={styles.row} href="/geral/nfc">
+            <span className={styles.rowIcon} data-tone="info">
+              <NfcIcon />
+            </span>
             <div className={styles.rowMeta}>
               <p className={styles.rowLabel}>Ativar NFC</p>
               <p className={styles.rowHint}>
@@ -160,6 +283,9 @@ export function GeralSettingsClient() {
       <ul className={styles.list}>
         <li>
           <Link className={styles.row} href="/ativar">
+            <span className={styles.rowIcon} data-tone="gold">
+              <KeyIcon />
+            </span>
             <div className={styles.rowMeta}>
               <p className={styles.rowLabel}>Ativar código</p>
               <p className={styles.rowHint}>
@@ -177,6 +303,9 @@ export function GeralSettingsClient() {
       <ul className={styles.list}>
         <li>
           <Link className={styles.row} href="/privacidade">
+            <span className={styles.rowIcon} data-tone="danger">
+              <LockIcon />
+            </span>
             <div className={styles.rowMeta}>
               <p className={styles.rowLabel}>Privacidade</p>
               <p className={styles.rowHint}>
@@ -200,6 +329,9 @@ export function GeralSettingsClient() {
             onClick={() => void onOptimizePhotos()}
             type="button"
           >
+            <span className={styles.rowIcon} data-tone="premium">
+              <PhotosIcon />
+            </span>
             <div className={styles.rowMeta}>
               <p className={styles.rowLabel}>Otimizar fotos antigas</p>
               <p className={styles.rowHint}>{optimizeHint}</p>

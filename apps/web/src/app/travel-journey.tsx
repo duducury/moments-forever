@@ -9,7 +9,7 @@ import styles from "./travel-journey.module.css";
 const stops = [
   { title: "Uma viagem pelas suas lembranças", body: "", image: "/home/santorini.jpg", alt: "Casas brancas de Santorini junto ao mar", kind: "single" },
   { title: "Viajar é mais do que chegar a um lugar.", body: "É tudo aquilo que acontece enquanto você está lá.", image: "/home/paris.jpg", alt: "Paris ao entardecer", kind: "photos" },
-  { title: "Alguns souvenirs lembram onde você esteve.", highlight: "Os seus vão lembrar tudo o que você viveu.", body: "Fotos, momentos e histórias, guardados junto daquele lugar.", image: "/home/amalfi.jpg", alt: "Costa Amalfitana vista do mar", kind: "map" },
+  { title: "Alguns souvenirs lembram onde você esteve.", highlight: "Os seus vão lembrar tudo o que você viveu.", body: "Fotos, momentos e histórias, guardados junto daquele lugar.", image: "/home/souvenirs.webp", alt: "Coleção de souvenirs de viagem em uma mesa", kind: "souvenirs" },
   { title: "Cada viagem deixa uma marca.", body: "E cada marca pode guardar uma história.", secondaryBody: "Conecte suas memórias aos lugares onde tudo aconteceu.", image: "/home/capri.jpg", alt: "Mar azul na ilha de Capri", kind: "phone" },
   { title: "Um simples toque pode levar você de volta para aquele momento.", body: "Aproxime o celular da sua tag NFC e reviva a memória ligada àquele lugar.", image: "/home/venice.jpg", alt: "Canal de Veneza", kind: "nfc" },
   { title: "Algumas memórias merecem mais do que ficar no rolo da câmera.", body: "Elas merecem um lugar para voltar.", image: "/home/machu.jpg", alt: "Machu Picchu entre as montanhas", kind: "memories" },
@@ -19,19 +19,11 @@ const ROUTE = "M 500 8 C 690 45 835 76 805 135 C 780 195 260 205 205 275 C 150 3
 const MOBILE_ROUTE = "M 800 5 C 640 25 180 65 100 135 C 15 200 800 205 900 260 C 1000 320 200 330 100 392 C 0 455 800 465 900 522 C 1000 585 200 590 100 652 C 0 715 800 725 900 782 C 1000 850 730 930 500 960";
 
 function StoryVisual({ stop }: { stop: (typeof stops)[number] }) {
-  if (stop.kind === "map") {
+  if (stop.kind === "souvenirs") {
     return (
-      <div className={styles.mapScene} aria-label="Mapa ilustrado da Costa Amalfitana com paradas em Positano, Amalfi e Ravello">
-        <div className={styles.mapHeading}><span>ITÁLIA · CAMPANIA</span><strong>Costa Amalfitana</strong></div>
-        <svg viewBox="0 0 420 250" role="img" aria-hidden="true">
-          <path className={styles.mapLand} d="M0 0h420v34c-28 3-37 18-57 24-20 7-27 3-42 14-19 14-21 29-45 35-20 5-29-4-48 9-17 12-18 28-38 36-17 7-31 1-45 14-15 14-12 31-28 45-17 15-33 12-46 28-10 12-8 22-20 31H0z" />
-          <path className={styles.mapRoad} d="M30 35c56 38 106 12 160 47s98 1 190 31M15 100c54-21 80 45 136 26s89-37 147-2 83 6 110 30M43 227c25-43 61-61 99-66s74-44 96-74m74 142c-23-41-13-74 13-104s29-64 38-94" />
-          <path className={styles.mapRoute} d="M82 190c38-3 52-34 91-38s51-30 88-32 48-31 78-48" />
-          <circle className={styles.mapPin} cx="82" cy="190" r="7" /><circle className={styles.mapPin} cx="173" cy="152" r="7" /><circle className={styles.mapPin} cx="261" cy="120" r="7" /><circle className={styles.mapPin} cx="339" cy="72" r="7" />
-          <text className={styles.mapPlace} x="50" y="218">Positano</text><text className={styles.mapPlace} x="145" y="178">Amalfi</text><text className={styles.mapPlace} x="238" y="145">Ravello</text>
-        </svg>
-        <span className={styles.mapLabel}>3 lugares · 1 história para reviver</span>
-      </div>
+      <figure className={styles.souvenirsPhoto}>
+        <Image src={stop.image} alt={stop.alt} width={700} height={600} sizes="(max-width: 720px) 76vw, 390px" />
+      </figure>
     );
   }
 

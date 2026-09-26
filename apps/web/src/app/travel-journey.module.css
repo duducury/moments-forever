@@ -185,6 +185,20 @@ html[data-resolved-theme="light"] .journey {
   .intro { min-height: 520px; }
 }
 
+.souvenirsPhoto {
+  margin: 0;
+  overflow: hidden;
+  border-radius: 20px;
+  box-shadow: 0 10px 30px color-mix(in srgb, #000 25%, transparent);
+}
+
+.souvenirsPhoto img {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .storyRow,.storyVisual,.storyCopy,.storyCopy > *,.scatterPhoto,.mapRoute,.mapPin,.nfcPhone,.nfcSpark,.routePoints circle,.plane { transition: none !important; }
   .storyRow:not(.intro):not(.finale) .storyVisual,.storyRow:not(.intro):not(.finale) .storyCopy,.storyCopy > * { opacity: 1; filter: none; transform: none; }

@@ -1,54 +1,59 @@
 "use client";
 
 import Image from "next/image";
+import { useEffect, useRef, useState } from "react";
 import styles from "./home.module.css";
 
+const TOTAL_FRAMES = 80;
+
 export function PremiumSection() {
+  const [frameIndex, setFrameIndex] = useState(0);
+  const sectionRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!sectionRef.current) return;
+
+      const rect = sectionRef.current.getBoundingClientRect();
+      const sectionStart = rect.top;
+      const sectionHeight = rect.height;
+      const windowHeight = window.innerHeight;
+
+      const scrollStart = sectionStart - windowHeight;
+      const scrollEnd = sectionStart + sectionHeight;
+      const totalScroll = scrollEnd - scrollStart;
+
+      let progress = (scrollStart * -1) / totalScroll;
+      progress = Math.max(0, Math.min(1, progress));
+
+      const newFrameIndex = Math.floor(progress * (TOTAL_FRAMES - 1));
+      setFrameIndex(newFrameIndex);
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll();
+
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const frameNumber = String(frameIndex + 1).padStart(3, "0");
+
   return (
-    <section className={styles.premiumSection} aria-labelledby="premium-title">
+    <section
+      ref={sectionRef}
+      className={styles.premiumSection}
+      aria-labelledby="premium-title"
+    >
       <div className={styles.premiumInner}>
         <div className={styles.premiumVisual}>
-          <div className={styles.premiumPhone}>
-            <div className={styles.premiumPhoneScreen}>
-              <div className={styles.premiumPhoneContent}>
-                <svg
-                  className={styles.premiumPhoneIcon}
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <rect
-                    height="14"
-                    rx="2"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    width="16"
-                    x="4"
-                    y="6"
-                  />
-                  <path
-                    d="M8 6V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v1"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                  />
-                </svg>
-                <p className={styles.premiumPhoneLabel}>
-                  Moments Forever
-                </p>
-                <p className={styles.premiumPhoneDescription}>
-                  Guarde suas viagens
-                </p>
-              </div>
-            </div>
-          </div>
-          <div className={styles.premiumPhotoFrame}>
-            <Image
-              alt="Santorini — cenário de exemplo"
-              className={styles.premiumPhotoFrameImage}
-              height={600}
-              src="/home/santorini.jpg"
-              width={400}
-            />
-          </div>
+          <Image
+            src={`/premium-frames/ezgif-frame-${frameNumber}.jpg`}
+            alt="Animação de apresentação do Moments Forever"
+            width={700}
+            height={800}
+            sizes="(max-width: 720px) 76vw, 390px"
+            priority={frameIndex < 5}
+          />
         </div>
 
         <div className={styles.premiumCopy}>

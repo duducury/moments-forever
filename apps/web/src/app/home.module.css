@@ -977,6 +977,7 @@
   display: grid;
   gap: 32px;
   animation: homeRise 0.85s ease both;
+  min-height: 600px;
 }
 
 .premiumInner {
@@ -987,96 +988,18 @@
 }
 
 .premiumVisual {
-  position: relative;
   width: 100%;
-  max-width: 360px;
+  max-width: 420px;
   margin: 0 auto;
-  aspect-ratio: 1;
-  perspective: 1200px;
-}
-
-.premiumPhone {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2;
-  animation: phoneBounce 6s ease-in-out infinite;
-}
-
-.premiumPhoneScreen {
-  position: relative;
-  width: 140px;
-  height: 280px;
-  background: #000;
-  border: 8px solid #1a1a1a;
-  border-radius: 24px;
   overflow: hidden;
-  box-shadow:
-    0 0 0 1px #333,
-    0 20px 60px color-mix(in srgb, #000 80%, transparent);
-}
-
-.premiumPhoneContent {
-  width: 100%;
-  height: 100%;
-  display: grid;
-  place-items: center;
-  gap: 8px;
-  padding: 20px 12px;
-  text-align: center;
-  color: white;
-  background: linear-gradient(135deg, #1a1a2e 0%, #0f3460 100%);
-  position: relative;
-}
-
-.premiumPhoneIcon {
-  width: 32px;
-  height: 32px;
-  color: #4a9eff;
-  opacity: 0.8;
-}
-
-.premiumPhoneLabel {
-  margin: 0;
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: #4a9eff;
-}
-
-.premiumPhoneDescription {
-  margin: 0;
-  font-size: 0.65rem;
-  color: rgba(255, 255, 255, 0.7);
-}
-
-.premiumPhotoFrame {
-  position: absolute;
-  right: -20px;
-  bottom: 20px;
-  width: 180px;
-  height: 220px;
   border-radius: 12px;
-  overflow: hidden;
-  box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.1),
-    0 20px 40px color-mix(in srgb, #000 40%, transparent);
-  z-index: 1;
-  animation: photoSlide 6s ease-in-out infinite;
+  box-shadow: 0 10px 40px color-mix(in srgb, #000 30%, transparent);
 }
 
-.premiumPhotoFrameImage {
+.premiumVisual img {
   display: block;
   width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center;
+  height: auto;
 }
 
 .premiumCopy {
@@ -1130,51 +1053,13 @@
   font-size: 1.1rem;
 }
 
-@keyframes phoneBounce {
-  0%, 100% {
-    transform: translateY(0) rotateZ(-8deg);
-  }
-  50% {
-    transform: translateY(-12px) rotateZ(-8deg);
-  }
-}
-
-@keyframes photoSlide {
-  0%, 100% {
-    transform: translateX(0) translateY(0);
-  }
-  25% {
-    transform: translateX(-4px) translateY(-4px);
-  }
-  75% {
-    transform: translateX(4px) translateY(4px);
-  }
-}
-
 @media (max-width: 768px) {
   .premiumInner {
     grid-template-columns: 1fr;
   }
 
   .premiumVisual {
-    max-width: 280px;
-  }
-
-  .premiumPhone {
-    animation: phoneBounce 5s ease-in-out infinite;
-  }
-
-  .premiumPhoneScreen {
-    width: 120px;
-    height: 240px;
-    border-width: 6px;
-  }
-
-  .premiumPhotoFrame {
-    width: 140px;
-    height: 170px;
-    right: -15px;
-    bottom: 15px;
+    max-width: 360px;
   }
 
   .premiumTitle {

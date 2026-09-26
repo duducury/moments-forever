@@ -1,8 +1,30 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import styles from "./home.module.css";
 
 export function PremiumSection() {
+  const copyRef = useRef<HTMLDivElement>(null);
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    const node = copyRef.current;
+    if (!node) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.3 },
+    );
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <section className={styles.premiumSection} aria-labelledby="premium-title">
       <div className={styles.premiumInner}>
@@ -19,17 +41,21 @@ export function PremiumSection() {
           </video>
         </div>
 
-        <div className={styles.premiumCopy}>
+        <div
+          className={`${styles.premiumCopy} ${isVisible ? styles.premiumCopyVisible : ""}`}
+          ref={copyRef}
+        >
           <h2 className={styles.premiumTitle} id="premium-title">
-            Leve suas memórias com você.
+            Um toque leva você direto à viagem.
           </h2>
           <p className={styles.premiumLead}>
-            Organize viagens, marque lugares, e acesse suas melhores fotos em qualquer lugar. Sem assinatura, sem complicações.
+            Usamos tecnologia NFC: aproxime o celular de um ímã e o
+            aplicativo abre, na hora, o álbum daquela viagem específica.
           </p>
           <ul className={styles.premiumList}>
-            <li>Coleções organizadas por viagem</li>
-            <li>Marque locais com tags NFC</li>
-            <li>Acesso ilimitado aos seus momentos</li>
+            <li>Cada ímã é vinculado a uma viagem específica</li>
+            <li>Basta aproximar o celular, sem precisar abrir o app</li>
+            <li>Suas fotos ficam organizadas automaticamente por lugar</li>
           </ul>
         </div>
       </div>

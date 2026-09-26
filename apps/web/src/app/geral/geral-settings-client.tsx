@@ -139,6 +139,23 @@ export function GeralSettingsClient() {
         </li>
       </ul>
 
+      <p className={styles.sectionLabel}>Tags NFC</p>
+      <ul className={styles.list}>
+        <li>
+          <Link className={styles.row} href="/geral/nfc">
+            <div className={styles.rowMeta}>
+              <p className={styles.rowLabel}>Ativar NFC</p>
+              <p className={styles.rowHint}>
+                Vincule uma viagem a uma tag e copie o link para gravá-la
+              </p>
+            </div>
+            <span aria-hidden className={styles.rowAction}>
+              ›
+            </span>
+          </Link>
+        </li>
+      </ul>
+
       <p className={styles.sectionLabel}>Licença</p>
       <ul className={styles.list}>
         <li>

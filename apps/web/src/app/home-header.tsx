@@ -55,9 +55,6 @@ export function HomeHeader() {
             >
               {name}
             </Link>
-            <Link className={styles.headerLinkDesktop} href="/privacidade">
-              Privacidade
-            </Link>
             <span className={styles.headerTheme}>
               <ThemeSelector />
             </span>
@@ -100,14 +97,6 @@ export function HomeHeader() {
             role="menuitem"
           >
             Meu perfil
-          </Link>
-          <Link
-            className={styles.headerMenuItem}
-            href="/privacidade"
-            onClick={() => setMenuOpen(false)}
-            role="menuitem"
-          >
-            Privacidade
           </Link>
           <button
             className={styles.headerMenuItem}

@@ -1,10 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+
+import { countryCodeFromPlaceLabel } from "@moments-forever/shared";
 
 import { ExperienceCoverThumb } from "@/components/experience-cover-thumb";
 import { useAuth } from "@/components/auth-provider";
+import { parseBrowserExifFields } from "@/lib/photo-import/browser-metadata";
 import {
   createNamedTripFromFiles,
   TripLicenseError,
@@ -14,6 +17,9 @@ import { uploadFilesToAlbum } from "@/lib/photos/upload-files-to-album";
 import { profileTripAlbumPath } from "@/lib/routes/app-routes";
 
 import styles from "./photo-import.module.css";
+
+/** Only the first files are checked — a single-place trip's GPS shows up fast. */
+const MAX_FILES_TO_SCAN_FOR_GPS = 15;
 
 interface DestinationAlbum {
   readonly albumId: string;
@@ -52,6 +58,16 @@ export function ImportDestination({
   const [error, setError] = useState<string | null>(null);
   const [newName, setNewName] = useState("");
   const [newStory, setNewStory] = useState("");
+  const [detectedCountryCode, setDetectedCountryCode] = useState<
+    string | null
+  >(null);
+  const [detectingLocation, setDetectingLocation] = useState(false);
+  const [coverIndex, setCoverIndex] = useState(0);
+  const coverPreviewUrls = useMemo(
+    () => files.map((file) => URL.createObjectURL(file)),
+    [files],
+  );
+  const nameEditedRef = useRef(false);
   const [licenseBlock, setLicenseBlock] = useState<{
     readonly code: TripLicenseErrorCode;
     readonly message: string;
@@ -61,6 +77,59 @@ export function ImportDestination({
   const [activationMessage, setActivationMessage] = useState<string | null>(
     null,
   );
+
+  useEffect(() => {
+    return () => {
+      coverPreviewUrls.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [coverPreviewUrls]);
+
+  useEffect(() => {
+    let alive = true;
+
+    async function detectLocation() {
+      setDetectingLocation(true);
+      try {
+        for (const file of files.slice(0, MAX_FILES_TO_SCAN_FOR_GPS)) {
+          if (!alive) return;
+          const fields = await parseBrowserExifFields(file).catch(() => null);
+          const latitude =
+            typeof fields?.latitude === "number" ? fields.latitude : null;
+          const longitude =
+            typeof fields?.longitude === "number" ? fields.longitude : null;
+          if (latitude === null || longitude === null) continue;
+
+          const response = await fetch("/api/geocode/reverse", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              lookups: [
+                { id: "detected", latitude, longitude, name: "Novo álbum" },
+              ],
+            }),
+          }).catch(() => null);
+          const body = (await response?.json().catch(() => null)) as {
+            readonly labels?: Record<string, string>;
+          } | null;
+          const label = body?.labels?.detected;
+          if (!alive || !label) return;
+
+          if (!nameEditedRef.current) {
+            setNewName(label);
+          }
+          setDetectedCountryCode(countryCodeFromPlaceLabel(label));
+          return;
+        }
+      } finally {
+        if (alive) setDetectingLocation(false);
+      }
+    }
+
+    void detectLocation();
+    return () => {
+      alive = false;
+    };
+  }, [files]);
 
   useEffect(() => {
     let alive = true;
@@ -133,8 +202,12 @@ export function ImportDestination({
     setBusy(true);
     setError(null);
     try {
+      const chosenCover = coverIndex > 0 ? files[coverIndex] : undefined;
+      const orderedFiles = chosenCover
+        ? [chosenCover, ...files.filter((_, index) => index !== coverIndex)]
+        : files;
       const result = await createNamedTripFromFiles({
-        files,
+        files: orderedFiles,
         name,
         story: newStory,
         ownerId: user.id,
@@ -236,13 +309,37 @@ export function ImportDestination({
         <div className={styles.destinationNew}>
           <p className={styles.destinationLabel}>Criar novo álbum de viagem</p>
           <label htmlFor="new-album-name">Nome do álbum</label>
-          <input
-            disabled={busy}
-            id="new-album-name"
-            onChange={(event) => setNewName(event.target.value)}
-            placeholder="Jamaica, Paris…"
-            value={newName}
-          />
+          <div className={styles.destinationNameField}>
+            {detectedCountryCode ? (
+              // eslint-disable-next-line @next/next/no-img-element -- small flag CDN asset
+              <img
+                alt=""
+                className={styles.destinationNameFlag}
+                decoding="async"
+                height={15}
+                src={`https://flagcdn.com/w40/${detectedCountryCode.toLowerCase()}.png`}
+                width={20}
+              />
+            ) : null}
+            <input
+              className={
+                detectedCountryCode ? styles.destinationNameInputWithFlag : ""
+              }
+              disabled={busy}
+              id="new-album-name"
+              onChange={(event) => {
+                nameEditedRef.current = true;
+                setNewName(event.target.value);
+              }}
+              placeholder="Jamaica, Paris…"
+              value={newName}
+            />
+          </div>
+          {detectingLocation ? (
+            <small className={styles.destinationHint}>
+              Detectando o local da viagem…
+            </small>
+          ) : null}
           <label htmlFor="new-album-story">Sobre essa viagem</label>
           <textarea
             disabled={busy}
@@ -253,6 +350,36 @@ export function ImportDestination({
             rows={5}
             value={newStory}
           />
+          {coverPreviewUrls.length > 1 ? (
+            <>
+              <label>Foto de capa</label>
+              <div
+                aria-label="Escolher foto de capa"
+                className={styles.destinationCoverPicker}
+                role="radiogroup"
+              >
+                {coverPreviewUrls.map((url, index) => (
+                  <button
+                    aria-checked={coverIndex === index}
+                    className={styles.destinationCoverOption}
+                    data-selected={coverIndex === index ? "true" : "false"}
+                    disabled={busy}
+                    key={url}
+                    onClick={() => setCoverIndex(index)}
+                    role="radio"
+                    type="button"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element -- local blob preview */}
+                    <img
+                      alt=""
+                      className={styles.destinationCoverOptionImage}
+                      src={url}
+                    />
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : null}
           <button
             className="button primary"
             disabled={busy || !newName.trim()}

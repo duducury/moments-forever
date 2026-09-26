@@ -105,6 +105,63 @@
   margin-top: 8px;
 }
 
+.destinationNameField {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.destinationNameField input {
+  width: 100%;
+}
+
+.destinationNameFlag {
+  position: absolute;
+  left: 12px;
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 12%);
+  pointer-events: none;
+}
+
+.destinationNameInputWithFlag {
+  padding-left: 40px !important;
+}
+
+.destinationHint {
+  margin-top: -2px;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.destinationCoverPicker {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.destinationCoverOption {
+  flex: 0 0 auto;
+  width: 64px;
+  height: 64px;
+  overflow: hidden;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  padding: 0;
+  cursor: pointer;
+}
+
+.destinationCoverOption[data-selected="true"] {
+  border-color: var(--accent);
+}
+
+.destinationCoverOptionImage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .destinationList {
   display: grid;
   gap: 8px;

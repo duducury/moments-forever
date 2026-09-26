@@ -5,7 +5,8 @@ import styles from "./home.module.css";
 
 const BENEFITS = [
   {
-    label: "Uma viagem por ímã",
+    title: "Uma viagem por ímã",
+    description: "Cada souvenir representa uma história.",
     icon: (
       <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
         <path
@@ -19,7 +20,8 @@ const BENEFITS = [
     ),
   },
   {
-    label: "Toque para reviver",
+    title: "Toque para reviver",
+    description: "Aproxime o celular e volte para aquela viagem.",
     icon: (
       <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
         <path
@@ -40,7 +42,8 @@ const BENEFITS = [
     ),
   },
   {
-    label: "Fotos e histórias no mesmo lugar",
+    title: "Tudo no mesmo lugar",
+    description: "Fotos, lugares e histórias reunidos em uma só memória.",
     icon: (
       <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
         <rect
@@ -106,17 +109,27 @@ export function PremiumSection() {
         >
           <span className={styles.premiumEyebrow}>Memórias que ficam</span>
           <h2 className={styles.premiumTitle} id="premium-title">
-            Seu souvenir agora conta a história da viagem.
+            Seu souvenir guarda muito mais que uma lembrança.
           </h2>
+          <p className={styles.premiumHighlight}>
+            Ele guarda a história da viagem que você viveu.
+          </p>
           <p className={styles.premiumLead}>
-            Cada ímã guarda uma viagem. Com um simples toque, você volta
-            para as fotos, lugares e momentos que fizeram parte dela.
+            Cada ímã fica ligado a uma viagem. Aproxime o celular e volte
+            para os lugares, fotos e momentos que fizeram parte dela.
           </p>
           <ul className={styles.premiumBenefits}>
             {BENEFITS.map((benefit) => (
-              <li className={styles.premiumBenefit} key={benefit.label}>
+              <li className={styles.premiumBenefit} key={benefit.title}>
                 <span className={styles.premiumBenefitIcon}>{benefit.icon}</span>
-                <span>{benefit.label}</span>
+                <span className={styles.premiumBenefitText}>
+                  <span className={styles.premiumBenefitTitle}>
+                    {benefit.title}
+                  </span>
+                  <span className={styles.premiumBenefitDescription}>
+                    {benefit.description}
+                  </span>
+                </span>
               </li>
             ))}
           </ul>

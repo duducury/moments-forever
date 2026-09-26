@@ -177,7 +177,7 @@ export default async function Home() {
                 className={styles.memoryImage}
                 height={700}
                 sizes="33vw"
-                src="/home/paris.jpg"
+                src="/home/rio.webp"
                 width={1000}
               />
             </figure>

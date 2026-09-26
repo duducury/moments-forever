@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
+
 import { useAuth } from "@/components/auth-provider";
 
 import styles from "./home.module.css";
@@ -32,13 +34,34 @@ export function PricingSection({
   readonly plans: readonly PricingPlanRow[];
 }) {
   const { loading } = useAuth();
+  const sectionRef = useRef<HTMLElement>(null);
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    const node = sectionRef.current;
+    if (!node) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.15 },
+    );
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
 
   if (loading || plans.length === 0) return null;
 
   return (
     <section
       aria-labelledby="home-pricing-title"
-      className={styles.pricingSection}
+      className={`${styles.pricingSection} ${isVisible ? styles.pricingSectionVisible : ""}`}
+      ref={sectionRef}
     >
       <div className={styles.sectionHead}>
         <h2 className={styles.sectionTitle} id="home-pricing-title">

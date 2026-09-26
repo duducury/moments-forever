@@ -533,20 +533,35 @@
   --shadow: rgb(42 32 22 / 16%);
   --accent: #8b3f28;
   --pricing-green: #2ee6a3;
+  --pricing-inset-left: calc(20px + env(safe-area-inset-left, 0px));
+  --pricing-inset-right: calc(20px + env(safe-area-inset-right, 0px));
+  /* Full-bleed: break out of .main's centered max-width so the white
+     background spans the full viewport, not just an inset rounded card. */
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
   display: grid;
   gap: 24px;
-  padding: 36px 20px;
-  border-radius: 24px;
+  padding: 56px var(--pricing-inset-right) 56px var(--pricing-inset-left);
   background: #fff;
   color: var(--text);
-  animation: homeRise 0.8s ease both;
+  opacity: 0;
+  transform: translateY(24px);
+  transition:
+    opacity 0.8s ease,
+    transform 0.8s ease;
+}
+
+.pricingSectionVisible {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .pricingGrid {
   display: flex;
   gap: 18px;
-  margin: 0 -20px;
-  padding: 4px 20px 8px;
+  margin: 0 calc(-1 * var(--pricing-inset-right)) 0 calc(-1 * var(--pricing-inset-left));
+  padding: 20px var(--pricing-inset-right) 20px var(--pricing-inset-left);
   list-style: none;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
@@ -575,7 +590,7 @@
 
 .pricingCard[data-highlight="true"] {
   border-color: color-mix(in srgb, var(--pricing-green) 55%, transparent);
-  box-shadow: 0 14px 32px color-mix(in srgb, var(--pricing-green) 16%, transparent);
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--pricing-green) 22%, transparent);
 }
 
 .pricingBadge {
@@ -793,9 +808,12 @@
   .finale,
   .heroPhotoImage,
   .memoryImage,
+  .pricingSection,
   .ctaRow :global(.button) {
     animation: none !important;
     transition: none !important;
+    opacity: 1 !important;
+    transform: none !important;
   }
 }
 

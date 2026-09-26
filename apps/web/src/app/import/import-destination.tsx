@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 import { useRouter } from "next/navigation";
 
 import { countryCodeFromPlaceLabel } from "@moments-forever/shared";
@@ -37,31 +43,82 @@ function fileKey(file: File): string {
   return `${file.name}:${file.size}:${file.lastModified}`;
 }
 
+/** Drag threshold in pixels before a press counts as a reorder drag, not a tap. */
+const DRAG_THRESHOLD_PX = 6;
+
 function SelectedPhotoItem({
   file,
-  isFirst,
-  isLast,
   isCover,
   busy,
   onRemove,
-  onMove,
+  onDragOverKey,
   onSetCover,
 }: {
   readonly file: File;
-  readonly isFirst: boolean;
-  readonly isLast: boolean;
   readonly isCover: boolean;
   readonly busy: boolean;
   readonly onRemove: () => void;
-  readonly onMove: (direction: -1 | 1) => void;
+  readonly onDragOverKey: (targetKey: string) => void;
   readonly onSetCover: () => void;
 }) {
   const [url] = useState(() => URL.createObjectURL(file));
   useEffect(() => () => URL.revokeObjectURL(url), [url]);
 
+  const [dragOffset, setDragOffset] = useState<{
+    readonly x: number;
+    readonly y: number;
+  } | null>(null);
+  const dragOriginRef = useRef({ x: 0, y: 0 });
+
+  function handlePointerDown(event: ReactPointerEvent<HTMLDivElement>) {
+    if (busy || (event.button !== 0 && event.pointerType === "mouse")) return;
+    dragOriginRef.current = { x: event.clientX, y: event.clientY };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function handlePointerMove(event: ReactPointerEvent<HTMLDivElement>) {
+    if (!event.currentTarget.hasPointerCapture(event.pointerId)) return;
+    const dx = event.clientX - dragOriginRef.current.x;
+    const dy = event.clientY - dragOriginRef.current.y;
+    if (
+      !dragOffset &&
+      Math.abs(dx) < DRAG_THRESHOLD_PX &&
+      Math.abs(dy) < DRAG_THRESHOLD_PX
+    ) {
+      return;
+    }
+    event.preventDefault();
+    setDragOffset({ x: dx, y: dy });
+    const under = document
+      .elementFromPoint(event.clientX, event.clientY)
+      ?.closest<HTMLElement>("[data-file-key]");
+    const targetKey = under?.dataset.fileKey;
+    if (targetKey) onDragOverKey(targetKey);
+  }
+
+  function handlePointerUp(event: ReactPointerEvent<HTMLDivElement>) {
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    setDragOffset(null);
+  }
+
   return (
-    <li className={styles.selectedPhotoItem}>
-      <div className={styles.selectedPhotoThumb}>
+    <li className={styles.selectedPhotoItem} data-file-key={fileKey(file)}>
+      <div
+        className={`${styles.selectedPhotoThumb} ${dragOffset ? styles.selectedPhotoThumbDragging : ""}`}
+        onPointerCancel={handlePointerUp}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        style={
+          dragOffset
+            ? {
+                transform: `translate(${dragOffset.x}px, ${dragOffset.y}px)`,
+              }
+            : undefined
+        }
+      >
         {/* eslint-disable-next-line @next/next/no-img-element -- local blob preview */}
         <img alt="" className={styles.selectedPhotoImage} src={url} />
         <button
@@ -69,42 +126,22 @@ function SelectedPhotoItem({
           className={styles.selectedPhotoRemove}
           disabled={busy}
           onClick={onRemove}
+          onPointerDown={(event) => event.stopPropagation()}
           type="button"
         >
           ×
-        </button>
-        {isCover ? (
-          <span className={styles.selectedPhotoCoverBadge}>Capa</span>
-        ) : null}
-      </div>
-      <div className={styles.selectedPhotoActions}>
-        <button
-          aria-label="Mover para trás"
-          className={styles.selectedPhotoMoveButton}
-          disabled={busy || isFirst}
-          onClick={() => onMove(-1)}
-          type="button"
-        >
-          ←
         </button>
         <button
           aria-label={isCover ? "Foto de capa" : "Definir como capa"}
           aria-pressed={isCover}
           className={styles.selectedPhotoCoverButton}
+          data-selected={isCover ? "true" : "false"}
           disabled={busy}
           onClick={onSetCover}
+          onPointerDown={(event) => event.stopPropagation()}
           type="button"
         >
           {isCover ? "★" : "☆"}
-        </button>
-        <button
-          aria-label="Mover para frente"
-          className={styles.selectedPhotoMoveButton}
-          disabled={busy || isLast}
-          onClick={() => onMove(1)}
-          type="button"
-        >
-          →
         </button>
       </div>
     </li>
@@ -161,15 +198,23 @@ export function ImportDestination({
     if (coverFile === target) setCoverFile(null);
   }
 
-  function moveFile(target: File, direction: -1 | 1) {
-    const index = files.indexOf(target);
-    if (index === -1) return;
-    const nextIndex = index + direction;
-    if (nextIndex < 0 || nextIndex >= files.length) return;
+  function reorderTo(dragged: File, targetKey: string) {
+    if (fileKey(dragged) === targetKey) return;
+    const draggedIndex = files.findIndex((file) => file === dragged);
+    const targetIndex = files.findIndex(
+      (file) => fileKey(file) === targetKey,
+    );
+    if (
+      draggedIndex === -1 ||
+      targetIndex === -1 ||
+      draggedIndex === targetIndex
+    ) {
+      return;
+    }
     const next = [...files];
-    const [moved] = next.splice(index, 1);
+    const [moved] = next.splice(draggedIndex, 1);
     if (!moved) return;
-    next.splice(nextIndex, 0, moved);
+    next.splice(targetIndex, 0, moved);
     onFilesChange(next);
   }
 
@@ -377,10 +422,8 @@ export function ImportDestination({
               busy={busy}
               file={file}
               isCover={coverFile ? coverFile === file : index === 0}
-              isFirst={index === 0}
-              isLast={index === files.length - 1}
               key={fileKey(file)}
-              onMove={(direction) => moveFile(file, direction)}
+              onDragOverKey={(targetKey) => reorderTo(file, targetKey)}
               onRemove={() => removeFile(file)}
               onSetCover={() => setCoverFile(file)}
             />

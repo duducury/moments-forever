@@ -149,7 +149,6 @@
 
 .selectedPhotoItem {
   display: grid;
-  gap: 4px;
   width: 84px;
 }
 
@@ -160,6 +159,16 @@
   overflow: hidden;
   border-radius: 12px;
   background: color-mix(in srgb, var(--surface) 70%, #1a1a1a);
+  touch-action: none;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.selectedPhotoThumbDragging {
+  z-index: 5;
+  box-shadow: 0 10px 24px rgb(0 0 0 / 45%);
+  cursor: grabbing;
 }
 
 .selectedPhotoImage {
@@ -167,6 +176,7 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+  pointer-events: none;
 }
 
 .selectedPhotoRemove {
@@ -187,50 +197,27 @@
   line-height: 1;
 }
 
-.selectedPhotoCoverBadge {
+.selectedPhotoCoverButton {
   position: absolute;
   bottom: 4px;
   left: 4px;
-  border-radius: 999px;
-  padding: 2px 8px;
-  color: #fff;
-  background: color-mix(in srgb, var(--accent) 88%, #000);
-  font-size: 0.65rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.selectedPhotoActions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 2px;
-}
-
-.selectedPhotoMoveButton,
-.selectedPhotoCoverButton {
   display: grid;
   place-items: center;
-  min-width: 26px;
-  min-height: 26px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 999px;
   padding: 0;
-  color: inherit;
-  background: var(--surface);
+  color: #fff;
+  background: rgb(0 0 0 / 55%);
   cursor: pointer;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
+  line-height: 1;
 }
 
-.selectedPhotoMoveButton:disabled {
-  opacity: 0.35;
-  cursor: default;
-}
-
-.selectedPhotoCoverButton[aria-pressed="true"] {
-  border-color: var(--accent);
-  color: var(--accent);
+.selectedPhotoCoverButton[data-selected="true"] {
+  color: #fff;
+  background: color-mix(in srgb, var(--accent) 88%, #000);
 }
 
 .selectedPhotoAddMore {

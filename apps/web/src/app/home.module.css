@@ -523,21 +523,52 @@
 
 /* —— Pricing —— */
 
-.pricingGrid {
+.pricingSection {
+  /* Deliberately a white panel in both themes — this section is meant to
+     stand out from the rest of the (cream/dark) page background. */
+  --surface: #faf7f2;
+  --border: #e3ddd2;
+  --text: #1a1612;
+  --text-secondary: #6b6258;
+  --shadow: rgb(42 32 22 / 16%);
+  --accent: #8b3f28;
   display: grid;
+  gap: 20px;
+  padding: 32px 20px;
+  border-radius: 24px;
+  background: #fff;
+  color: var(--text);
+  animation: homeRise 0.8s ease both;
+}
+
+.pricingGrid {
+  display: flex;
   gap: 16px;
+  margin: 0 -20px;
+  padding: 4px 20px 8px;
   list-style: none;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.pricingGrid::-webkit-scrollbar {
+  display: none;
 }
 
 .pricingCard {
   position: relative;
   display: grid;
+  flex: 0 0 86%;
+  max-width: 340px;
   gap: 16px;
   align-content: start;
   padding: 24px 22px;
   border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
   border-radius: var(--home-radius);
   background: var(--surface);
+  scroll-snap-align: start;
 }
 
 .pricingCard[data-highlight="true"] {
@@ -908,8 +939,17 @@
   }
 
   .pricingGrid {
+    display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 18px;
+    margin: 0;
+    padding: 0;
+    overflow: visible;
+  }
+
+  .pricingCard {
+    flex: initial;
+    max-width: none;
   }
 
   .finaleInner {

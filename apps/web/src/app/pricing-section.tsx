@@ -38,7 +38,7 @@ export function PricingSection({
   return (
     <section
       aria-labelledby="home-pricing-title"
-      className={styles.section}
+      className={styles.pricingSection}
     >
       <div className={styles.sectionHead}>
         <h2 className={styles.sectionTitle} id="home-pricing-title">

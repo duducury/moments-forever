@@ -196,69 +196,76 @@
 /* —— Hero —— */
 
 .hero {
-  display: block;
+  display: grid;
+  gap: 22px;
+  justify-items: center;
+  text-align: center;
 }
 
-.heroBanner {
+.heroVisual {
   position: relative;
-  display: grid;
-  align-items: end;
-  width: 100%;
-  aspect-ratio: 3 / 4;
+  width: min(100%, 420px);
+  animation: homeRise 0.9s ease both;
+}
+
+.heroPhoto {
   overflow: hidden;
   border-radius: 22px;
+  aspect-ratio: 4 / 5;
   box-shadow:
     0 0 0 1px color-mix(in srgb, var(--border) 40%, transparent),
     0 28px 56px color-mix(in srgb, #000 40%, transparent);
 }
 
-.heroBannerImage {
+.heroPhotoImage {
+  display: block;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
-  object-position: center 22%;
+  object-position: center 40%;
+  transition: transform 700ms ease;
 }
 
-.heroBannerScrim {
+@media (hover: hover) and (pointer: fine) {
+  .heroPhoto:hover .heroPhotoImage {
+    transform: scale(1.035);
+  }
+}
+
+.heroMark {
   position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(
-      180deg,
-      rgba(8, 8, 10, 0.1) 0%,
-      rgba(8, 8, 10, 0.05) 35%,
-      rgba(8, 8, 10, 0.78) 100%
-    ),
-    linear-gradient(
-      90deg,
-      rgba(8, 8, 10, 0.8) 0%,
-      rgba(8, 8, 10, 0.46) 40%,
-      rgba(8, 8, 10, 0.08) 66%,
-      transparent 80%
-    );
+  right: 14px;
+  bottom: 14px;
+  width: 72px;
+  overflow: hidden;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--border) 55%, transparent),
+    0 12px 28px color-mix(in srgb, #000 35%, transparent),
+    0 0 28px color-mix(in srgb, var(--accent) 18%, transparent);
 }
 
-.heroBannerCopy {
-  position: relative;
-  z-index: 1;
+.heroLogo {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.heroCopy {
   display: grid;
-  gap: 14px;
-  justify-items: start;
-  max-width: 22rem;
-  padding: 28px 22px calc(30px + env(safe-area-inset-bottom, 0px));
-  text-align: left;
-  animation: homeRise 0.9s ease 0.15s both;
+  gap: 12px;
+  justify-items: center;
+  max-width: 34rem;
+  animation: homeRise 0.85s ease 0.08s both;
 }
 
-.heroBannerCopy .title {
-  color: #fff;
-}
-
-.heroBannerCopy .lead {
-  color: rgba(255, 255, 255, 0.86);
-}
-
-.heroHighlight {
+.brand {
   color: var(--accent);
-  font-style: normal;
+  font-size: 0.7rem;
+  font-weight: 750;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
 }
 
 .title {
@@ -268,6 +275,7 @@
   font-weight: 500;
   letter-spacing: -0.045em;
   line-height: 1.05;
+  text-wrap: balance;
 }
 
 .lead {
@@ -298,25 +306,13 @@
   transform: translateY(-1px);
 }
 
-.heroBannerCta {
-  display: grid;
-  gap: 10px;
-  width: 100%;
-  max-width: 280px;
-  margin-top: 4px;
-}
-
-.heroBannerCta :global(.button) {
-  width: 100%;
-  transition:
-    transform 160ms ease,
-    background 160ms ease,
-    border-color 160ms ease,
-    opacity 160ms ease;
-}
-
-.heroBannerCta :global(.button:hover) {
-  transform: translateY(-1px);
+.heroAside {
+  margin: 2px 0 0;
+  color: color-mix(in srgb, var(--text-secondary) 88%, var(--accent));
+  font-size: 0.78rem;
+  font-weight: 550;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 /* —— Memories mosaic —— */
@@ -749,13 +745,14 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .heroBannerCopy,
+  .heroVisual,
+  .heroCopy,
   .memories,
   .section,
   .finale,
+  .heroPhotoImage,
   .memoryImage,
-  .ctaRow :global(.button),
-  .heroBannerCta :global(.button) {
+  .ctaRow :global(.button) {
     animation: none !important;
     transition: none !important;
   }
@@ -797,19 +794,37 @@
     padding-top: 28px;
   }
 
-  .heroBanner {
-    aspect-ratio: 21 / 9;
+  .hero {
+    grid-template-columns: minmax(300px, 46%) minmax(0, 1fr);
+    gap: 40px;
+    align-items: center;
+    justify-items: start;
+    text-align: left;
+    min-height: min(54vh, 520px);
+  }
+
+  .heroVisual {
+    width: 100%;
+  }
+
+  .heroPhoto {
+    aspect-ratio: 4 / 5;
     border-radius: 26px;
   }
 
-  .heroBannerCopy {
-    max-width: 30rem;
-    padding: 40px 48px;
+  .heroMark {
+    width: 88px;
+    border-radius: 18px;
+  }
+
+  .heroCopy {
+    justify-items: start;
+    max-width: 28rem;
   }
 
   .title {
     max-width: none;
-    font-size: clamp(2.35rem, 3.4vw, 3.1rem);
+    font-size: clamp(2.55rem, 4.1vw, 3.55rem);
   }
 
   .ctaRow {
@@ -820,18 +835,6 @@
   }
 
   .ctaRow :global(.button) {
-    width: auto;
-    min-width: 168px;
-  }
-
-  .heroBannerCta {
-    grid-template-columns: auto auto;
-    width: auto;
-    max-width: none;
-    justify-content: start;
-  }
-
-  .heroBannerCta :global(.button) {
     width: auto;
     min-width: 168px;
   }
@@ -927,7 +930,16 @@
     padding-top: 36px;
   }
 
-  .heroBannerCopy .lead {
+  .hero {
+    gap: 52px;
+    min-height: min(58vh, 560px);
+  }
+
+  .heroMark {
+    width: 96px;
+  }
+
+  .lead {
     font-size: 1.1rem;
   }
 

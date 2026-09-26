@@ -6,6 +6,7 @@ import { HomePrimaryCta } from "./home-cta";
 import { HomeFooterNav } from "./home-footer-nav";
 import { HomeHeader } from "./home-header";
 import { PricingSection, type PricingPlanRow } from "./pricing-section";
+import { TravelJourney } from "./travel-journey";
 import styles from "./home.module.css";
 
 const MEMORY_PHOTOS = [
@@ -113,6 +114,8 @@ export default async function Home() {
             <p className={styles.heroAside}>Viagens · Lugares · Momentos</p>
           </div>
         </section>
+
+        <TravelJourney />
 
         <section
           aria-labelledby="home-memories-title"

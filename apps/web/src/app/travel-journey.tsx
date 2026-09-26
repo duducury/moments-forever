@@ -11,7 +11,7 @@ const stops = [
   { title: "Viajar é mais do que chegar a um lugar.", body: "É tudo aquilo que acontece enquanto você está lá.", image: "/home/paris.jpg", alt: "Paris ao entardecer", kind: "photos" },
   { title: "Alguns souvenirs lembram onde você esteve.", highlight: "Os seus vão lembrar tudo o que você viveu.", body: "Fotos, momentos e histórias, guardados junto daquele lugar.", image: "/home/souvenirs.webp", alt: "Coleção de souvenirs de viagem em uma mesa", kind: "souvenirs" },
   { title: "Cada viagem deixa uma marca.", body: "E cada marca pode guardar uma história.", secondaryBody: "Conecte suas memórias aos lugares onde tudo aconteceu.", image: "/home/capri.jpg", alt: "Mar azul na ilha de Capri", kind: "phone" },
-  { title: "Um simples toque pode levar você de volta para aquele momento.", body: "Aproxime o celular da sua tag NFC e reviva a memória ligada àquele lugar.", image: "/home/venice.jpg", alt: "Canal de Veneza", kind: "nfc" },
+  { title: "Um simples toque pode levar você de volta para aquele momento.", body: "Aproxime o celular da sua tag NFC e reviva a memória ligada àquele lugar.", image: "/home/nfc-rio.webp", alt: "Celular aproximado de um ímã de geladeira do Rio de Janeiro, abrindo a viagem por NFC", kind: "nfc" },
   { title: "Algumas memórias merecem mais do que ficar no rolo da câmera.", body: "Elas merecem um lugar para voltar.", image: "/home/machu.jpg", alt: "Machu Picchu entre as montanhas", kind: "memories" },
 ] as const;
 
@@ -42,12 +42,9 @@ function StoryVisual({ stop }: { stop: (typeof stops)[number] }) {
 
   if (stop.kind === "nfc") {
     return (
-      <div className={styles.nfcScene}>
-        <div className={styles.nfcTag}><span className={styles.nfcWave}>)))</span><span>NFC</span><small>TOQUE PARA REVIVER</small></div>
-        <span className={styles.nfcArrow} aria-hidden="true">→</span>
-        <div className={styles.nfcPhone}><div className={styles.nfcScreen}><Image src={stop.image} alt={stop.alt} width={360} height={440} sizes="120px" /><span>Veneza</span></div><span className={styles.nfcPhoneBase} /></div>
-        <span className={styles.nfcSpark} aria-hidden="true">✦</span>
-      </div>
+      <figure className={styles.souvenirsPhoto}>
+        <Image src={stop.image} alt={stop.alt} width={700} height={640} sizes="(max-width: 720px) 76vw, 390px" />
+      </figure>
     );
   }
 

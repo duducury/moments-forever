@@ -6,7 +6,7 @@ import styles from "./home.module.css";
 const BENEFITS = [
   {
     title: "Uma viagem por ímã",
-    description: "Cada souvenir representa uma história.",
+    description: "Cada souvenir é uma história.",
     icon: (
       <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
         <path
@@ -21,7 +21,7 @@ const BENEFITS = [
   },
   {
     title: "Toque para reviver",
-    description: "Aproxime o celular e volte para aquela viagem.",
+    description: "Sem precisar abrir o app.",
     icon: (
       <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
         <path
@@ -43,7 +43,7 @@ const BENEFITS = [
   },
   {
     title: "Tudo no mesmo lugar",
-    description: "Fotos, lugares e histórias reunidos em uma só memória.",
+    description: "Fotos e histórias, juntas.",
     icon: (
       <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
         <rect
@@ -115,8 +115,8 @@ export function PremiumSection() {
             Ele guarda a história da viagem que você viveu.
           </p>
           <p className={styles.premiumLead}>
-            Cada ímã fica ligado a uma viagem. Aproxime o celular e volte
-            para os lugares, fotos e momentos que fizeram parte dela.
+            Cada ímã guarda uma viagem. Aproxime o celular e reviva os
+            lugares e momentos que fizeram parte dela.
           </p>
           <ul className={styles.premiumBenefits}>
             {BENEFITS.map((benefit) => (

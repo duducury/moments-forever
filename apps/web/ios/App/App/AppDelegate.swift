@@ -1,5 +1,15 @@
 import UIKit
 import Capacitor
+// `@exxili/capacitor-nfc` isn't wired through Capacitor's own cap-sync-managed
+// CapApp-SPM/Package.swift (that would be the officially auto-discovered
+// path) — it's linked directly to this target instead. Nothing in this app's
+// own Swift source otherwise references the NFCPlugin module, so Xcode's
+// linker is free to dead-strip its object file out of the final binary even
+// though it's listed under "Link Binary With Libraries": being *linkable*
+// isn't the same as being *referenced*. Import it here, and see the
+// NFCPlugin.self touch below, purely to keep it in the compiled app so
+// Capacitor's CAPBridgedPlugin runtime scan can actually find it.
+import NFCPlugin
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -7,6 +17,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        // Forces the linker to keep NFCPlugin's Objective-C class metadata in
+        // the app binary — see the import comment above.
+        _ = NFCPlugin.NFCPlugin.self
         // Override point for customization after application launch.
         return true
     }

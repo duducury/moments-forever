@@ -46,6 +46,25 @@ type ReadTestState =
     }
   | { readonly status: "error"; readonly message: string };
 
+/**
+ * Tag-first flow: the user taps a blank/unknown tag *before* picking a trip
+ * — the app detects it, then asks which trip to link. Core NFC's write
+ * session is independent of the read session the plugin uses to detect the
+ * tag (they're two separate `NFCNDEFReaderSession`s under the hood), so this
+ * still needs two physical taps of the same tag: one to detect, one to
+ * write — there's no way to hold a single Core NFC session open across a
+ * "pick a trip from a list" UI interaction.
+ */
+type NewTagFlowState =
+  | { readonly step: "detecting" }
+  | {
+      readonly step: "picking";
+      readonly matchedTitle: string | null;
+    }
+  | { readonly step: "writing"; readonly title: string }
+  | { readonly step: "success"; readonly title: string }
+  | { readonly step: "error"; readonly message: string };
+
 export function NfcManagerClient() {
   const [trips, setTrips] = useState<readonly TripNfcInfo[] | null>(null);
   const [limit, setLimit] = useState<{
@@ -60,6 +79,7 @@ export function NfcManagerClient() {
   const [readTestState, setReadTestState] = useState<ReadTestState | null>(
     null,
   );
+  const [newTagFlow, setNewTagFlow] = useState<NewTagFlowState | null>(null);
   const [canWriteDirectly] = useState(
     () => isWebNfcSupported() || isNativeNfcSupported(),
   );
@@ -114,9 +134,7 @@ export function NfcManagerClient() {
       readonly error?: string;
     };
     if (!response.ok || !payload.token || !payload.url) {
-      throw new Error(
-        payload.error ?? "Não foi possível criar a tag NFC.",
-      );
+      throw new Error(payload.error ?? "Não foi possível criar a tag NFC.");
     }
     const { token, url } = payload;
     setTrips((current) =>
@@ -223,6 +241,36 @@ export function NfcManagerClient() {
     }
   }
 
+  /** Step 1 of the tag-first flow: approach a tag before picking a trip. */
+  async function startNewTagFlow() {
+    setNewTagFlow({ step: "detecting" });
+    try {
+      const result = await readNfcTag();
+      const matched = trips?.find((trip) => trip.nfcUrl === result.url);
+      setNewTagFlow({ step: "picking", matchedTitle: matched?.title ?? null });
+    } catch (err) {
+      setNewTagFlow({
+        step: "error",
+        message: err instanceof Error ? err.message : "Falha ao ler a tag.",
+      });
+    }
+  }
+
+  /** Step 2: user picked a trip for the tag detected in step 1 — write it. */
+  async function finishNewTagFlow(trip: TripNfcInfo) {
+    setNewTagFlow({ step: "writing", title: trip.title });
+    try {
+      const url = trip.nfcUrl ?? (await createTagLink(trip.experienceId)).url;
+      await writeUrlToNfcTagAuto(url);
+      setNewTagFlow({ step: "success", title: trip.title });
+    } catch (err) {
+      setNewTagFlow({
+        step: "error",
+        message: err instanceof Error ? err.message : "Falha ao gravar a tag.",
+      });
+    }
+  }
+
   const atLimit = Boolean(
     limit && limit.max !== null && limit.used >= limit.max,
   );
@@ -234,21 +282,85 @@ export function NfcManagerClient() {
         <h1 className={styles.title}>Ativar NFC</h1>
         <p className={styles.lead}>
           {canWriteDirectly
-            ? "Toque em “Configurar nova tag NFC” na viagem desejada e aproxime uma tag em branco do celular — o app grava sozinho."
-            : "Copie o link da viagem e grave-o com um app gratuito como NFC Tools — só precisa fazer isso uma vez por tag."}
+            ? "Toque em “Nova tag NFC”, aproxime uma tag em branco do celular e escolha a viagem na hora — o app grava sozinho."
+            : "Grave tags NFC diretamente pelo app Moments Forever no iPhone. Neste navegador, copie o link da viagem e grave com um leitor NFC de sua preferência."}
         </p>
         {canReadNatively ? (
           <div className={styles.readTest}>
-            <button
-              className="button secondary"
-              disabled={readTestState?.status === "reading"}
-              onClick={() => void testReadTag()}
-              type="button"
-            >
-              {readTestState?.status === "reading"
-                ? "Aproxime a tag…"
-                : "Testar tag NFC"}
-            </button>
+            <div className={styles.quickActions}>
+              <button
+                className="button primary"
+                disabled={
+                  newTagFlow !== null &&
+                  newTagFlow.step !== "success" &&
+                  newTagFlow.step !== "error"
+                }
+                onClick={() => void startNewTagFlow()}
+                type="button"
+              >
+                {newTagFlow?.step === "detecting"
+                  ? "Aproxime a tag…"
+                  : "Nova tag NFC"}
+              </button>
+              <button
+                className="button secondary"
+                disabled={readTestState?.status === "reading"}
+                onClick={() => void testReadTag()}
+                type="button"
+              >
+                {readTestState?.status === "reading"
+                  ? "Aproxime a tag…"
+                  : "Testar tag NFC"}
+              </button>
+            </div>
+
+            {newTagFlow?.step === "picking" ? (
+              <div className={styles.tagPicker}>
+                <p className={styles.tripHint}>
+                  {newTagFlow.matchedTitle
+                    ? `Essa tag já aponta para "${newTagFlow.matchedTitle}". Escolha uma viagem abaixo para gravar por cima, ou cancele.`
+                    : "Tag detectada! Escolha a viagem que deseja vincular a ela:"}
+                </p>
+                <ul className={styles.tagPickerList}>
+                  {(trips ?? []).map((trip) => (
+                    <li key={trip.experienceId}>
+                      <button
+                        className="button secondary"
+                        onClick={() => void finishNewTagFlow(trip)}
+                        type="button"
+                      >
+                        {trip.title}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+                <button
+                  className="button secondary"
+                  onClick={() => setNewTagFlow(null)}
+                  type="button"
+                >
+                  Cancelar
+                </button>
+              </div>
+            ) : null}
+            {newTagFlow?.step === "writing" ? (
+              <p className={styles.tripHint}>
+                Aproxime a mesma tag novamente para gravar &ldquo;
+                {newTagFlow.title}&rdquo;…
+              </p>
+            ) : null}
+            {newTagFlow?.step === "success" ? (
+              <p className={styles.tripHint}>
+                Tag configurada com sucesso! Vinculada a &ldquo;
+                {newTagFlow.title}&rdquo;.
+              </p>
+            ) : null}
+            {newTagFlow?.step === "error" ? (
+              <p className={styles.error} role="alert">
+                {newTagFlow.message}
+              </p>
+            ) : null}
+
             {readTestState?.status === "success" ? (
               <p className={styles.tripHint}>
                 {readTestState.url

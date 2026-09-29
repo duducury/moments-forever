@@ -4,7 +4,7 @@
 
 Cada NFC representa uma única memória/álbum e abre diretamente essa memória, nunca somente a homepage. O NFC guarda apenas sua URL HTTPS canônica:
 
-`https://momentsforever.com/trip/{slug-imutavel}`
+`https://momentsforever.vercel.app/trip/{slug-imutavel}`
 
 Fotos, tokens, dados privados e lógica não ficam na tag. A URL resolve no web, com ou sem app instalado. Depois de entrar, o visitante pode navegar para outras memórias que tenha permissão para ver.
 

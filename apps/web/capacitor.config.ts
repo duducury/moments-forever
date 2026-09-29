@@ -11,7 +11,7 @@ const config: CapacitorConfig = {
   appName: "Moments Forever",
   webDir: "public",
   server: {
-    url: "https://momentsforever.com",
+    url: "https://momentsforever.vercel.app",
     cleartext: false,
   },
   ios: {

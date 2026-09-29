@@ -6,8 +6,10 @@
 
 .header {
   display: grid;
-  gap: 6px;
-  margin: 8px 0 24px;
+  gap: 7px;
+  margin: 8px 0 28px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
 }
 
 .eyebrow {
@@ -44,22 +46,29 @@
 .row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   width: 100%;
-  padding: 12px;
+  padding: 14px;
   border: 1px solid var(--border);
-  border-radius: 16px;
+  border-radius: 18px;
   background: color-mix(in srgb, var(--surface) 94%, transparent);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
   flex-wrap: wrap;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.row:hover {
+  border-color: color-mix(in srgb, var(--border) 60%, var(--accent, #2f6f4f));
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
 }
 
 .cover,
 .coverFallback {
   flex: 0 0 auto;
-  width: 56px;
-  height: 56px;
+  width: 60px;
+  height: 60px;
   overflow: hidden;
-  border-radius: 12px;
+  border-radius: 14px;
   background: color-mix(in srgb, var(--surface) 70%, #1a1a1a);
 }
 
@@ -80,16 +89,49 @@
 
 .meta {
   display: grid;
-  gap: 2px;
+  gap: 4px;
   min-width: 0;
   flex: 1 1 160px;
 }
 
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.flag {
+  flex: 0 0 auto;
+  border-radius: 3px;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08);
+}
+
 .tripTitle {
   margin: 0;
+  min-width: 0;
   font-size: 0.98rem;
   font-weight: 650;
   overflow-wrap: anywhere;
+}
+
+.statusBadge {
+  flex: 0 0 auto;
+  margin-left: auto;
+  padding: 2px 9px;
+  border-radius: 999px;
+  color: var(--text-secondary);
+  font-size: 0.68rem;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  background: color-mix(in srgb, var(--surface) 60%, #1a1a1a);
+  white-space: nowrap;
+}
+
+.statusBadge[data-linked="true"] {
+  color: #1f7a4d;
+  background: color-mix(in srgb, #1f7a4d 16%, transparent);
 }
 
 .tripHint {
@@ -104,7 +146,7 @@
   flex: 1 1 100%;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 4px;
+  margin-top: 6px;
 }
 
 .error {

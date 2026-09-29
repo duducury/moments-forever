@@ -9,11 +9,16 @@
     "lint": "eslint .",
     "test": "node --import tsx --test src/lib/photo-import/browser-metadata.test.ts src/lib/location/*.test.ts src/lib/profile/profile-slug.test.ts src/lib/media/media-url.test.ts src/lib/photos/*.test.ts src/lib/pwa/*.test.ts src/lib/site-url.test.ts",
     "typecheck": "tsc --noEmit",
-    "reprocess-photos": "node --env-file=.env.local --import tsx scripts/reprocess-legacy-photos.ts"
+    "reprocess-photos": "node --env-file=.env.local --import tsx scripts/reprocess-legacy-photos.ts",
+    "cap:sync": "cap sync ios",
+    "cap:open:ios": "cap open ios"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1106.0",
     "@aws-sdk/s3-request-presigner": "^3.1106.0",
+    "@capacitor/core": "^8.5.2",
+    "@capacitor/ios": "^8.5.2",
+    "@exxili/capacitor-nfc": "^0.0.14",
     "@moments-forever/config": "*",
     "@moments-forever/shared": "*",
     "@supabase/ssr": "^0.7.0",
@@ -31,6 +36,7 @@
     "@img/sharp-linux-x64": "0.35.3"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.5.2",
     "@types/leaflet": "^1.9.22",
     "@types/node": "^20",
     "@types/react": "19.2.2",

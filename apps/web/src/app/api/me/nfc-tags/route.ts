@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { loadOwnerExperiences } from "@/lib/experiences/load-owner-experiences";
+import { loadOwnerPlaceCards } from "@/lib/experiences/load-owner-place-cards";
 import { getUserLicense } from "@/lib/licensing/get-user-license";
 import { getSiteUrl } from "@/lib/site-url";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -9,7 +9,12 @@ function nfcUrl(token: string): string {
   return `${getSiteUrl()}/n/${token}`;
 }
 
-/** All of the owner's trips + their NFC tag status, for the "Ativar NFC" list. */
+/**
+ * All of the owner's trips + their NFC tag status, for the "Ativar NFC" list.
+ * Sourced from the same root-album ("pasta") data /perfil shows, so the name
+ * here always matches whatever the owner last renamed it to — never the
+ * (possibly stale) experiences.title, which a rename never touches.
+ */
 export async function GET() {
   const supabase = await createSupabaseServerClient();
   if (!supabase) {
@@ -26,19 +31,29 @@ export async function GET() {
     return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
   }
 
-  const [{ experiences, error }, license] = await Promise.all([
-    loadOwnerExperiences(supabase, user.id),
+  const [{ places, error }, license] = await Promise.all([
+    loadOwnerPlaceCards(supabase, user.id),
     getUserLicense(supabase, user.id),
   ]);
 
-  if (error || !experiences) {
+  if (error || !places) {
     return NextResponse.json(
       { error: error ?? "Não foi possível carregar as viagens." },
       { status: 400 },
     );
   }
 
-  const experienceIds = experiences.map((experience) => experience.id);
+  // One root album per experience in the common case — dedupe defensively
+  // so a trip never shows twice (an nfc_tags row is keyed by experience,
+  // not by album).
+  const seenExperienceIds = new Set<string>();
+  const trips = places.filter((place) => {
+    if (seenExperienceIds.has(place.experienceId)) return false;
+    seenExperienceIds.add(place.experienceId);
+    return true;
+  });
+
+  const experienceIds = trips.map((trip) => trip.experienceId);
   const tags =
     experienceIds.length > 0
       ? await supabase
@@ -56,13 +71,14 @@ export async function GET() {
   );
 
   return NextResponse.json({
-    trips: experiences.map((experience) => {
-      const token = tokenByExperienceId.get(experience.id) ?? null;
+    trips: trips.map((trip) => {
+      const token = tokenByExperienceId.get(trip.experienceId) ?? null;
       return {
-        experienceId: experience.id,
-        title: experience.title,
-        coverPhotoId: experience.coverPhotoId,
-        photoCount: experience.photoCount,
+        experienceId: trip.experienceId,
+        title: trip.title,
+        countryCode: trip.countryCode,
+        coverPhotoId: trip.coverPhotoId,
+        photoCount: trip.photoCount,
         nfcToken: token,
         nfcUrl: token ? nfcUrl(token) : null,
       };

@@ -35,6 +35,14 @@
   line-height: 1.45;
 }
 
+.readTest {
+  display: grid;
+  gap: 6px;
+  margin-top: 4px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--border);
+}
+
 .list {
   display: grid;
   gap: 10px;

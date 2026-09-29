@@ -3,7 +3,11 @@
 import { useEffect, useState } from "react";
 
 import { ExperienceCoverThumb } from "@/components/experience-cover-thumb";
-import { isNativeNfcSupported, writeUrlToNfcTagAuto } from "@/lib/nfc/native-nfc";
+import {
+  isNativeNfcSupported,
+  readNfcTag,
+  writeUrlToNfcTagAuto,
+} from "@/lib/nfc/native-nfc";
 import { isWebNfcSupported } from "@/lib/nfc/web-nfc";
 
 import styles from "./nfc-manager.module.css";
@@ -18,7 +22,13 @@ interface TripNfcInfo {
   readonly nfcUrl: string | null;
 }
 
-type WriteState =
+/**
+ * Per-trip state for the combined "create the link + write it to a physical
+ * tag in one tap" flow ({@link configureNewTag}), and for re-writing an
+ * existing link onto an additional tag ({@link writeToTag}).
+ */
+type ConfigureState =
+  | { readonly tripId: string; readonly status: "linking" }
   | { readonly tripId: string; readonly status: "writing" }
   | { readonly tripId: string; readonly status: "success" }
   | {
@@ -27,6 +37,15 @@ type WriteState =
       readonly message: string;
     };
 
+type ReadTestState =
+  | { readonly status: "reading" }
+  | {
+      readonly status: "success";
+      readonly url: string | null;
+      readonly matchedTitle: string | null;
+    }
+  | { readonly status: "error"; readonly message: string };
+
 export function NfcManagerClient() {
   const [trips, setTrips] = useState<readonly TripNfcInfo[] | null>(null);
   const [limit, setLimit] = useState<{
@@ -34,12 +53,17 @@ export function NfcManagerClient() {
     readonly max: number | null;
   } | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [linkingId, setLinkingId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [writeState, setWriteState] = useState<WriteState | null>(null);
+  const [configureState, setConfigureState] = useState<ConfigureState | null>(
+    null,
+  );
+  const [readTestState, setReadTestState] = useState<ReadTestState | null>(
+    null,
+  );
   const [canWriteDirectly] = useState(
     () => isWebNfcSupported() || isNativeNfcSupported(),
   );
+  const [canReadNatively] = useState(() => isNativeNfcSupported());
 
   useEffect(() => {
     let alive = true;
@@ -75,44 +99,97 @@ export function NfcManagerClient() {
     };
   }, []);
 
-  async function linkTrip(tripId: string) {
-    setLinkingId(tripId);
+  /** Creates the trip's `/n/{token}` link (if it doesn't exist yet). */
+  async function createTagLink(
+    tripId: string,
+  ): Promise<{ readonly token: string; readonly url: string }> {
+    const response = await fetch("/api/nfc-tags", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ experienceId: tripId }),
+    });
+    const payload = (await response.json()) as {
+      readonly token?: string;
+      readonly url?: string;
+      readonly error?: string;
+    };
+    if (!response.ok || !payload.token || !payload.url) {
+      throw new Error(
+        payload.error ?? "Não foi possível criar a tag NFC.",
+      );
+    }
+    const { token, url } = payload;
+    setTrips((current) =>
+      current
+        ? current.map((trip) =>
+            trip.experienceId === tripId
+              ? { ...trip, nfcToken: token, nfcUrl: url }
+              : trip,
+          )
+        : current,
+    );
+    setLimit((current) =>
+      current ? { ...current, used: current.used + 1 } : current,
+    );
+    return { token, url };
+  }
+
+  /**
+   * The main "Configurar nova tag NFC" flow: creates the trip's short link,
+   * then — when this build can write NFC directly (native app or Web NFC) —
+   * immediately starts the write session so the user only has to tap the tag
+   * once, never leaving the app. Falls back to just creating the link (for
+   * copy + a third-party writer app) when neither is available.
+   */
+  async function configureNewTag(tripId: string) {
     setLoadError(null);
+    setConfigureState({ tripId, status: "linking" });
+    let url: string;
     try {
-      const response = await fetch("/api/nfc-tags", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ experienceId: tripId }),
-      });
-      const payload = (await response.json()) as {
-        readonly token?: string;
-        readonly url?: string;
-        readonly error?: string;
-      };
-      if (!response.ok || !payload.token || !payload.url) {
-        throw new Error(
-          payload.error ?? "Não foi possível vincular a tag NFC.",
-        );
-      }
-      const { token, url } = payload;
-      setTrips((current) =>
-        current
-          ? current.map((trip) =>
-              trip.experienceId === tripId
-                ? { ...trip, nfcToken: token, nfcUrl: url }
-                : trip,
-            )
-          : current,
-      );
-      setLimit((current) =>
-        current ? { ...current, used: current.used + 1 } : current,
-      );
+      const created = await createTagLink(tripId);
+      url = created.url;
     } catch (err) {
-      setLoadError(
-        err instanceof Error ? err.message : "Falha ao vincular a tag NFC.",
-      );
-    } finally {
-      setLinkingId(null);
+      setConfigureState({
+        tripId,
+        status: "error",
+        message:
+          err instanceof Error ? err.message : "Falha ao criar a tag NFC.",
+      });
+      return;
+    }
+
+    if (!canWriteDirectly) {
+      // No in-app write path here (plain Safari/iOS browser) — the link is
+      // created; the user copies it and writes it with a third-party app.
+      setConfigureState(null);
+      return;
+    }
+
+    setConfigureState({ tripId, status: "writing" });
+    try {
+      await writeUrlToNfcTagAuto(url);
+      setConfigureState({ tripId, status: "success" });
+    } catch (err) {
+      setConfigureState({
+        tripId,
+        status: "error",
+        message: err instanceof Error ? err.message : "Falha ao gravar a tag.",
+      });
+    }
+  }
+
+  /** Writes an *already-linked* trip's URL onto an additional physical tag. */
+  async function writeToTag(tripId: string, url: string) {
+    setConfigureState({ tripId, status: "writing" });
+    try {
+      await writeUrlToNfcTagAuto(url);
+      setConfigureState({ tripId, status: "success" });
+    } catch (err) {
+      setConfigureState({
+        tripId,
+        status: "error",
+        message: err instanceof Error ? err.message : "Falha ao gravar a tag.",
+      });
     }
   }
 
@@ -128,16 +205,20 @@ export function NfcManagerClient() {
     }, 2000);
   }
 
-  async function writeToTag(tripId: string, url: string) {
-    setWriteState({ tripId, status: "writing" });
+  async function testReadTag() {
+    setReadTestState({ status: "reading" });
     try {
-      await writeUrlToNfcTagAuto(url);
-      setWriteState({ tripId, status: "success" });
+      const result = await readNfcTag();
+      const matched = trips?.find((trip) => trip.nfcUrl === result.url);
+      setReadTestState({
+        status: "success",
+        url: result.url,
+        matchedTitle: matched?.title ?? null,
+      });
     } catch (err) {
-      setWriteState({
-        tripId,
+      setReadTestState({
         status: "error",
-        message: err instanceof Error ? err.message : "Falha ao gravar a tag.",
+        message: err instanceof Error ? err.message : "Falha ao ler a tag.",
       });
     }
   }
@@ -151,21 +232,18 @@ export function NfcManagerClient() {
       <header className={styles.header}>
         <p className={styles.eyebrow}>Tags NFC</p>
         <h1 className={styles.title}>Ativar NFC</h1>
-        <p className={styles.lead}>
-          Escolha uma viagem para copiar o link dela e escrever numa tag NFC
-          física — ao encostar o celular, ela abre direto essa viagem.
-        </p>
         {canWriteDirectly ? (
           <p className={styles.lead}>
-            Seu app grava direto: toque em &ldquo;Gravar na tag&rdquo; e
-            aproxime uma tag NFC em branco do celular.
+            Escolha uma viagem abaixo e toque em &ldquo;Configurar nova tag
+            NFC&rdquo;. O Moments Forever aproveita para aproximar uma tag em
+            branco do celular e grava tudo sozinho — sem sair do app.
           </p>
         ) : (
           <p className={styles.lead}>
-            Este navegador não grava tags NFC diretamente (isso é uma
-            limitação do iPhone/Safari, não do app). Copie o link e grave-o
-            com um app gratuito como NFC Tools — só precisa fazer isso uma vez
-            por tag.
+            Este navegador não grava tags NFC diretamente (limitação do
+            iPhone/Safari fora do app, não do Moments Forever). Escolha uma
+            viagem, copie o link e grave-o com um app gratuito como NFC Tools
+            — só precisa fazer isso uma vez por tag.
           </p>
         )}
         {limit ? (
@@ -174,6 +252,34 @@ export function NfcManagerClient() {
               ? `${limit.used} tags NFC criadas.`
               : `${limit.used} de ${limit.max} tags NFC do seu plano em uso.`}
           </p>
+        ) : null}
+        {canReadNatively ? (
+          <div className={styles.readTest}>
+            <button
+              className="button secondary"
+              disabled={readTestState?.status === "reading"}
+              onClick={() => void testReadTag()}
+              type="button"
+            >
+              {readTestState?.status === "reading"
+                ? "Aproxime a tag…"
+                : "Testar tag NFC"}
+            </button>
+            {readTestState?.status === "success" ? (
+              <p className={styles.tripHint}>
+                {readTestState.url
+                  ? readTestState.matchedTitle
+                    ? `Essa tag abre: ${readTestState.matchedTitle}`
+                    : `Tag lida, mas o link não corresponde a nenhuma das suas viagens: ${readTestState.url}`
+                  : "Tag lida, mas não tem nenhum link gravado."}
+              </p>
+            ) : null}
+            {readTestState?.status === "error" ? (
+              <p className={styles.error} role="alert">
+                {readTestState.message}
+              </p>
+            ) : null}
+          </div>
         ) : null}
       </header>
 
@@ -184,9 +290,10 @@ export function NfcManagerClient() {
       ) : (
         <ul className={styles.list}>
           {trips.map((trip) => {
-            const isLinking = linkingId === trip.experienceId;
-            const writeForTrip =
-              writeState?.tripId === trip.experienceId ? writeState : null;
+            const stateForTrip =
+              configureState?.tripId === trip.experienceId
+                ? configureState
+                : null;
             return (
               <li className={styles.row} key={trip.experienceId}>
                 <ExperienceCoverThumb
@@ -225,17 +332,22 @@ export function NfcManagerClient() {
                       {trip.photoCount} foto{trip.photoCount === 1 ? "" : "s"}
                     </p>
                   )}
-                  {writeForTrip?.status === "writing" ? (
+                  {stateForTrip?.status === "linking" ? (
+                    <p className={styles.tripHint}>Criando o link da tag…</p>
+                  ) : null}
+                  {stateForTrip?.status === "writing" ? (
                     <p className={styles.tripHint}>
                       Aproxime uma tag NFC em branco do celular…
                     </p>
                   ) : null}
-                  {writeForTrip?.status === "success" ? (
-                    <p className={styles.tripHint}>Tag gravada com sucesso!</p>
+                  {stateForTrip?.status === "success" ? (
+                    <p className={styles.tripHint}>
+                      Tag configurada com sucesso!
+                    </p>
                   ) : null}
-                  {writeForTrip?.status === "error" ? (
+                  {stateForTrip?.status === "error" ? (
                     <p className={styles.error} role="alert">
-                      {writeForTrip.message}
+                      {stateForTrip.message}
                     </p>
                   ) : null}
                 </div>
@@ -256,7 +368,7 @@ export function NfcManagerClient() {
                       {canWriteDirectly ? (
                         <button
                           className="button secondary"
-                          disabled={writeForTrip?.status === "writing"}
+                          disabled={stateForTrip?.status === "writing"}
                           onClick={() =>
                             void writeToTag(
                               trip.experienceId,
@@ -265,20 +377,28 @@ export function NfcManagerClient() {
                           }
                           type="button"
                         >
-                          {writeForTrip?.status === "writing"
+                          {stateForTrip?.status === "writing"
                             ? "Gravando…"
-                            : "Gravar na tag"}
+                            : "Gravar em nova tag"}
                         </button>
                       ) : null}
                     </>
                   ) : (
                     <button
                       className="button primary"
-                      disabled={isLinking || atLimit}
-                      onClick={() => void linkTrip(trip.experienceId)}
+                      disabled={
+                        stateForTrip?.status === "linking" ||
+                        stateForTrip?.status === "writing" ||
+                        atLimit
+                      }
+                      onClick={() => void configureNewTag(trip.experienceId)}
                       type="button"
                     >
-                      {isLinking ? "Vinculando…" : "Vincular NFC"}
+                      {stateForTrip?.status === "linking"
+                        ? "Criando link…"
+                        : stateForTrip?.status === "writing"
+                          ? "Aproxime a tag…"
+                          : "Configurar nova tag NFC"}
                     </button>
                   )}
                 </div>

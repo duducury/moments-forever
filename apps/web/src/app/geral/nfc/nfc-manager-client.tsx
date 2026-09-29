@@ -232,27 +232,11 @@ export function NfcManagerClient() {
       <header className={styles.header}>
         <p className={styles.eyebrow}>Tags NFC</p>
         <h1 className={styles.title}>Ativar NFC</h1>
-        {canWriteDirectly ? (
-          <p className={styles.lead}>
-            Escolha uma viagem abaixo e toque em &ldquo;Configurar nova tag
-            NFC&rdquo;. O Moments Forever aproveita para aproximar uma tag em
-            branco do celular e grava tudo sozinho — sem sair do app.
-          </p>
-        ) : (
-          <p className={styles.lead}>
-            Este navegador não grava tags NFC diretamente (limitação do
-            iPhone/Safari fora do app, não do Moments Forever). Escolha uma
-            viagem, copie o link e grave-o com um app gratuito como NFC Tools
-            — só precisa fazer isso uma vez por tag.
-          </p>
-        )}
-        {limit ? (
-          <p className={styles.lead}>
-            {limit.max === null
-              ? `${limit.used} tags NFC criadas.`
-              : `${limit.used} de ${limit.max} tags NFC do seu plano em uso.`}
-          </p>
-        ) : null}
+        <p className={styles.lead}>
+          {canWriteDirectly
+            ? "Toque em “Configurar nova tag NFC” na viagem desejada e aproxime uma tag em branco do celular — o app grava sozinho."
+            : "Copie o link da viagem e grave-o com um app gratuito como NFC Tools — só precisa fazer isso uma vez por tag."}
+        </p>
         {canReadNatively ? (
           <div className={styles.readTest}>
             <button

@@ -3,13 +3,15 @@
 import { useEffect, useState } from "react";
 
 import { ExperienceCoverThumb } from "@/components/experience-cover-thumb";
-import { isWebNfcSupported, writeUrlToNfcTag } from "@/lib/nfc/web-nfc";
+import { isNativeNfcSupported, writeUrlToNfcTagAuto } from "@/lib/nfc/native-nfc";
+import { isWebNfcSupported } from "@/lib/nfc/web-nfc";
 
 import styles from "./nfc-manager.module.css";
 
 interface TripNfcInfo {
   readonly experienceId: string;
   readonly title: string;
+  readonly countryCode: string | null;
   readonly coverPhotoId: string | null;
   readonly photoCount: number;
   readonly nfcToken: string | null;
@@ -35,7 +37,9 @@ export function NfcManagerClient() {
   const [linkingId, setLinkingId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [writeState, setWriteState] = useState<WriteState | null>(null);
-  const [webNfcSupported] = useState(() => isWebNfcSupported());
+  const [canWriteDirectly] = useState(
+    () => isWebNfcSupported() || isNativeNfcSupported(),
+  );
 
   useEffect(() => {
     let alive = true;
@@ -127,7 +131,7 @@ export function NfcManagerClient() {
   async function writeToTag(tripId: string, url: string) {
     setWriteState({ tripId, status: "writing" });
     try {
-      await writeUrlToNfcTag(url);
+      await writeUrlToNfcTagAuto(url);
       setWriteState({ tripId, status: "success" });
     } catch (err) {
       setWriteState({
@@ -151,9 +155,9 @@ export function NfcManagerClient() {
           Escolha uma viagem para copiar o link dela e escrever numa tag NFC
           física — ao encostar o celular, ela abre direto essa viagem.
         </p>
-        {webNfcSupported ? (
+        {canWriteDirectly ? (
           <p className={styles.lead}>
-            Seu navegador grava direto: toque em &ldquo;Gravar na tag&rdquo; e
+            Seu app grava direto: toque em &ldquo;Gravar na tag&rdquo; e
             aproxime uma tag NFC em branco do celular.
           </p>
         ) : (
@@ -194,13 +198,31 @@ export function NfcManagerClient() {
                   variant="thumbnail"
                 />
                 <div className={styles.meta}>
-                  <p className={styles.tripTitle}>{trip.title}</p>
+                  <div className={styles.titleRow}>
+                    {trip.countryCode ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- small flag CDN asset
+                      <img
+                        alt=""
+                        className={styles.flag}
+                        decoding="async"
+                        height={15}
+                        src={`https://flagcdn.com/w40/${trip.countryCode.toLowerCase()}.png`}
+                        width={20}
+                      />
+                    ) : null}
+                    <p className={styles.tripTitle}>{trip.title}</p>
+                    <span
+                      className={styles.statusBadge}
+                      data-linked={trip.nfcUrl ? "true" : "false"}
+                    >
+                      {trip.nfcUrl ? "Vinculada" : "Sem tag"}
+                    </span>
+                  </div>
                   {trip.nfcUrl ? (
                     <p className={styles.tripHint}>{trip.nfcUrl}</p>
                   ) : (
                     <p className={styles.tripHint}>
-                      {trip.photoCount} foto{trip.photoCount === 1 ? "" : "s"}{" "}
-                      · nenhuma tag vinculada
+                      {trip.photoCount} foto{trip.photoCount === 1 ? "" : "s"}
                     </p>
                   )}
                   {writeForTrip?.status === "writing" ? (
@@ -231,7 +253,7 @@ export function NfcManagerClient() {
                           ? "Copiado"
                           : "Copiar link"}
                       </button>
-                      {webNfcSupported ? (
+                      {canWriteDirectly ? (
                         <button
                           className="button secondary"
                           disabled={writeForTrip?.status === "writing"}

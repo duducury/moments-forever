@@ -39,3 +39,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Capacitor iOS — the Xcode project itself is committed; only local/generated
+# build output is ignored (CocoaPods installs its own copy from the Podfile).
+ios/App/Pods/
+ios/App/build/
+ios/App/DerivedData/
+ios/**/xcuserdata/
+ios/**/*.xcuserstate

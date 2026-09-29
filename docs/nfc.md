@@ -24,7 +24,7 @@ O slug é identidade pública imutável. Alterações de título, capa, conteúd
 - Programar tags por ferramenta/processo externo.
 - Verificar leitura em iPhone e Android.
 
-Escrita e leitura NFC dentro do app ficam fora do MVP. Isso evita módulos nativos e permissões antes de validar o kit físico.
+Escrita e leitura NFC dentro do app ficam fora do MVP web. No app nativo iOS/Android (`apps/web/ios`, via Capacitor — ver `apps/web/capacitor.config.ts`), a gravação já é possível usando Core NFC / Android NFC através do plugin `@exxili/capacitor-nfc`, com fallback para Web NFC (Chrome/Android) e "copiar link" no Safari comum. Ver `src/lib/nfc/native-nfc.ts`.
 
 ## Tags
 

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { loadOwnerPlaceCards } from "@/lib/experiences/load-owner-place-cards";
 import { getUserLicense } from "@/lib/licensing/get-user-license";
+import { shapeOwnerNfcTrips } from "@/lib/nfc/shape-owner-nfc-trips";
 import { getSiteUrl } from "@/lib/site-url";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -10,10 +11,12 @@ function nfcUrl(token: string): string {
 }
 
 /**
- * All of the owner's trips + their NFC tag status, for the "Ativar NFC" list.
- * Sourced from the same root-album ("pasta") data /perfil shows, so the name
- * here always matches whatever the owner last renamed it to — never the
- * (possibly stale) experiences.title, which a rename never touches.
+ * All of the owner's destinations (root albums) + their NFC tag status, for
+ * the "Ativar NFC" list. One row per root album, never deduplicated by
+ * experience — an experience can have several root albums (e.g. "Dubai" and
+ * "Bali" under one import trip), each independently taggable. A tag is
+ * looked up by album_id, not by experience, so two destinations sharing an
+ * experience never share a tag.
  */
 export async function GET() {
   const supabase = await createSupabaseServerClient();
@@ -43,47 +46,26 @@ export async function GET() {
     );
   }
 
-  // One root album per experience in the common case — dedupe defensively
-  // so a trip never shows twice (an nfc_tags row is keyed by experience,
-  // not by album).
-  const seenExperienceIds = new Set<string>();
-  const trips = places.filter((place) => {
-    if (seenExperienceIds.has(place.experienceId)) return false;
-    seenExperienceIds.add(place.experienceId);
-    return true;
-  });
-
-  const experienceIds = trips.map((trip) => trip.experienceId);
+  const albumIds = places.map((place) => place.albumId);
   const tags =
-    experienceIds.length > 0
+    albumIds.length > 0
       ? await supabase
           .from("nfc_tags")
-          .select("trip_id, token")
+          .select("album_id, token")
           .eq("user_id", user.id)
-          .in("trip_id", experienceIds)
-      : { data: [] as Array<{ trip_id: string; token: string }> };
+          .in("album_id", albumIds)
+      : { data: [] as Array<{ album_id: string; token: string }> };
 
-  const tokenByExperienceId = new Map(
+  const tokenByAlbumId = new Map(
     (tags.data ?? []).map((row) => [
-      row.trip_id as string,
+      row.album_id as string,
       row.token as string,
     ]),
   );
 
   return NextResponse.json({
-    trips: trips.map((trip) => {
-      const token = tokenByExperienceId.get(trip.experienceId) ?? null;
-      return {
-        experienceId: trip.experienceId,
-        title: trip.title,
-        countryCode: trip.countryCode,
-        coverPhotoId: trip.coverPhotoId,
-        photoCount: trip.photoCount,
-        nfcToken: token,
-        nfcUrl: token ? nfcUrl(token) : null,
-      };
-    }),
-    usedCount: tokenByExperienceId.size,
+    trips: shapeOwnerNfcTrips(places, tokenByAlbumId, nfcUrl),
+    usedCount: tokenByAlbumId.size,
     maxNfcTags: license?.maxNfcTags ?? null,
   });
 }

@@ -24,10 +24,17 @@ function NotLinkedPage() {
 }
 
 /**
- * Public NFC tag redirect. resolve_nfc_token() only ever returns a trip id
- * (or null) — it never exposes the nfc_tags row itself. Whether that trip is
- * actually visible to this visitor is then decided by the normal RLS
- * policies on `experiences`/`albums`, exactly like every other public page.
+ * Public NFC tag redirect. resolve_nfc_token() returns the exact
+ * {trip_id, album_id} the tag was linked to — never the nfc_tags row itself
+ * — so this redirects straight to that specific album, the same one the
+ * owner selected when they created the tag. It never re-derives "the first
+ * root album of this experience": that used to be the resolution rule here,
+ * and it could silently disagree with which album was actually linked
+ * whenever an experience has more than one root album (e.g. "Dubai" and
+ * "Bali" as two destinations under the same import trip). Whether the
+ * resolved trip/album is actually visible to this visitor is then decided by
+ * the normal RLS policies on `experiences`/`albums`, exactly like every other
+ * public page.
  */
 export default async function NfcTagPage({
   params,
@@ -42,27 +49,21 @@ export default async function NfcTagPage({
   if (!supabase) return <NotLinkedPage />;
 
   const resolved = await supabase.rpc("resolve_nfc_token", { p_token: token });
-  const experienceId = resolved.data as string | null;
-  if (resolved.error || !experienceId) return <NotLinkedPage />;
+  const row = (
+    resolved.data as
+      | readonly { readonly trip_id: string; readonly album_id: string }[]
+      | null
+  )?.[0];
+  if (resolved.error || !row?.trip_id || !row.album_id) {
+    return <NotLinkedPage />;
+  }
 
   const experience = await supabase
     .from("experiences")
     .select("slug")
-    .eq("id", experienceId)
+    .eq("id", row.trip_id)
     .maybeSingle();
   if (experience.error || !experience.data?.slug) return <NotLinkedPage />;
 
-  const slug = experience.data.slug as string;
-
-  const firstAlbum = await supabase
-    .from("albums")
-    .select("id")
-    .eq("experience_id", experienceId)
-    .is("parent_album_id", null)
-    .order("position", { ascending: true })
-    .limit(1)
-    .maybeSingle();
-  if (firstAlbum.error || !firstAlbum.data?.id) return <NotLinkedPage />;
-
-  redirect(profileTripAlbumPath(slug, firstAlbum.data.id as string));
+  redirect(profileTripAlbumPath(experience.data.slug as string, row.album_id));
 }

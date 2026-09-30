@@ -10,7 +10,7 @@ Fotos, tokens, dados privados e lógica não ficam na tag. A URL resolve no web,
 
 ## Cardinalidade
 
-No MVP: uma memória possui um NFC principal. O modelo permite futuramente várias tags apontando para a mesma memória, cada uma com identidade operacional própria. Uma tag nunca aponta para várias memórias.
+Uma tag aponta para exatamente um álbum raiz (destino) — nunca para "a viagem inteira" de forma ambígua. Uma experiência/viagem pode ter vários álbuns raiz (ex.: "Dubai" e "Bali" na mesma importação); cada um é uma memória própria e pode ter sua própria tag, independente das demais. `nfc_tags.album_id` é o identificador operacional real; `trip_id` (a experiência) é mantido para contexto/RLS, mas a resolução do link (`/n/[token]`) sempre usa o `album_id` gravado, nunca "o primeiro álbum da experiência".
 
 ## Permanência
 

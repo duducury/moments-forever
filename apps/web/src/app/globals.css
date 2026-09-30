@@ -130,24 +130,25 @@ a {
 }
 
 .wordmark {
-  /* Fluid instead of a fixed 184px: on the narrowest phones (iPhone SE-width
-     and below) the logo plus the copy-link/theme-toggle buttons no longer
-     fit on one row at the fixed size, and the row wraps/overlaps. Shrinks
-     smoothly between 140px and 184px; height/background-size/position scale
-     with it (same ratios as the original 184x68 crop) so the logo never
-     distorts or crops wrong. */
-  --wordmark-w: clamp(140px, 44vw, 184px);
-  width: var(--wordmark-w);
-  height: calc(var(--wordmark-w) * 68 / 184);
+  /* navlogo.png/navlogo2.png are now cropped tight to the visible mark (see
+     public/brand), both at the same 2.8:1 aspect ratio, so `contain` +
+     `center` displays either one correctly centered with no per-image crop
+     math. The old fixed-offset sprite crop (a hand-tuned background-position
+     assuming a much larger, differently-padded source image) was why the
+     logo rendered noticeably above center compared to the copy-link/theme
+     buttons next to it — `center` can't get that wrong.
+     --wordmark-h is fluid (not a fixed 184px) so the logo shrinks smoothly
+     on narrow phones instead of the row wrapping/overlapping. */
+  --wordmark-h: clamp(34px, 9vw, 44px);
+  width: calc(var(--wordmark-h) * 2.8);
+  height: var(--wordmark-h);
   flex: 0 1 auto;
   overflow: hidden;
   /* Light theme / light background */
   background-image: url("/brand/navlogo2.png");
-  background-position:
-    calc(var(--wordmark-w) * -20.5 / 184) calc(var(--wordmark-w) * -27.5 / 184);
+  background-position: center;
   background-repeat: no-repeat;
-  background-size:
-    calc(var(--wordmark-w) * 133.5 / 184) calc(var(--wordmark-w) * 89 / 184);
+  background-size: contain;
   text-indent: -9999px;
   white-space: nowrap;
 }

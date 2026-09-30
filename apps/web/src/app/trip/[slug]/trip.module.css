@@ -676,14 +676,17 @@
 }
 
 .lightboxBrand {
-  width: 132px;
+  /* navlogo.png is cropped tight to the visible mark at a 2.8:1 aspect
+     ratio (see public/brand) — contain + center displays it correctly
+     centered with no hand-tuned crop offset needed. */
+  width: 134px;
   height: 48px;
   flex: 0 0 auto;
   overflow: hidden;
   background-image: url("/brand/navlogo.png");
-  background-position: -14.5px -19px;
+  background-position: center;
   background-repeat: no-repeat;
-  background-size: 96px 64px;
+  background-size: contain;
   text-indent: -9999px;
   white-space: nowrap;
 }

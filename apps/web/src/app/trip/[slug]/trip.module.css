@@ -1111,6 +1111,24 @@
   font-size: 0.9rem;
 }
 
+/* The bottom nav bar (AppBottomNav) is fixed at the same --z-drawer level and
+   renders after this panel in the DOM, so on equal z-index it paints on top,
+   hiding whatever sits flush at the bottom edge. Sit above it and leave
+   enough bottom clearance so the card (and its buttons) floats clear of it. */
+.nfcPanelOverlay {
+  z-index: calc(var(--z-modal) + 10);
+  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+}
+
+.nfcPanelCardLinked {
+  border: 1px solid color-mix(in srgb, #1f7a4d 45%, transparent);
+  background: color-mix(in srgb, #1f7a4d 10%, var(--surface));
+}
+
+.nfcPanelCardLinked h2 {
+  color: #1f7a4d;
+}
+
 .inlineNotice {
   margin-top: 10px;
   color: var(--muted);

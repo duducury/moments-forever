@@ -1,0 +1,73 @@
+.article {
+  width: min(100%, 720px);
+  margin: 0 auto;
+  padding: 32px 0 64px;
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.title {
+  margin: 0 0 6px;
+  font-size: clamp(1.6rem, 5vw, 2.1rem);
+}
+
+.updated {
+  margin: 0 0 32px;
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+}
+
+.section {
+  margin-top: 32px;
+}
+
+.section h2 {
+  margin: 0 0 10px;
+  font-size: 1.15rem;
+}
+
+.section p,
+.section li {
+  color: var(--text);
+  font-size: 0.96rem;
+  line-height: 1.6;
+}
+
+.section p + p {
+  margin-top: 10px;
+}
+
+.section ul {
+  margin: 10px 0 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 8px;
+}
+
+.section a {
+  color: var(--accent);
+  font-weight: 650;
+}
+
+.contactCard {
+  margin-top: 12px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px 18px;
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+}
+
+.contactCard p {
+  margin: 0;
+}
+
+.contactCard p + p {
+  margin-top: 6px;
+}

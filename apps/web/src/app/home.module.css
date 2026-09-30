@@ -5,7 +5,10 @@
   --home-radius: 14px;
   position: relative;
   min-height: 100dvh;
-  overflow-x: clip;
+  /* No overflow-x here (html/body already clip horizontally in globals.css)
+     — any non-visible overflow on an ancestor turns it into a scroll
+     container for CSS purposes, which silently breaks position: sticky on
+     .header below (it just scrolled away permanently instead of sticking). */
   padding-top: calc(12px + env(safe-area-inset-top, 0px));
   padding-right: calc(16px + env(safe-area-inset-right, 0px));
   padding-bottom: calc(36px + env(safe-area-inset-bottom, 0px));
@@ -27,7 +30,14 @@
 /* —— Header —— */
 
 .header {
-  position: relative;
+  /* No background — just the logo/buttons floating over the page, per
+     request. sticky (not fixed) keeps it in normal flow, so no page padding
+     needs to compensate; data-nav-hidden (see AutoHideNavOnScroll) slides it
+     away on scroll-down and back on scroll-up via transform. Still a valid
+     containing block for .headerMenu's position: absolute below. */
+  position: sticky;
+  top: env(safe-area-inset-top, 0px);
+  z-index: var(--z-sticky);
   display: flex;
   max-width: var(--home-max);
   min-height: 48px;
@@ -35,14 +45,25 @@
   justify-content: space-between;
   gap: 12px;
   margin: 0 auto;
+  transition: transform 220ms ease;
+}
+
+html[data-nav-hidden="true"] .header {
+  transform: translateY(-130%);
 }
 
 .headerWordmark {
+  /* navlogo2.png/navlogo.png are now cropped tight to the visible mark (see
+     public/brand) — the old hand-tuned background-position/size here was
+     calibrated against the previous, much larger source canvas, so once
+     that image was re-cropped this zoomed in on the wrong region and
+     rendered the logo oversized. contain + center is correct regardless of
+     the source image's own dimensions. */
   width: 132px !important;
   height: 48px !important;
   flex: 0 0 auto;
-  background-position: -30px -40px !important;
-  background-size: 192px 128px !important;
+  background-position: center !important;
+  background-size: contain !important;
 }
 
 .headerNav {

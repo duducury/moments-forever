@@ -46,17 +46,30 @@ html {
      shows up as a white bar under the status bar/notch when the page bounces
      at the top. */
   background: var(--background);
+  /* Only html gets overflow-x here, not body too (see below) — this alone
+     already prevents horizontal scroll app-wide. */
+  overflow-x: hidden;
 }
 
 html,
 body {
   max-width: 100vw;
-  overflow-x: hidden;
   /* Prefer tap over double-tap page zoom (Instagram-like app chrome). */
   touch-action: manipulation;
   /* None, not just -x: the vertical bounce is what exposes the white bar
      above (see the .top comment on `html`). */
   overscroll-behavior: none;
+}
+
+body {
+  /* overflow-x was also set here before, redundantly. Setting a non-visible
+     overflow-x on an element with no overflow-y forces overflow-y to
+     compute as `auto` (CSS Overflow spec) — with it on both html AND body,
+     both silently became independent scroll containers, and any
+     `position: sticky` element nested inside (e.g. .topbar, .header) lost
+     track of the viewport as its scrolling ancestor and just scrolled away
+     instead of sticking. */
+  overflow-x: visible;
 }
 
 body {
@@ -127,6 +140,21 @@ a {
   gap: 8px 12px;
   max-width: 1120px;
   margin: 0 auto;
+  /* No background — just the logo/buttons floating over the page, per
+     request. position: sticky (not fixed) keeps it in normal document flow
+     — it reserves its own space at rest and only "sticks" once scrolled
+     past, so no page needs extra top padding to compensate. The
+     data-nav-hidden toggle (see AutoHideNavOnScroll) then slides it away on
+     scroll-down and back on scroll-up, layered on top of the sticky
+     positioning via transform. */
+  position: sticky;
+  top: env(safe-area-inset-top, 0px);
+  z-index: var(--z-sticky);
+  transition: transform 220ms ease;
+}
+
+html[data-nav-hidden="true"] .topbar {
+  transform: translateY(-130%);
 }
 
 .wordmark {

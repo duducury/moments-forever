@@ -19,6 +19,9 @@ export function HomeFooterNav() {
       <Link className={styles.footerLink} href="/privacidade">
         Privacidade
       </Link>
+      <Link className={styles.footerLink} href="/politica-de-privacidade">
+        Política de Privacidade
+      </Link>
       <Link className={styles.footerLink} href="/login">
         Entrar
       </Link>

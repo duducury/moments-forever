@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 
 import { AuthProvider } from "@/components/auth-provider";
+import { AutoHideNavOnScroll } from "@/components/auto-hide-nav";
 import { PwaSplashDismiss } from "@/components/pwa-splash-dismiss";
 import { RevealOnScroll } from "@/components/reveal-on-scroll";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -149,6 +150,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <ThemeProvider>
           <AuthProvider>
             <RevealOnScroll />
+            <AutoHideNavOnScroll />
             {children}
           </AuthProvider>
         </ThemeProvider>

@@ -4,7 +4,7 @@ import Capacitor
 // dead-stripped as unused, in case it's ever linked without also being in
 // capacitor.config.json's packageClassList. Not required for normal
 // operation anymore — see the postinstall fix in
-// apps/web/scripts/fix-capacitor-nfc-plugin-exports.js for the actual root
+// apps/web/scripts/fix-capacitor-nfc-plugin.mjs for the actual root
 // cause (an npm-resolution bug that silently dropped the plugin from that
 // list on every `cap sync`, which is what registers it with Capacitor's
 // runtime — CapacitorBridge.swift's registerPlugins() reads that JSON array

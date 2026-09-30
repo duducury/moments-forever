@@ -49,7 +49,9 @@
 }
 
 html[data-nav-hidden="true"] .header {
-  transform: translateY(-130%);
+  /* -130% alone left a visible sliver behind the status bar/notch — see the
+     matching comment on .topbar in globals.css for why. */
+  transform: translateY(calc(-100% - env(safe-area-inset-top, 0px) - 24px));
 }
 
 .headerWordmark {

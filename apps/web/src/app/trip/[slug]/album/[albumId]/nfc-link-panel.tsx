@@ -165,13 +165,16 @@ export function NfcLinkPanel({
       }}
       role="dialog"
     >
-      <div
-        className={`${styles.panelCard} ${
-          state.step === "existing" ? styles.nfcPanelCardLinked : ""
-        }`}
-      >
+      <div className={styles.panelCard}>
         <p className={styles.panelEyebrow}>NFC</p>
-        <h2>{state.step === "existing" ? "NFC vinculada" : "Vincular NFC"}</h2>
+        <h2>Vincular NFC</h2>
+
+        {state.step === "existing" ? (
+          <span className={styles.nfcStatusPill}>
+            <span aria-hidden="true" className={styles.nfcStatusDot} />
+            NFC vinculada
+          </span>
+        ) : null}
 
         {state.step === "checking" ? (
           <p className={styles.sectionHint}>Verificando…</p>

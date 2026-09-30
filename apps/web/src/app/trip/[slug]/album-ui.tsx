@@ -615,7 +615,7 @@ export function TripBreadcrumb({
   );
 }
 
-function useLockPageScroll() {
+export function useLockPageScroll() {
   useEffect(() => {
     const html = document.documentElement;
     const body = document.body;

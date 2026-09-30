@@ -14,6 +14,10 @@ import styles from "./nfc-manager.module.css";
 
 interface TripNfcInfo {
   readonly experienceId: string;
+  /** The specific root album (destination card) this tag belongs to — the
+   * identity that actually matters here, since one experience can have
+   * several root albums (e.g. "Dubai" and "Bali" under one import trip). */
+  readonly albumId: string;
   readonly title: string;
   readonly countryCode: string | null;
   readonly coverPhotoId: string | null;
@@ -23,16 +27,17 @@ interface TripNfcInfo {
 }
 
 /**
- * Per-trip state for the combined "create the link + write it to a physical
+ * Per-row state for the combined "create the link + write it to a physical
  * tag in one tap" flow ({@link configureNewTag}), and for re-writing an
- * existing link onto an additional tag ({@link writeToTag}).
+ * existing link onto an additional tag ({@link writeToTag}). Keyed by
+ * albumId, not experienceId — two rows can share an experienceId.
  */
 type ConfigureState =
-  | { readonly tripId: string; readonly status: "linking" }
-  | { readonly tripId: string; readonly status: "writing" }
-  | { readonly tripId: string; readonly status: "success" }
+  | { readonly albumId: string; readonly status: "linking" }
+  | { readonly albumId: string; readonly status: "writing" }
+  | { readonly albumId: string; readonly status: "success" }
   | {
-      readonly tripId: string;
+      readonly albumId: string;
       readonly status: "error";
       readonly message: string;
     };
@@ -47,23 +52,30 @@ type ReadTestState =
   | { readonly status: "error"; readonly message: string };
 
 /**
- * Tag-first flow: the user taps a blank/unknown tag *before* picking a trip
- * — the app detects it, then asks which trip to link. Core NFC's write
- * session is independent of the read session the plugin uses to detect the
- * tag (they're two separate `NFCNDEFReaderSession`s under the hood), so this
- * still needs two physical taps of the same tag: one to detect, one to
- * write — there's no way to hold a single Core NFC session open across a
- * "pick a trip from a list" UI interaction.
+ * Tag-first flow: pick a trip, then write straight away. This does NOT read
+ * the tag first — a genuinely blank/new tag isn't NDEF-formatted yet (or has
+ * no records), so a read attempt on it fails with "Failed to read NDEF
+ * message" even though it's perfectly writable. Only `writeNDEF` needs to
+ * touch the tag here.
  */
 type NewTagFlowState =
-  | { readonly step: "detecting" }
-  | {
-      readonly step: "picking";
-      readonly matchedTitle: string | null;
-    }
+  | { readonly step: "picking" }
   | { readonly step: "writing"; readonly title: string }
   | { readonly step: "success"; readonly title: string }
   | { readonly step: "error"; readonly message: string };
+
+/** TEMPORARY diagnostic logging for the "wrong trip written" investigation. */
+function logTripSelection(label: string, trip: TripNfcInfo) {
+  console.log(`[nfc-debug] ${label}: ${trip.title}`);
+  console.log("[nfc-debug] EXPERIENCE ID:", trip.experienceId);
+  console.log("[nfc-debug] ALBUM ID:", trip.albumId);
+  console.log("[nfc-debug] NFC TOKEN (before write):", trip.nfcToken);
+  console.log("[nfc-debug] NFC URL (before write):", trip.nfcUrl);
+}
+
+function logWritingUrl(url: string) {
+  console.log("[nfc-debug] WRITING URL:", url);
+}
 
 export function NfcManagerClient() {
   const [trips, setTrips] = useState<readonly TripNfcInfo[] | null>(null);
@@ -103,7 +115,18 @@ export function NfcManagerClient() {
           setTrips([]);
           return;
         }
-        setTrips(payload.trips ?? []);
+        const loadedTrips = payload.trips ?? [];
+        console.log(
+          "[nfc-debug] /api/me/nfc-tags loaded",
+          loadedTrips.length,
+          "trips:",
+        );
+        for (const trip of loadedTrips) {
+          console.log(
+            `[nfc-debug]   - ${trip.title} | experienceId=${trip.experienceId} | albumId=${trip.albumId} | nfcUrl=${trip.nfcUrl}`,
+          );
+        }
+        setTrips(loadedTrips);
         setLimit({
           used: payload.usedCount ?? 0,
           max: payload.maxNfcTags ?? null,
@@ -119,14 +142,17 @@ export function NfcManagerClient() {
     };
   }, []);
 
-  /** Creates the trip's `/n/{token}` link (if it doesn't exist yet). */
+  /** Creates this destination's `/n/{token}` link (if it doesn't exist yet). */
   async function createTagLink(
-    tripId: string,
+    trip: TripNfcInfo,
   ): Promise<{ readonly token: string; readonly url: string }> {
     const response = await fetch("/api/nfc-tags", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ experienceId: tripId }),
+      body: JSON.stringify({
+        experienceId: trip.experienceId,
+        albumId: trip.albumId,
+      }),
     });
     const payload = (await response.json()) as {
       readonly token?: string;
@@ -137,12 +163,15 @@ export function NfcManagerClient() {
       throw new Error(payload.error ?? "Não foi possível criar a tag NFC.");
     }
     const { token, url } = payload;
+    console.log(
+      `[nfc-debug] createTagLink(albumId=${trip.albumId}) → token=${token} url=${url}`,
+    );
     setTrips((current) =>
       current
-        ? current.map((trip) =>
-            trip.experienceId === tripId
-              ? { ...trip, nfcToken: token, nfcUrl: url }
-              : trip,
+        ? current.map((t) =>
+            t.albumId === trip.albumId
+              ? { ...t, nfcToken: token, nfcUrl: url }
+              : t,
           )
         : current,
     );
@@ -153,22 +182,23 @@ export function NfcManagerClient() {
   }
 
   /**
-   * The main "Configurar nova tag NFC" flow: creates the trip's short link,
-   * then — when this build can write NFC directly (native app or Web NFC) —
-   * immediately starts the write session so the user only has to tap the tag
-   * once, never leaving the app. Falls back to just creating the link (for
-   * copy + a third-party writer app) when neither is available.
+   * The main "Configurar nova tag NFC" flow: creates this destination's short
+   * link, then — when this build can write NFC directly (native app or Web
+   * NFC) — immediately starts the write session so the user only has to tap
+   * the tag once, never leaving the app. Falls back to just creating the
+   * link (for copy + a third-party writer app) when neither is available.
    */
-  async function configureNewTag(tripId: string) {
+  async function configureNewTag(trip: TripNfcInfo) {
+    logTripSelection("SELECTED TRIP (configureNewTag)", trip);
     setLoadError(null);
-    setConfigureState({ tripId, status: "linking" });
+    setConfigureState({ albumId: trip.albumId, status: "linking" });
     let url: string;
     try {
-      const created = await createTagLink(tripId);
+      const created = await createTagLink(trip);
       url = created.url;
     } catch (err) {
       setConfigureState({
-        tripId,
+        albumId: trip.albumId,
         status: "error",
         message:
           err instanceof Error ? err.message : "Falha ao criar a tag NFC.",
@@ -183,43 +213,55 @@ export function NfcManagerClient() {
       return;
     }
 
-    setConfigureState({ tripId, status: "writing" });
+    setConfigureState({ albumId: trip.albumId, status: "writing" });
     try {
+      logWritingUrl(url);
       await writeUrlToNfcTagAuto(url);
-      setConfigureState({ tripId, status: "success" });
+      setConfigureState({ albumId: trip.albumId, status: "success" });
     } catch (err) {
       setConfigureState({
-        tripId,
+        albumId: trip.albumId,
         status: "error",
         message: err instanceof Error ? err.message : "Falha ao gravar a tag.",
       });
     }
   }
 
-  /** Writes an *already-linked* trip's URL onto an additional physical tag. */
-  async function writeToTag(tripId: string, url: string) {
-    setConfigureState({ tripId, status: "writing" });
+  /** Writes an *already-linked* destination's URL onto an additional physical tag. */
+  async function writeToTag(trip: TripNfcInfo) {
+    logTripSelection("SELECTED TRIP (writeToTag)", trip);
+    const url = trip.nfcUrl;
+    if (!url) {
+      setConfigureState({
+        albumId: trip.albumId,
+        status: "error",
+        message: "Esta viagem ainda não tem um link NFC criado.",
+      });
+      return;
+    }
+    setConfigureState({ albumId: trip.albumId, status: "writing" });
     try {
+      logWritingUrl(url);
       await writeUrlToNfcTagAuto(url);
-      setConfigureState({ tripId, status: "success" });
+      setConfigureState({ albumId: trip.albumId, status: "success" });
     } catch (err) {
       setConfigureState({
-        tripId,
+        albumId: trip.albumId,
         status: "error",
         message: err instanceof Error ? err.message : "Falha ao gravar a tag.",
       });
     }
   }
 
-  async function copyUrl(tripId: string, url: string) {
+  async function copyUrl(albumId: string, url: string) {
     try {
       await navigator.clipboard.writeText(url);
     } catch {
       window.prompt("Copie o link:", url);
     }
-    setCopiedId(tripId);
+    setCopiedId(albumId);
     setTimeout(() => {
-      setCopiedId((current) => (current === tripId ? null : current));
+      setCopiedId((current) => (current === albumId ? null : current));
     }, 2000);
   }
 
@@ -227,7 +269,12 @@ export function NfcManagerClient() {
     setReadTestState({ status: "reading" });
     try {
       const result = await readNfcTag();
+      console.log("[nfc-debug] READ BACK URL:", result.url);
       const matched = trips?.find((trip) => trip.nfcUrl === result.url);
+      console.log(
+        "[nfc-debug] READ BACK matches trip:",
+        matched?.title ?? "(none of the loaded trips)",
+      );
       setReadTestState({
         status: "success",
         url: result.url,
@@ -241,26 +288,22 @@ export function NfcManagerClient() {
     }
   }
 
-  /** Step 1 of the tag-first flow: approach a tag before picking a trip. */
-  async function startNewTagFlow() {
-    setNewTagFlow({ step: "detecting" });
-    try {
-      const result = await readNfcTag();
-      const matched = trips?.find((trip) => trip.nfcUrl === result.url);
-      setNewTagFlow({ step: "picking", matchedTitle: matched?.title ?? null });
-    } catch (err) {
-      setNewTagFlow({
-        step: "error",
-        message: err instanceof Error ? err.message : "Falha ao ler a tag.",
-      });
-    }
+  /**
+   * Step 1 of the tag-first flow: just show the trip picker. Does NOT touch
+   * the tag at all — see the NewTagFlowState doc comment for why a read here
+   * would break on a genuinely blank tag.
+   */
+  function startNewTagFlow() {
+    setNewTagFlow({ step: "picking" });
   }
 
-  /** Step 2: user picked a trip for the tag detected in step 1 — write it. */
+  /** Step 2: user picked a destination — create its link if needed, then write. */
   async function finishNewTagFlow(trip: TripNfcInfo) {
+    logTripSelection("SELECTED TRIP (Nova tag NFC)", trip);
     setNewTagFlow({ step: "writing", title: trip.title });
     try {
-      const url = trip.nfcUrl ?? (await createTagLink(trip.experienceId)).url;
+      const url = trip.nfcUrl ?? (await createTagLink(trip)).url;
+      logWritingUrl(url);
       await writeUrlToNfcTagAuto(url);
       setNewTagFlow({ step: "success", title: trip.title });
     } catch (err) {
@@ -282,7 +325,7 @@ export function NfcManagerClient() {
         <h1 className={styles.title}>Ativar NFC</h1>
         <p className={styles.lead}>
           {canWriteDirectly
-            ? "Toque em “Nova tag NFC”, aproxime uma tag em branco do celular e escolha a viagem na hora — o app grava sozinho."
+            ? "Toque em “Nova tag NFC”, escolha a viagem e aproxime uma tag em branco do celular — o app grava sozinho."
             : "Grave tags NFC diretamente pelo app Moments Forever no iPhone. Neste navegador, copie o link da viagem e grave com um leitor NFC de sua preferência."}
         </p>
         {canReadNatively ? (
@@ -295,12 +338,10 @@ export function NfcManagerClient() {
                   newTagFlow.step !== "success" &&
                   newTagFlow.step !== "error"
                 }
-                onClick={() => void startNewTagFlow()}
+                onClick={startNewTagFlow}
                 type="button"
               >
-                {newTagFlow?.step === "detecting"
-                  ? "Aproxime a tag…"
-                  : "Nova tag NFC"}
+                Nova tag NFC
               </button>
               <button
                 className="button secondary"
@@ -317,13 +358,11 @@ export function NfcManagerClient() {
             {newTagFlow?.step === "picking" ? (
               <div className={styles.tagPicker}>
                 <p className={styles.tripHint}>
-                  {newTagFlow.matchedTitle
-                    ? `Essa tag já aponta para "${newTagFlow.matchedTitle}". Escolha uma viagem abaixo para gravar por cima, ou cancele.`
-                    : "Tag detectada! Escolha a viagem que deseja vincular a ela:"}
+                  Escolha a viagem que deseja vincular a uma nova tag:
                 </p>
                 <ul className={styles.tagPickerList}>
                   {(trips ?? []).map((trip) => (
-                    <li key={trip.experienceId}>
+                    <li key={trip.albumId}>
                       <button
                         className="button secondary"
                         onClick={() => void finishNewTagFlow(trip)}
@@ -345,7 +384,7 @@ export function NfcManagerClient() {
             ) : null}
             {newTagFlow?.step === "writing" ? (
               <p className={styles.tripHint}>
-                Aproxime a mesma tag novamente para gravar &ldquo;
+                Aproxime uma tag NFC em branco do celular para gravar &ldquo;
                 {newTagFlow.title}&rdquo;…
               </p>
             ) : null}
@@ -387,11 +426,9 @@ export function NfcManagerClient() {
         <ul className={styles.list}>
           {trips.map((trip) => {
             const stateForTrip =
-              configureState?.tripId === trip.experienceId
-                ? configureState
-                : null;
+              configureState?.albumId === trip.albumId ? configureState : null;
             return (
-              <li className={styles.row} key={trip.experienceId}>
+              <li className={styles.row} key={trip.albumId}>
                 <ExperienceCoverThumb
                   className={styles.cover}
                   coverPhotoId={trip.coverPhotoId}
@@ -453,24 +490,17 @@ export function NfcManagerClient() {
                       <button
                         className="button secondary"
                         onClick={() =>
-                          void copyUrl(trip.experienceId, trip.nfcUrl ?? "")
+                          void copyUrl(trip.albumId, trip.nfcUrl ?? "")
                         }
                         type="button"
                       >
-                        {copiedId === trip.experienceId
-                          ? "Copiado"
-                          : "Copiar link"}
+                        {copiedId === trip.albumId ? "Copiado" : "Copiar link"}
                       </button>
                       {canWriteDirectly ? (
                         <button
                           className="button secondary"
                           disabled={stateForTrip?.status === "writing"}
-                          onClick={() =>
-                            void writeToTag(
-                              trip.experienceId,
-                              trip.nfcUrl ?? "",
-                            )
-                          }
+                          onClick={() => void writeToTag(trip)}
                           type="button"
                         >
                           {stateForTrip?.status === "writing"
@@ -487,7 +517,7 @@ export function NfcManagerClient() {
                         stateForTrip?.status === "writing" ||
                         atLimit
                       }
-                      onClick={() => void configureNewTag(trip.experienceId)}
+                      onClick={() => void configureNewTag(trip)}
                       type="button"
                     >
                       {stateForTrip?.status === "linking"

@@ -118,10 +118,13 @@ export interface NativeNfcReadResult {
  * native Core NFC / Android NFC bridge. Only meaningful inside the native
  * shell — Web NFC's `NDEFReader` also supports scanning, but nothing in this
  * app currently needs a browser read path, so this stays native-only.
- * Forces "ndef" reader mode so iOS uses the plain `NFCNDEFReaderSession`
- * (only needs the standard NFC Tag Reading capability) instead of the
- * plugin's advanced tag-session mode, which needs a separate Apple
- * entitlement grant this app doesn't have.
+ * Uses "full" reader mode so iOS uses `NFCTagReaderSession` — the entitlement
+ * (`com.apple.developer.nfc.readersession.formats`) only lists `TAG`, which
+ * Apple's App Store Connect validation now requires (it rejects `NDEF` in
+ * that entitlement outright). `NFCNDEFReaderSession` needs `NDEF` in that
+ * same entitlement, so it's not usable here — see the patched
+ * NFCReader.swift/NFCWriter.swift (via fix-capacitor-nfc-plugin.mjs) for how
+ * NDEF read/write still work under a TAG-only session.
  */
 export async function readNfcTag(): Promise<NativeNfcReadResult> {
   if (!isRunningInNativeShell()) {
@@ -135,7 +138,7 @@ export async function readNfcTag(): Promise<NativeNfcReadResult> {
     );
     throw new Error("Módulo de NFC nativo indisponível neste build.");
   }
-  console.log("[nfc-native] plugin loaded, calling NFC.startScan({ mode: 'ndef' })…");
+  console.log("[nfc-native] plugin loaded, calling NFC.startScan({ mode: 'full' })…");
 
   return new Promise<NativeNfcReadResult>((resolve, reject) => {
     let settled = false;
@@ -165,7 +168,7 @@ export async function readNfcTag(): Promise<NativeNfcReadResult> {
       console.error("[nfc-native] read error:", error);
       reject(new Error(error.error || "Falha ao ler a tag NFC."));
     });
-    nfc.NFC.startScan({ mode: "ndef" }).catch((error: unknown) => {
+    nfc.NFC.startScan({ mode: "full" }).catch((error: unknown) => {
       if (settled) return;
       settled = true;
       cleanup();

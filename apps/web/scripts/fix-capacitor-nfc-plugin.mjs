@@ -64,6 +64,29 @@
  * makes `npx cap sync ios` regenerate a self-consistent, buildable
  * CapApp-SPM/Package.swift every time — CapApp-SPM/Package.swift itself is
  * never hand-edited.
+ *
+ * --- Fix 3: NFCWriter.swift needs NDEF over NFCTagReaderSession, not
+ *            NFCNDEFReaderSession --------------------------------------
+ *
+ * App Store Connect now rejects an upload whose
+ * `com.apple.developer.nfc.readersession.formats` entitlement (see
+ * ios/App/App/App.entitlements) lists `NDEF` at all, and requires `TAG`
+ * instead — the value Apple currently documents as the one that grants read
+ * *and write* access via `NFCTagReaderSession`. `NDEF` is what
+ * `NFCNDEFReaderSession` needs; with only `TAG` in the entitlement, any
+ * `NFCNDEFReaderSession` the plugin opens fails at runtime with a missing-
+ * entitlement error.
+ *
+ * The plugin's NFCReader.swift already reads NDEF over an
+ * `NFCTagReaderSession` by default (its `.fullTag` mode extracts the
+ * concrete tag — ISO7816/MiFare/FeliCa/ISO15693 — from the `NFCTag` enum and
+ * calls `.queryNDEFStatus`/`.readNDEF` on it, all of which conform to
+ * `NFCNDEFTag`), so reading needs no patch once native-nfc.ts stops forcing
+ * "ndef" mode (see readNfcTag()). NFCWriter.swift has no equivalent: it only
+ * ever opens an `NFCNDEFReaderSession`. This fix replaces it with a
+ * TAG-session implementation that mirrors NFCReader.swift's own approach —
+ * NDEF write functionality is fully preserved, just moved onto the session
+ * type the new entitlement actually grants.
  */
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -133,4 +156,146 @@ if (existsSync(swiftPath)) {
   }
 } else {
   console.warn(`[fix-capacitor-nfc-plugin] ${swiftPath} not found — skipping SPM name fix.`);
+}
+
+// Fix 3: rewrite NFCWriter.swift to write NDEF over NFCTagReaderSession
+// (needs the "TAG" entitlement) instead of NFCNDEFReaderSession (needs
+// "NDEF", which Apple's upload validation now rejects).
+const writerPath = join(pluginDir, "ios", "Sources", "NFCPlugin", "NFCWriter.swift");
+const patchedWriterSource = `import Foundation
+import CoreNFC
+
+// Patched by fix-capacitor-nfc-plugin.mjs (Fix 3): writes NDEF over
+// NFCTagReaderSession instead of NFCNDEFReaderSession, so it works with an
+// entitlement that only lists "TAG" (no "NDEF") — see that script for why.
+@objc public class NFCWriter: NSObject, NFCTagReaderSessionDelegate {
+    private var writerSession: NFCTagReaderSession?
+    private var messageToWrite: NFCNDEFMessage?
+
+    public var onWriteSuccess: (() -> Void)?
+    public var onError: ((Error) -> Void)?
+
+    public func tagReaderSessionDidBecomeActive(_ session: NFCTagReaderSession) {
+        // Intentionally left blank; no special handling needed when the session becomes active.
+    }
+
+    @objc public func startWriting(message: NFCNDEFMessage) {
+        print("NFCWriter startWriting called")
+        self.messageToWrite = message
+
+        guard NFCTagReaderSession.readingAvailable else {
+            print("NFC writing not supported on this device")
+            return
+        }
+        guard let session = NFCTagReaderSession(
+            pollingOption: [.iso14443, .iso15693, .iso18092],
+            delegate: self,
+            queue: nil
+        ) else {
+            print("[NFC] Failed to create NFCTagReaderSession for writing (nil).")
+            return
+        }
+        session.alertMessage = "Hold your iPhone near the NFC tag to write."
+        writerSession = session
+        session.begin()
+    }
+
+    public func tagReaderSession(_ session: NFCTagReaderSession, didInvalidateWithError error: Error) {
+        print("NFC writer session error: \\(error.localizedDescription)")
+        writerSession = nil
+        if let nfcError = error as? NFCReaderError,
+           nfcError.code == .readerSessionInvalidationErrorUserCanceled {
+            return
+        }
+        onError?(error)
+    }
+
+    public func tagReaderSession(_ session: NFCTagReaderSession, didDetect tags: [NFCTag]) {
+        if tags.count > 1 {
+            let retryInterval = DispatchTimeInterval.milliseconds(500)
+            session.alertMessage = "More than one tag detected. Please try again."
+            DispatchQueue.global().asyncAfter(deadline: .now() + retryInterval) {
+                session.restartPolling()
+            }
+            return
+        }
+        guard let tag = tags.first else {
+            session.invalidate(errorMessage: "No tag found.")
+            return
+        }
+
+        session.connect(to: tag) { (error: Error?) in
+            if let error = error {
+                session.invalidate(errorMessage: "Unable to connect to tag.")
+                self.onError?(error)
+                return
+            }
+
+            guard let ndefTag = Self.ndefTag(from: tag) else {
+                session.invalidate(errorMessage: "Tag is not NDEF compliant.")
+                return
+            }
+
+            ndefTag.queryNDEFStatus { (ndefStatus: NFCNDEFStatus, _: Int, error: Error?) in
+                if let error = error {
+                    session.invalidate(errorMessage: "Unable to query the NDEF status of tag.")
+                    self.onError?(error)
+                    return
+                }
+
+                switch ndefStatus {
+                case .notSupported:
+                    session.invalidate(errorMessage: "Tag is not NDEF compliant.")
+                case .readOnly:
+                    session.invalidate(errorMessage: "Tag is read-only.")
+                case .readWrite:
+                    guard let message = self.messageToWrite else {
+                        session.invalidate(errorMessage: "No message to write.")
+                        return
+                    }
+                    ndefTag.writeNDEF(message) { (error: Error?) in
+                        if let error = error {
+                            session.invalidate(errorMessage: "Failed to write NDEF message.")
+                            self.onError?(error)
+                            return
+                        }
+                        session.alertMessage = "NDEF message written successfully."
+                        session.invalidate()
+                        self.onWriteSuccess?()
+                    }
+                @unknown default:
+                    session.invalidate(errorMessage: "Unknown NDEF tag status.")
+                }
+            }
+        }
+    }
+
+    /// Extracts the concrete NFCNDEFTag-conforming object out of the NFCTag
+    /// enum NFCTagReaderSession hands back — the enum itself doesn't conform
+    /// to NFCNDEFTag, only its associated concrete tag types do. Mirrors
+    /// NFCReader.swift's own per-technology handling in this same plugin.
+    private static func ndefTag(from tag: NFCTag) -> NFCNDEFTag? {
+        switch tag {
+        case .iso7816(let concrete): return concrete
+        case .miFare(let concrete): return concrete
+        case .feliCa(let concrete): return concrete
+        case .iso15693(let concrete): return concrete
+        @unknown default: return nil
+        }
+    }
+}
+`;
+
+if (existsSync(writerPath)) {
+  const currentWriterSource = readFileSync(writerPath, "utf-8");
+  if (currentWriterSource.includes("NFCTagReaderSessionDelegate")) {
+    console.log(`[fix-capacitor-nfc-plugin] ${writerPath} already patched — nothing to do.`);
+  } else {
+    writeFileSync(writerPath, patchedWriterSource);
+    console.log(
+      `[fix-capacitor-nfc-plugin] Patched ${writerPath}: writes NDEF over NFCTagReaderSession (TAG entitlement) instead of NFCNDEFReaderSession (NDEF entitlement).`,
+    );
+  }
+} else {
+  console.warn(`[fix-capacitor-nfc-plugin] ${writerPath} not found — skipping NFCWriter fix.`);
 }

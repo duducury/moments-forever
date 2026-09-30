@@ -12,7 +12,7 @@
     "reprocess-photos": "node --env-file=.env.local --import tsx scripts/reprocess-legacy-photos.ts",
     "cap:sync": "cap sync ios",
     "cap:open:ios": "cap open ios",
-    "postinstall": "node scripts/fix-capacitor-nfc-plugin-exports.mjs"
+    "postinstall": "node scripts/fix-capacitor-nfc-plugin.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1106.0",

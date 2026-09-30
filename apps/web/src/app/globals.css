@@ -41,6 +41,11 @@ html[data-resolved-theme="dark"] {
 
 html {
   height: 100%;
+  /* Elastic overscroll on iOS reveals whatever sits behind the scrolling
+     body — without this, that's the browser's default white canvas, which
+     shows up as a white bar under the status bar/notch when the page bounces
+     at the top. */
+  background: var(--background);
 }
 
 html,
@@ -49,7 +54,9 @@ body {
   overflow-x: hidden;
   /* Prefer tap over double-tap page zoom (Instagram-like app chrome). */
   touch-action: manipulation;
-  overscroll-behavior-x: none;
+  /* None, not just -x: the vertical bounce is what exposes the white bar
+     above (see the .top comment on `html`). */
+  overscroll-behavior: none;
 }
 
 body {
@@ -113,24 +120,34 @@ a {
 
 .topbar {
   display: flex;
+  flex-wrap: wrap;
   min-height: 52px;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 8px 12px;
   max-width: 1120px;
   margin: 0 auto;
 }
 
 .wordmark {
-  width: 184px;
-  height: 68px;
-  flex: 0 0 auto;
+  /* Fluid instead of a fixed 184px: on the narrowest phones (iPhone SE-width
+     and below) the logo plus the copy-link/theme-toggle buttons no longer
+     fit on one row at the fixed size, and the row wraps/overlaps. Shrinks
+     smoothly between 140px and 184px; height/background-size/position scale
+     with it (same ratios as the original 184x68 crop) so the logo never
+     distorts or crops wrong. */
+  --wordmark-w: clamp(140px, 44vw, 184px);
+  width: var(--wordmark-w);
+  height: calc(var(--wordmark-w) * 68 / 184);
+  flex: 0 1 auto;
   overflow: hidden;
   /* Light theme / light background */
   background-image: url("/brand/navlogo2.png");
-  background-position: -20.5px -27.5px;
+  background-position:
+    calc(var(--wordmark-w) * -20.5 / 184) calc(var(--wordmark-w) * -27.5 / 184);
   background-repeat: no-repeat;
-  background-size: 133.5px 89px;
+  background-size:
+    calc(var(--wordmark-w) * 133.5 / 184) calc(var(--wordmark-w) * 89 / 184);
   text-indent: -9999px;
   white-space: nowrap;
 }

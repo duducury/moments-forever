@@ -159,13 +159,17 @@ export function NfcLinkPanel({
     <div
       aria-label="Vincular NFC"
       aria-modal="true"
-      className={styles.panel}
+      className={`${styles.panel} ${styles.nfcPanelOverlay}`}
       onClick={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
       role="dialog"
     >
-      <div className={styles.panelCard}>
+      <div
+        className={`${styles.panelCard} ${
+          state.step === "existing" ? styles.nfcPanelCardLinked : ""
+        }`}
+      >
         <p className={styles.panelEyebrow}>NFC</p>
         <h2>{state.step === "existing" ? "NFC vinculada" : "Vincular NFC"}</h2>
 

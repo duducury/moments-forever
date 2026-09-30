@@ -154,7 +154,12 @@ a {
 }
 
 html[data-nav-hidden="true"] .topbar {
-  transform: translateY(-130%);
+  /* -130% alone isn't enough: sticky's `top` offset already pushes this bar
+     down by the safe-area inset when stuck, and a % transform only covers
+     the element's OWN height, not that offset — so a big chunk of it stayed
+     visible right behind the status bar/notch. Clear its own height *and*
+     the inset it's sitting at, plus a small buffer. */
+  transform: translateY(calc(-100% - env(safe-area-inset-top, 0px) - 24px));
 }
 
 .wordmark {

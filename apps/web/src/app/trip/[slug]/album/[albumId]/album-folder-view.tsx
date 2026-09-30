@@ -28,6 +28,7 @@ import {
 } from "@/lib/local-photos/local-photo-object-url-cache";
 import { useLocalPhotoObjectUrl } from "@/lib/local-photos/use-local-photo-urls";
 import { boundsFromGeoPoints } from "@/lib/map/cluster-photos";
+import { canShowVincularNfcAction } from "@/lib/nfc/album-nfc-link";
 import {
   confirmRemovePhotoLocation,
   removeLocationFromPhotos,
@@ -47,6 +48,7 @@ import {
   PhotoGallery,
   PhotoLightbox,
 } from "../../album-ui";
+import { NfcLinkPanel } from "./nfc-link-panel";
 import { PendingR2Sync } from "../../pending-r2-sync";
 import {
   buildBreadcrumb,
@@ -142,6 +144,7 @@ export function AlbumFolderView({
   );
   const [renameOpen, setRenameOpen] = useState(false);
   const [addPhotosOpen, setAddPhotosOpen] = useState(false);
+  const [nfcLinkOpen, setNfcLinkOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(
     () => new Set(),
   );
@@ -778,6 +781,21 @@ export function AlbumFolderView({
             >
               Renomear
             </button>
+            {canShowVincularNfcAction({
+              isOwner,
+              parentAlbumId: album.parentAlbumId,
+            }) ? (
+              <button
+                className={styles.albumToolButton}
+                onClick={() => {
+                  setError(null);
+                  setNfcLinkOpen(true);
+                }}
+                type="button"
+              >
+                Vincular NFC
+              </button>
+            ) : null}
             <button
               aria-expanded={organizePhotos}
               className={styles.albumToolButton}
@@ -1041,6 +1059,15 @@ export function AlbumFolderView({
           onClose={() => setStoryOpen(false)}
           onSubmit={saveStory}
           title="Sobre essa viagem"
+        />
+      ) : null}
+
+      {nfcLinkOpen ? (
+        <NfcLinkPanel
+          albumId={albumId}
+          albumTitle={album.displayName}
+          experienceId={experience.id}
+          onClose={() => setNfcLinkOpen(false)}
         />
       ) : null}
 

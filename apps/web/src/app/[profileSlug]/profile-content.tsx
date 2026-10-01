@@ -73,7 +73,9 @@ async function ProfilePlacesBody({
     );
   }
 
-  const result = await loadOwnerPlaceCards(supabase, profile.id);
+  const result = await loadOwnerPlaceCards(supabase, profile.id, {
+    publicOnly: !isOwner,
+  });
   const hasPlaces = (result.places?.length ?? 0) > 0;
   const identity = profileViewIdentity(profile, isOwner, isAdmin, viewerHasSession);
 

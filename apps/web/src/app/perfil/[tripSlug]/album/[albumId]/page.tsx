@@ -117,6 +117,7 @@ export default async function ProfileTripAlbumPage({
           <Suspense fallback={null}>
             <AlbumRelatedPlaces
               excludeAlbumId={albumId}
+              isOwner={isOwner}
               ownerId={data.experience.ownerId}
             />
           </Suspense>

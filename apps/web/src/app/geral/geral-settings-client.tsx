@@ -10,6 +10,7 @@ import { useTheme } from "@/components/theme-provider";
 import { displayNameFromUser } from "@/lib/auth/display-name";
 import { toggleThemePreference } from "@/lib/theme/theme";
 
+import { DeleteAccountSection } from "./delete-account-section";
 import { ProfileAvatar } from "../perfil/profile-avatar";
 import styles from "./geral.module.css";
 
@@ -356,6 +357,13 @@ export function GeralSettingsClient({
               <p className={styles.rowHint}>Encerrar sessão neste aparelho</p>
             </div>
           </button>
+        </li>
+      </ul>
+
+      <p className={styles.sectionLabel}>Zona de perigo</p>
+      <ul className={styles.list}>
+        <li>
+          <DeleteAccountSection />
         </li>
       </ul>
 

@@ -18,6 +18,7 @@ import {
 import { AppBottomNav } from "@/components/app-bottom-nav";
 import { useAuth } from "@/components/auth-provider";
 import { ExperienceCoverThumb } from "@/components/experience-cover-thumb";
+import { ReportContentDialog } from "@/components/report-content-dialog";
 import {
   deleteLocalPhotoBlob,
   deleteLocalPhotoBlobs,
@@ -145,6 +146,7 @@ export function AlbumFolderView({
   const [renameOpen, setRenameOpen] = useState(false);
   const [addPhotosOpen, setAddPhotosOpen] = useState(false);
   const [nfcLinkOpen, setNfcLinkOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(
     () => new Set(),
   );
@@ -662,6 +664,18 @@ export function AlbumFolderView({
               </div>
             ) : null}
 
+            {!isOwner && user ? (
+              <div className={styles.albumHeroActions}>
+                <button
+                  className={styles.albumHeroCoverButton}
+                  onClick={() => setReportOpen(true)}
+                  type="button"
+                >
+                  Denunciar
+                </button>
+              </div>
+            ) : null}
+
             <div className={styles.albumHeroCopy}>
               <div className={styles.albumHeroTitleRow}>
                 {countryCode ? (
@@ -1068,6 +1082,14 @@ export function AlbumFolderView({
           albumTitle={album.displayName}
           experienceId={experience.id}
           onClose={() => setNfcLinkOpen(false)}
+        />
+      ) : null}
+
+      {reportOpen ? (
+        <ReportContentDialog
+          onClose={() => setReportOpen(false)}
+          targetId={albumId}
+          targetType="album"
         />
       ) : null}
 

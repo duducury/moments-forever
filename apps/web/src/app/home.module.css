@@ -853,8 +853,8 @@ html[data-nav-hidden="true"] .header {
   .headerWordmark {
     width: 168px !important;
     height: 60px !important;
-    background-position: -38px -50px !important;
-    background-size: 244px 162px !important;
+    background-position: center !important;
+    background-size: contain !important;
   }
 
   .headerUser {

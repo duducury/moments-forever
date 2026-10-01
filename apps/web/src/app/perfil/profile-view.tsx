@@ -99,7 +99,7 @@ export function ProfileView({
             </Link>
           ) : null}
           <AuthStatus hideUserName={isOwner} />
-          {isOwner ? null : <ProfileUserMenu ownerId={ownerId} />}
+          <ProfileUserMenu ownerId={ownerId} />
         </div>
       </nav>
 

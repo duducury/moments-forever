@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import {
   type ContentReportInput,
+  insertContentReport,
   validateContentReportInput,
 } from "@/lib/moderation/content-reports";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -13,6 +14,13 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
  * (content_reports_insert_own, 20261001101000_content_reports.sql) is the
  * real enforcement: it rejects any insert where reporter_id isn't
  * auth.uid(), so this check here is just an early, friendlier error.
+ *
+ * The actual write goes through insertContentReport() (src/lib/moderation/
+ * content-reports.ts), which never reports success unless Supabase actually
+ * returned a persisted row's id — on any failure (RLS rejection, missing
+ * grant, schema-cache miss, whatever) the real Postgres/PostgREST error is
+ * logged here server-side and a non-2xx response goes back, so the client
+ * never shows "denúncia enviada" for a write that didn't happen.
  */
 export async function POST(request: Request) {
   const supabase = await createSupabaseServerClient();
@@ -41,28 +49,15 @@ export async function POST(request: Request) {
   if (!validated.ok) {
     return NextResponse.json({ error: validated.error }, { status: 400 });
   }
-  const { targetType, targetId, reason, details } = validated.value;
+  const created = await insertContentReport(supabase, user.id, validated.value);
 
-  const created = await supabase
-    .from("content_reports")
-    .insert({
-      reporter_id: user.id,
-      target_type: targetType,
-      target_id: targetId,
-      reason,
-      details,
-    })
-    .select("id")
-    .single();
-
-  if (created.error || !created.data) {
+  if (!created.ok) {
+    console.error("[/api/reports] insert failed:", created.error);
     return NextResponse.json(
       { error: "Não foi possível enviar a denúncia." },
       { status: 400 },
     );
   }
 
-  return NextResponse.json({ ok: true, id: created.data.id as string }, {
-    status: 201,
-  });
+  return NextResponse.json({ ok: true, id: created.id }, { status: 201 });
 }

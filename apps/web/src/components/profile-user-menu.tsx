@@ -7,10 +7,12 @@ import { ReportContentDialog } from "./report-content-dialog";
 import styles from "./profile-user-menu.module.css";
 
 /**
- * "•••" menu on a public profile — Bloquear/Desbloquear usuário and
- * Denunciar usuário. Self-gates on auth + not-the-owner, so it renders
- * nothing on your own profile or for a signed-out visitor (both block and
- * report require an authenticated caller — see /api/blocks, /api/reports).
+ * "•••" menu on a public profile — Copiar link and Compartilhar are always
+ * available; Denunciar/Bloquear usuário only show for a signed-in visitor
+ * (never on your own profile — both require an authenticated, non-owner
+ * caller, see /api/blocks and /api/reports). Replaces a previous standalone
+ * "Denunciar" button that sat directly over the album cover photo — this
+ * consolidates every profile-level action behind one discreet trigger.
  */
 export function ProfileUserMenu({ ownerId }: { readonly ownerId: string }) {
   const { user } = useAuth();
@@ -21,6 +23,10 @@ export function ProfileUserMenu({ ownerId }: { readonly ownerId: string }) {
   const [status, setStatus] = useState<string | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const isVisitor = Boolean(user) && user?.id !== ownerId;
+  // Only read when the menu is actually open — i.e. only after a client
+  // interaction, never during the initial render — so this never causes a
+  // server/client hydration mismatch (navigator isn't defined during SSR).
+  const canShare = open && typeof navigator !== "undefined" && Boolean(navigator.share);
 
   useEffect(() => {
     if (!open) return;
@@ -53,7 +59,24 @@ export function ProfileUserMenu({ ownerId }: { readonly ownerId: string }) {
     return () => clearTimeout(timer);
   }, [status]);
 
-  if (!isVisitor) return null;
+  async function copyLink() {
+    setOpen(false);
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setStatus("Link copiado");
+    } catch {
+      window.prompt("Copie o link:", window.location.href);
+    }
+  }
+
+  async function shareLink() {
+    setOpen(false);
+    try {
+      await navigator.share({ url: window.location.href });
+    } catch {
+      // User cancelled the share sheet, or it failed — nothing to report.
+    }
+  }
 
   async function toggleBlock() {
     setBusy(true);
@@ -97,24 +120,46 @@ export function ProfileUserMenu({ ownerId }: { readonly ownerId: string }) {
         <div className={styles.menu} role="menu">
           <button
             className={styles.menuItem}
-            disabled={busy || blocked === null}
-            onClick={() => void toggleBlock()}
+            onClick={() => void copyLink()}
             role="menuitem"
             type="button"
           >
-            {blocked ? "Desbloquear usuário" : "Bloquear usuário"}
+            Copiar link
           </button>
-          <button
-            className={styles.menuItem}
-            onClick={() => {
-              setOpen(false);
-              setReportOpen(true);
-            }}
-            role="menuitem"
-            type="button"
-          >
-            Denunciar usuário
-          </button>
+          {canShare ? (
+            <button
+              className={styles.menuItem}
+              onClick={() => void shareLink()}
+              role="menuitem"
+              type="button"
+            >
+              Compartilhar
+            </button>
+          ) : null}
+          {isVisitor ? (
+            <>
+              <button
+                className={styles.menuItem}
+                disabled={busy || blocked === null}
+                onClick={() => void toggleBlock()}
+                role="menuitem"
+                type="button"
+              >
+                {blocked ? "Desbloquear usuário" : "Bloquear usuário"}
+              </button>
+              <button
+                className={styles.menuItem}
+                onClick={() => {
+                  setOpen(false);
+                  setReportOpen(true);
+                }}
+                role="menuitem"
+                type="button"
+              >
+                Denunciar usuário
+              </button>
+            </>
+          ) : null}
         </div>
       ) : null}
       {status ? (

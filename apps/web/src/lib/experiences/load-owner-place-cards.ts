@@ -76,16 +76,24 @@ function toAlbumRow(row: Record<string, unknown>): AlbumRow {
 export async function loadOwnerPlaceCards(
   supabase: ServerSupabase,
   ownerId: string,
+  options?: { readonly publicOnly?: boolean },
 ): Promise<
   | { readonly places: readonly OwnerPlaceCardItem[]; readonly error: null }
   | { readonly places: null; readonly error: string }
 > {
   // Stage 1: tiny experiences list (ids + labels only).
-  const experiences = await supabase
+  let experiencesQuery = supabase
     .from("experiences")
     .select("id, slug, title")
-    .eq("owner_id", ownerId)
-    .order("created_at", { ascending: false });
+    .eq("owner_id", ownerId);
+  if (options?.publicOnly) {
+    experiencesQuery = experiencesQuery
+      .eq("visibility", "public")
+      .eq("status", "published");
+  }
+  const experiences = await experiencesQuery.order("created_at", {
+    ascending: false,
+  });
 
   if (experiences.error) {
     return { places: null, error: experiences.error.message };

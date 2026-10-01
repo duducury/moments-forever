@@ -53,7 +53,9 @@ export default async function PublicProfilePassportPage({
     Boolean(userResult.data.user),
   );
   const homeHref = publicProfilePath(profile.profileSlug);
-  const placesResult = await loadOwnerPlaceCards(supabase, profile.id);
+  const placesResult = await loadOwnerPlaceCards(supabase, profile.id, {
+    publicOnly: !isOwner,
+  });
   const places = placesResult.places ?? [];
   const passport = buildPassport(places, null);
   const displayName = profile.displayName?.trim() || profile.profileSlug;

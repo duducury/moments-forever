@@ -8,14 +8,18 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 export async function AlbumRelatedPlaces({
   ownerId,
   excludeAlbumId,
+  isOwner,
 }: {
   readonly ownerId: string;
   readonly excludeAlbumId: string;
+  readonly isOwner: boolean;
 }) {
   const supabase = await createSupabaseServerClient();
   if (!supabase) return null;
 
-  const placesResult = await loadOwnerPlaceCards(supabase, ownerId);
+  const placesResult = await loadOwnerPlaceCards(supabase, ownerId, {
+    publicOnly: !isOwner,
+  });
   const relatedPlaces = (placesResult.places ?? []).filter(
     (place) => place.albumId !== excludeAlbumId,
   );

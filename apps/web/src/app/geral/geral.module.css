@@ -216,6 +216,66 @@
   font-weight: 500;
 }
 
+/* —— Zona de perigo —— */
+
+.deleteConfirm {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid #c0503e;
+  border-radius: 18px;
+  background: color-mix(in srgb, #c0503e 8%, var(--surface));
+}
+
+.deleteWarning {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.deleteConfirm label {
+  font-size: 0.82rem;
+  font-weight: 650;
+  color: var(--text-secondary);
+}
+
+.deleteConfirm input {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+
+.deleteActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+.dangerButton {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 18px;
+  border: none;
+  border-radius: 999px;
+  background: #c0503e;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.dangerButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .row,
   .accountCard {

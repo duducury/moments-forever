@@ -87,6 +87,21 @@ export function SettingsIcon() {
   );
 }
 
+export function ReportsIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
+      <path
+        d="M5 3.5h11l3 3V20a.5.5 0 0 1-.5.5h-13a.5.5 0 0 1-.5-.5V4a.5.5 0 0 1 .5-.5Z"
+        stroke="currentColor"
+        strokeLinejoin="round"
+        strokeWidth="1.7"
+      />
+      <path d="M12 9v4.5" stroke="currentColor" strokeLinecap="round" strokeWidth="1.7" />
+      <circle cx="12" cy="16.5" fill="currentColor" r="0.9" />
+    </svg>
+  );
+}
+
 export function MenuIcon() {
   return (
     <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">

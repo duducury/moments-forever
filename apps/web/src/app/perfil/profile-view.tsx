@@ -8,6 +8,7 @@ import { AppCreditFooter } from "@/components/app-credit-footer";
 import { AppWordmark } from "@/components/app-wordmark";
 import { AuthStatus } from "@/components/auth-status";
 import { NewTripButton } from "@/components/new-trip-button";
+import { ProfileUserMenu } from "@/components/profile-user-menu";
 import { RememberOwnerHome } from "@/components/remember-owner-home";
 import { R2UploadWarningBanner } from "@/components/r2-upload-warning-banner";
 import { SignalPwaBootReady } from "@/components/signal-pwa-boot-ready";
@@ -98,6 +99,7 @@ export function ProfileView({
             </Link>
           ) : null}
           <AuthStatus hideUserName={isOwner} />
+          {isOwner ? null : <ProfileUserMenu ownerId={ownerId} />}
         </div>
       </nav>
 

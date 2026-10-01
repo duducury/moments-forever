@@ -10,6 +10,7 @@ import {
   MenuIcon,
   PlansIcon,
   ProfileIcon,
+  ReportsIcon,
   SettingsIcon,
   UsersIcon,
 } from "./admin-icons";
@@ -20,6 +21,7 @@ const NAV_ITEMS = [
   { href: "/admin/users", label: "Usuários", Icon: UsersIcon },
   { href: "/admin/codes", label: "Códigos", Icon: CodesIcon },
   { href: "/admin/plans", label: "Planos", Icon: PlansIcon },
+  { href: "/admin/reports", label: "Denúncias", Icon: ReportsIcon },
 ] as const;
 
 function isActive(pathname: string, href: string): boolean {

@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "test": "node --import tsx --test src/lib/photo-import/browser-metadata.test.ts src/lib/location/*.test.ts src/lib/profile/profile-slug.test.ts src/lib/media/media-url.test.ts src/lib/photos/*.test.ts src/lib/pwa/*.test.ts src/lib/auth/*.test.ts src/lib/site-url.test.ts src/lib/nfc/*.test.ts src/lib/moderation/*.test.ts src/lib/experiences/load-owner-place-cards.test.ts src/lib/experiences/load-trip-page-data.test.ts src/lib/routes/nfc-tag-redirect.test.ts",
+    "test": "node --import tsx --test src/lib/photo-import/browser-metadata.test.ts src/lib/location/*.test.ts src/lib/profile/profile-slug.test.ts src/lib/media/media-url.test.ts src/lib/photos/*.test.ts src/lib/pwa/*.test.ts src/lib/auth/*.test.ts src/lib/activation/*.test.ts src/lib/site-url.test.ts src/lib/nfc/*.test.ts src/lib/moderation/*.test.ts src/lib/experiences/load-owner-place-cards.test.ts src/lib/experiences/load-trip-page-data.test.ts src/lib/routes/nfc-tag-redirect.test.ts",
     "typecheck": "tsc --noEmit",
     "reprocess-photos": "node --env-file=.env.local --import tsx scripts/reprocess-legacy-photos.ts",
     "cap:sync": "cap sync ios",

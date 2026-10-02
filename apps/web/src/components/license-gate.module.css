@@ -1,0 +1,167 @@
+.gate {
+  display: grid;
+  gap: 8px;
+  margin: 8px 0 20px;
+}
+
+.card {
+  display: grid;
+  gap: 8px;
+  padding: 18px;
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--border));
+  border-radius: 18px;
+  background:
+    radial-gradient(
+      120% 140% at 0% 0%,
+      color-mix(in srgb, var(--accent) 10%, transparent),
+      transparent 60%
+    ),
+    var(--surface);
+}
+
+.eyebrow {
+  margin: 0;
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.card h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  line-height: 1.2;
+}
+
+.lead {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+.form {
+  display: grid;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.form label {
+  font-size: 0.82rem;
+  font-weight: 650;
+}
+
+.form input {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-secondary);
+  color: inherit;
+  font: inherit;
+  letter-spacing: 0.04em;
+}
+
+.error {
+  margin: 0;
+  color: #e0705a;
+  font-size: 0.88rem;
+}
+
+.plans {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.plans h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.planList {
+  display: grid;
+  gap: 12px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.plan {
+  position: relative;
+  display: grid;
+  gap: 6px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--surface);
+}
+
+.plan[data-highlight="true"] {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+  box-shadow: 0 12px 30px -20px color-mix(in srgb, var(--accent) 70%, transparent);
+}
+
+.badge {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.planName {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.planPrice {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  color: var(--accent);
+  font-size: 1.7rem;
+  font-weight: 800;
+}
+
+.planPrice span {
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.features {
+  display: grid;
+  gap: 6px;
+  margin: 6px 0 8px;
+  padding: 12px 0 0;
+  border-top: 1px solid var(--border);
+  list-style: none;
+  font-size: 0.92rem;
+}
+
+.features li {
+  padding-left: 22px;
+  position: relative;
+}
+
+.features li::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-weight: 800;
+}
+
+.features span {
+  color: var(--muted);
+}

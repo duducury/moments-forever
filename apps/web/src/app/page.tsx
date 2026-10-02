@@ -2,14 +2,14 @@ import Image from "next/image";
 
 import { AppCreditFooter } from "@/components/app-credit-footer";
 import { SignalPwaBootReady } from "@/components/signal-pwa-boot-ready";
-import { createSupabaseAnonClient } from "@/lib/supabase/anon";
+import { loadPricingPlans } from "@/lib/pricing/load-pricing-plans";
 import { HomePrimaryCta } from "./home-cta";
 import { HomeFooterNav } from "./home-footer-nav";
 import { HomeHeader } from "./home-header";
 import { JourneySky } from "./journey-sky";
 import { MemoriesMotion } from "./memories-motion";
 import { PremiumSection } from "./premium-section";
-import { PricingSection, type PricingPlanRow } from "./pricing-section";
+import { PricingSection } from "./pricing-section";
 import { StoryScroll } from "./story-scroll";
 import { TravelJourney } from "./travel-journey";
 import styles from "./home.module.css";
@@ -64,32 +64,8 @@ const MEMORY_PHOTOS = [
 
 export const dynamic = "force-dynamic";
 
-async function getPricingPlans(): Promise<readonly PricingPlanRow[]> {
-  const supabase = createSupabaseAnonClient();
-  if (!supabase) return [];
-
-  const { data } = await supabase
-    .from("plans")
-    .select(
-      "name, max_nfc_tags, max_photos_per_trip, price_label, price_note, highlight",
-    )
-    .neq("name", "LEGACY")
-    .not("price_label", "is", null)
-    .order("max_nfc_tags", { ascending: true });
-
-  return (data ?? []).map((plan) => ({
-    name: plan.name as string,
-    priceLabel: plan.price_label as string,
-    priceNote: plan.price_note as string,
-    trips: plan.max_nfc_tags as number,
-    photosPerTrip: plan.max_photos_per_trip as number,
-    nfcTags: plan.max_nfc_tags as number,
-    highlight: plan.highlight as boolean,
-  }));
-}
-
 export default async function Home() {
-  const pricingPlans = await getPricingPlans();
+  const pricingPlans = await loadPricingPlans();
 
   return (
     <main className={styles.home}>

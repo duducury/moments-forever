@@ -35,6 +35,7 @@ export function ProfileView({
   homeHref = profilePath(),
   mapSlot = null,
   carouselSlot = null,
+  licenseSlot = null,
   gridPending = false,
   moreHref,
   moreLabel,
@@ -56,6 +57,8 @@ export function ProfileView({
   readonly mapSlot?: ReactNode;
   /** Streamed Destaques so the place grid can paint first. */
   readonly carouselSlot?: ReactNode;
+  /** Owner-only prompt to activate a key / pick a plan (account has no active license). */
+  readonly licenseSlot?: ReactNode;
   /** Header is ready; place cards are still streaming. */
   readonly gridPending?: boolean;
   /** From visitorMoreNavProps() — undefined keeps AppBottomNav's owner default (Mais -> /geral). */
@@ -117,6 +120,8 @@ export function ProfileView({
         />
 
         {isOwner ? <R2UploadWarningBanner /> : null}
+
+        {isOwner ? licenseSlot : null}
 
         {loadError ? (
           <p className="placeholder-note" role="alert">

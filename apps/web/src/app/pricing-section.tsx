@@ -19,11 +19,11 @@ export interface PricingPlanRow {
 /** Digits only (country code + number), no "+" or formatting — wa.me's format. */
 const SALES_WHATSAPP_NUMBER = "12033947243";
 
-function titleCase(name: string): string {
+export function titleCase(name: string): string {
   return name.charAt(0) + name.slice(1).toLowerCase();
 }
 
-function whatsappHref(planName: string): string {
+export function whatsappHref(planName: string): string {
   const message = `Olá, tenho interesse no plano ${titleCase(planName)}!`;
   return `https://wa.me/${SALES_WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
 }

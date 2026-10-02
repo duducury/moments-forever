@@ -5,7 +5,10 @@ import { AppWordmark } from "@/components/app-wordmark";
 import { ProfileCarousel } from "@/app/perfil/profile-carousel";
 import { loadOwnerCarouselPhotos } from "@/lib/experiences/load-owner-carousel-photos";
 import { loadOwnerPlaceCards } from "@/lib/experiences/load-owner-place-cards";
+import { LicenseGate } from "@/components/license-gate";
+import { getUserLicense } from "@/lib/licensing/get-user-license";
 import { isAdminUser } from "@/lib/licensing/require-admin";
+import { loadPricingPlans } from "@/lib/pricing/load-pricing-plans";
 import {
   isReservedProfileSlug,
   lookupPublicProfile,
@@ -73,9 +76,13 @@ async function ProfilePlacesBody({
     );
   }
 
-  const result = await loadOwnerPlaceCards(supabase, profile.id, {
-    publicOnly: !isOwner,
-  });
+  // Only the owner ever needs to know whether the account has a license.
+  const [result, license] = await Promise.all([
+    loadOwnerPlaceCards(supabase, profile.id, { publicOnly: !isOwner }),
+    isOwner ? getUserLicense(supabase, profile.id) : Promise.resolve(undefined),
+  ]);
+  const needsLicense = isOwner && license === null;
+  const pricingPlans = needsLicense ? await loadPricingPlans() : [];
   const hasPlaces = (result.places?.length ?? 0) > 0;
   const identity = profileViewIdentity(profile, isOwner, isAdmin, viewerHasSession);
 
@@ -104,6 +111,7 @@ async function ProfilePlacesBody({
           </Suspense>
         ) : null
       }
+      licenseSlot={needsLicense ? <LicenseGate plans={pricingPlans} /> : null}
       loadError={
         result.error ? "Não foi possível carregar as viagens deste perfil." : null
       }

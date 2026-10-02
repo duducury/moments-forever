@@ -38,6 +38,8 @@ interface DestinationAlbum {
   readonly photoCount: number;
 }
 
+type DestinationMode = "choose" | "new" | "existing";
+
 /** Purely derived from the File's own fields — no impure calls, stable across reorders. */
 function fileKey(file: File): string {
   return `${file.name}:${file.size}:${file.lastModified}`;
@@ -172,6 +174,8 @@ export function ImportDestination({
     null,
   );
   const [loadError, setLoadError] = useState<string | null>(null);
+  /** Which step of the destination choice is showing; the forms only appear once one is picked. */
+  const [mode, setMode] = useState<DestinationMode>("choose");
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -450,142 +454,187 @@ export function ImportDestination({
         ) : null}
       </section>
 
-      {licenseBlock ? (
-        <div className={styles.destinationNew}>
-          <p className={styles.destinationLabel}>
-            {licenseBlock.code === "trip_limit_reached"
-              ? "Limite de viagens atingido"
-              : "Você precisa ativar uma key"}
-          </p>
-          <p className={styles.lead}>{licenseBlock.message}</p>
-          <label htmlFor="inline-activation-code">Código de ativação</label>
-          <input
-            disabled={activating}
-            id="inline-activation-code"
-            onChange={(event) =>
-              setActivationCode(formatActivationCodeInput(event.target.value))
-            }
-            placeholder="MF-____-____-__"
-            value={activationCode}
-          />
+      {mode === "choose" ? (
+        <div className={styles.destinationChoices}>
           <button
-            className="button primary"
-            disabled={activating || !activationCode.trim()}
-            onClick={() => void activateInlineCode()}
+            className={styles.destinationChoice}
+            disabled={busy}
+            onClick={() => setMode("new")}
             type="button"
           >
-            {activating ? "Ativando…" : "Ativar"}
+            <strong>Criar um álbum novo de viagem</strong>
+            <span>Dê um nome e conte a história dessa viagem.</span>
           </button>
-          {activationMessage ? (
-            <p className={styles.error} role="alert">
-              {activationMessage}
-            </p>
-          ) : null}
+          <button
+            className={styles.destinationChoice}
+            disabled={busy || (albums !== null && albums.length === 0)}
+            onClick={() => setMode("existing")}
+            type="button"
+          >
+            <strong>Adicionar a um álbum existente</strong>
+            <span>
+              {albums === null
+                ? "Carregando seus álbuns…"
+                : albums.length === 0
+                  ? "Você ainda não tem álbuns."
+                  : `Você tem ${albums.length} álbum${albums.length === 1 ? "" : "s"}.`}
+            </span>
+          </button>
         </div>
       ) : (
-        <div className={styles.destinationNew}>
-          <p className={styles.destinationLabel}>Criar novo álbum de viagem</p>
-          <label htmlFor="new-album-name">Nome do álbum</label>
-          <div className={styles.destinationNameField}>
-            {detectedCountryCode ? (
-              // eslint-disable-next-line @next/next/no-img-element -- small flag CDN asset
-              <img
-                alt=""
-                className={styles.destinationNameFlag}
-                decoding="async"
-                height={15}
-                src={`https://flagcdn.com/w40/${detectedCountryCode.toLowerCase()}.png`}
-                width={20}
-              />
-            ) : null}
-            <input
-              className={
-                detectedCountryCode ? styles.destinationNameInputWithFlag : ""
-              }
-              disabled={busy}
-              id="new-album-name"
-              onChange={(event) => {
-                nameEditedRef.current = true;
-                setNewName(event.target.value);
-              }}
-              placeholder="Jamaica, Paris…"
-              value={newName}
-            />
-          </div>
-          {detectingLocation ? (
-            <small className={styles.destinationHint}>
-              Detectando o local da viagem…
-            </small>
-          ) : null}
-          <label htmlFor="new-album-story">Sobre essa viagem</label>
-          <textarea
-            disabled={busy}
-            id="new-album-story"
-            maxLength={4000}
-            onChange={(event) => setNewStory(event.target.value)}
-            placeholder="O que essa viagem significou para você?"
-            rows={5}
-            value={newStory}
-          />
-          <button
-            className="button primary"
-            disabled={busy || !newName.trim() || files.length === 0}
-            onClick={() => void createNewAlbum()}
-            type="button"
-          >
-            Criar álbum
-          </button>
-        </div>
+        <button
+          className="link-button"
+          disabled={busy}
+          onClick={() => {
+            setMode("choose");
+            setError(null);
+          }}
+          type="button"
+        >
+          ← Voltar
+        </button>
       )}
 
-      {albums === null ? (
-        <p className={styles.lead}>Carregando seus álbuns…</p>
+      {mode === "new" ? (
+        licenseBlock ? (
+          <div className={styles.destinationNew}>
+            <p className={styles.destinationLabel}>
+              {licenseBlock.code === "trip_limit_reached"
+                ? "Limite de viagens atingido"
+                : "Você precisa ativar uma key"}
+            </p>
+            <p className={styles.lead}>{licenseBlock.message}</p>
+            <label htmlFor="inline-activation-code">Código de ativação</label>
+            <input
+              disabled={activating}
+              id="inline-activation-code"
+              onChange={(event) =>
+                setActivationCode(formatActivationCodeInput(event.target.value))
+              }
+              placeholder="MF-____-____-__"
+              value={activationCode}
+            />
+            <button
+              className="button primary"
+              disabled={activating || !activationCode.trim()}
+              onClick={() => void activateInlineCode()}
+              type="button"
+            >
+              {activating ? "Ativando…" : "Ativar"}
+            </button>
+            {activationMessage ? (
+              <p className={styles.error} role="alert">
+                {activationMessage}
+              </p>
+            ) : null}
+          </div>
+        ) : (
+          <div className={styles.destinationNew}>
+            <p className={styles.destinationLabel}>Criar novo álbum de viagem</p>
+            <label htmlFor="new-album-name">Nome do álbum</label>
+            <div className={styles.destinationNameField}>
+              {detectedCountryCode ? (
+                // eslint-disable-next-line @next/next/no-img-element -- small flag CDN asset
+                <img
+                  alt=""
+                  className={styles.destinationNameFlag}
+                  decoding="async"
+                  height={15}
+                  src={`https://flagcdn.com/w40/${detectedCountryCode.toLowerCase()}.png`}
+                  width={20}
+                />
+              ) : null}
+              <input
+                className={
+                  detectedCountryCode ? styles.destinationNameInputWithFlag : ""
+                }
+                disabled={busy}
+                id="new-album-name"
+                onChange={(event) => {
+                  nameEditedRef.current = true;
+                  setNewName(event.target.value);
+                }}
+                placeholder="Jamaica, Paris…"
+                value={newName}
+              />
+            </div>
+            {detectingLocation ? (
+              <small className={styles.destinationHint}>
+                Detectando o local da viagem…
+              </small>
+            ) : null}
+            <label htmlFor="new-album-story">Sobre essa viagem</label>
+            <textarea
+              disabled={busy}
+              id="new-album-story"
+              maxLength={4000}
+              onChange={(event) => setNewStory(event.target.value)}
+              placeholder="O que essa viagem significou para você?"
+              rows={5}
+              value={newStory}
+            />
+            <button
+              className="button primary"
+              disabled={busy || !newName.trim() || files.length === 0}
+              onClick={() => void createNewAlbum()}
+              type="button"
+            >
+              Criar álbum
+            </button>
+          </div>
+        )
       ) : null}
 
-      {albums && albums.length > 0 ? (
+      {mode === "existing" ? (
         <>
-          <p className={styles.destinationLabel}>Ou escolher um álbum</p>
-          <ul className={styles.destinationList}>
-            {albums.map((album) => (
-              <li key={album.albumId}>
-                <button
-                  className={styles.destinationAlbum}
-                  disabled={busy || files.length === 0}
-                  onClick={() => void addToAlbum(album)}
-                  type="button"
-                >
-                  <ExperienceCoverThumb
-                    className={styles.destinationCover}
-                    coverPhotoId={album.coverPhotoId}
-                    fallbackClassName={styles.destinationCoverFallback}
-                    imageClassName={styles.destinationCoverImage}
-                    title={album.title}
-                    variant="thumbnail"
-                  />
-                  <span className={styles.destinationAlbumCopy}>
-                    <strong>
-                      {album.countryCode ? (
-                        // eslint-disable-next-line @next/next/no-img-element -- small flag CDN asset
-                        <img
-                          alt=""
-                          className={styles.destinationFlag}
-                          decoding="async"
-                          height={15}
-                          src={`https://flagcdn.com/w40/${album.countryCode.toLowerCase()}.png`}
-                          width={20}
-                        />
-                      ) : null}
-                      {album.title}
-                    </strong>
-                    <span>
-                      {album.photoCount} foto
-                      {album.photoCount === 1 ? "" : "s"}
+          <p className={styles.destinationLabel}>Escolher um álbum</p>
+          {albums === null ? (
+            <p className={styles.lead}>Carregando seus álbuns…</p>
+          ) : albums.length === 0 ? (
+            <p className={styles.lead}>Você ainda não tem álbuns.</p>
+          ) : (
+            <ul className={styles.destinationList}>
+              {albums.map((album) => (
+                <li key={album.albumId}>
+                  <button
+                    className={styles.destinationAlbum}
+                    disabled={busy || files.length === 0}
+                    onClick={() => void addToAlbum(album)}
+                    type="button"
+                  >
+                    <ExperienceCoverThumb
+                      className={styles.destinationCover}
+                      coverPhotoId={album.coverPhotoId}
+                      fallbackClassName={styles.destinationCoverFallback}
+                      imageClassName={styles.destinationCoverImage}
+                      title={album.title}
+                      variant="thumbnail"
+                    />
+                    <span className={styles.destinationAlbumCopy}>
+                      <strong>
+                        {album.countryCode ? (
+                          // eslint-disable-next-line @next/next/no-img-element -- small flag CDN asset
+                          <img
+                            alt=""
+                            className={styles.destinationFlag}
+                            decoding="async"
+                            height={15}
+                            src={`https://flagcdn.com/w40/${album.countryCode.toLowerCase()}.png`}
+                            width={20}
+                          />
+                        ) : null}
+                        {album.title}
+                      </strong>
+                      <span>
+                        {album.photoCount} foto
+                        {album.photoCount === 1 ? "" : "s"}
+                      </span>
                     </span>
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </>
       ) : null}
 

@@ -320,6 +320,39 @@
   cursor: wait;
 }
 
+.destinationChoices {
+  display: grid;
+  gap: 10px;
+}
+
+.destinationChoice {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+
+.destinationChoice strong {
+  font-size: 1rem;
+}
+
+.destinationChoice span {
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.destinationChoice:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 .destinationLabel {
   margin: 12px 0 0;
   font-size: 0.78rem;

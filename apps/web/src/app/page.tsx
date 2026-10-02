@@ -6,6 +6,7 @@ import { HomePrimaryCta } from "./home-cta";
 import { HomeFooterNav } from "./home-footer-nav";
 import { HomeHeader } from "./home-header";
 import { JourneySky } from "./journey-sky";
+import { MemoriesMotion } from "./memories-motion";
 import { PremiumSection } from "./premium-section";
 import { PricingSection, type PricingPlanRow } from "./pricing-section";
 import { StoryScroll } from "./story-scroll";
@@ -18,30 +19,45 @@ const MEMORY_PHOTOS = [
     alt: "Casas brancas e cúpulas azuis em Santorini",
     label: "Santorini",
     className: "memoryTall",
+    fly: "left",
+    flySm: "left",
+    flyOrder: 0,
   },
   {
     src: "/home/paris.jpg",
     alt: "Torre Eiffel em Paris ao entardecer",
     label: "Paris",
     className: "memoryWide",
+    fly: "right",
+    flySm: "right",
+    flyOrder: 1,
   },
   {
     src: "/home/tokyo.jpg",
     alt: "Cruzamento iluminado em Tóquio à noite",
     label: "Tóquio",
     className: "memorySquare",
+    fly: "left",
+    flySm: "right",
+    flyOrder: 2,
   },
   {
     src: "/home/machu.jpg",
     alt: "Machu Picchu nas montanhas",
     label: "Machu Picchu",
     className: "memorySquareAlt",
+    fly: "right",
+    flySm: "left",
+    flyOrder: 3,
   },
   {
     src: "/home/amalfi.jpg",
     alt: "Costa Amalfitana vista do mar",
     label: "Amalfi",
     className: "memoryFeature",
+    fly: "left",
+    flySm: "left",
+    flyOrder: 4,
   },
 ] as const;
 
@@ -126,69 +142,89 @@ export default async function Home() {
 
         <PremiumSection />
 
-        <section
-          aria-labelledby="home-memories-title"
-          className={styles.memories}
-        >
-          <div className={styles.memoriesHead}>
-            <p className={styles.memoriesEyebrow}>Memórias que ficam</p>
-            <h2 className={styles.memoriesTitle} id="home-memories-title">
-              Lugares que merecem ser visitados.
-            </h2>
-          </div>
-          <div className={styles.memoryMosaic}>
-            {MEMORY_PHOTOS.map((photo) => (
+        <MemoriesMotion>
+          <section
+            aria-labelledby="home-memories-title"
+            className={styles.memories}
+          >
+            <div className={styles.memoriesHead}>
+              <p className={styles.memoriesEyebrow}>Memórias que ficam</p>
+              <h2 className={styles.memoriesTitle} id="home-memories-title">
+                Lugares que merecem ser visitados.
+              </h2>
+            </div>
+            <div className={styles.memoryMosaic}>
+              {MEMORY_PHOTOS.map((photo) => (
+                <figure
+                  className={`${styles.memoryCell} ${styles[photo.className]}`}
+                  data-fly={photo.fly}
+                  data-fly-order={photo.flyOrder}
+                  data-fly-sm={photo.flySm}
+                  key={photo.src}
+                >
+                  <Image
+                    alt={photo.alt}
+                    className={styles.memoryImage}
+                    height={900}
+                    sizes="(max-width: 720px) 50vw, 33vw"
+                    src={photo.src}
+                    width={1200}
+                  />
+                  <figcaption className={styles.memoryCaption}>
+                    {photo.label}
+                  </figcaption>
+                </figure>
+              ))}
+            </div>
+            <div className={styles.memoryStrip} aria-hidden="true">
               <figure
-                className={`${styles.memoryCell} ${styles[photo.className]}`}
-                key={photo.src}
+                className={styles.memoryStripCell}
+                data-fly="left"
+                data-fly-order={5}
+                data-fly-sm="left"
               >
                 <Image
-                  alt={photo.alt}
+                  alt=""
                   className={styles.memoryImage}
-                  height={900}
-                  sizes="(max-width: 720px) 50vw, 33vw"
-                  src={photo.src}
-                  width={1200}
+                  height={700}
+                  sizes="33vw"
+                  src="/home/dubai.jpg"
+                  width={1000}
                 />
-                <figcaption className={styles.memoryCaption}>
-                  {photo.label}
-                </figcaption>
               </figure>
-            ))}
-          </div>
-          <div className={styles.memoryStrip} aria-hidden="true">
-            <figure className={styles.memoryStripCell}>
-              <Image
-                alt=""
-                className={styles.memoryImage}
-                height={700}
-                sizes="33vw"
-                src="/home/dubai.jpg"
-                width={1000}
-              />
-            </figure>
-            <figure className={styles.memoryStripCell}>
-              <Image
-                alt=""
-                className={styles.memoryImage}
-                height={700}
-                sizes="33vw"
-                src="/home/venice.jpg"
-                width={1000}
-              />
-            </figure>
-            <figure className={styles.memoryStripCell}>
-              <Image
-                alt=""
-                className={styles.memoryImage}
-                height={700}
-                sizes="33vw"
-                src="/home/rio.webp"
-                width={1000}
-              />
-            </figure>
-          </div>
-        </section>
+              <figure
+                className={styles.memoryStripCell}
+                data-fly="right"
+                data-fly-order={6}
+                data-fly-sm="right"
+              >
+                <Image
+                  alt=""
+                  className={styles.memoryImage}
+                  height={700}
+                  sizes="33vw"
+                  src="/home/venice.jpg"
+                  width={1000}
+                />
+              </figure>
+              <figure
+                className={styles.memoryStripCell}
+                data-fly="right"
+                data-fly-order={7}
+                data-fly-sm="right"
+              >
+                <Image
+                  alt=""
+                  className={styles.memoryImage}
+                  height={700}
+                  sizes="33vw"
+                  src="/home/rio.webp"
+                  width={1000}
+                />
+              </figure>
+            </div>
+          </section>
+        </MemoriesMotion>
 
         <section
           aria-labelledby="home-concepts-title"

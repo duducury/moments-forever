@@ -1,0 +1,48 @@
+/* Full-bleed wrapper so photos can start off the edge of the screen; the
+   content keeps the exact column width it had before. */
+.root {
+  width: 100vw;
+  margin-inline: calc(50% - 50vw);
+  /* Clip sideways only — vertical overflow (shadows etc.) stays visible. */
+  overflow-x: clip;
+}
+
+.inner {
+  width: min(
+    1120px,
+    calc(100vw - 32px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px))
+  );
+  margin-inline: auto;
+}
+
+/* --fly-p is set per photo from scroll (0 = off-screen on its side, 1 = in
+   place). Unset (no JS / reduced motion) = in place, fully visible. */
+.root [data-fly] {
+  --fly-dir: 0;
+  opacity: clamp(0, calc(var(--fly-p, 1) * 3), 1);
+  transform: translate3d(
+    calc((1 - var(--fly-p, 1)) * var(--fly-dir) * 100vw),
+    0,
+    0
+  );
+  will-change: transform, opacity;
+}
+
+.root [data-fly="left"] {
+  --fly-dir: -1;
+}
+
+.root [data-fly="right"] {
+  --fly-dir: 1;
+}
+
+/* Mobile has a different grid, so a photo can sit in the other column. */
+@media (max-width: 719px) {
+  .root [data-fly-sm="left"] {
+    --fly-dir: -1;
+  }
+
+  .root [data-fly-sm="right"] {
+    --fly-dir: 1;
+  }
+}

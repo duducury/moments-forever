@@ -1,6 +1,7 @@
 import Image from "next/image";
 
 import { AppCreditFooter } from "@/components/app-credit-footer";
+import { SignalPwaBootReady } from "@/components/signal-pwa-boot-ready";
 import { createSupabaseAnonClient } from "@/lib/supabase/anon";
 import { HomePrimaryCta } from "./home-cta";
 import { HomeFooterNav } from "./home-footer-nav";
@@ -133,6 +134,8 @@ export default async function Home() {
             <p className={styles.heroAside}>Viagens · Lugares · Momentos</p>
           </div>
         </section>
+        {/* Essential UI = header + hero; the splash can go once it is parsed. */}
+        <SignalPwaBootReady />
 
         <JourneySky>
           <TravelJourney />

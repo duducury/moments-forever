@@ -5,14 +5,24 @@ import { AutoHideNavOnScroll } from "@/components/auto-hide-nav";
 import { PwaSplashDismiss } from "@/components/pwa-splash-dismiss";
 import { RevealOnScroll } from "@/components/reveal-on-scroll";
 import { ThemeProvider } from "@/components/theme-provider";
+import { bootReadyScript } from "@/lib/pwa/boot-ready";
 import { bootSplashSkipScript } from "@/lib/pwa/boot-splash";
+import {
+  nativeLaunchRedirectScript,
+  supabaseAuthCookieName,
+} from "@/lib/pwa/native-launch";
 import { IOS_STARTUP_IMAGES, iosStartupImageMedia } from "@/lib/pwa/ios-startup-images";
 import { getSiteUrl } from "@/lib/site-url";
+import { getSupabaseConfig } from "@/lib/supabase/config";
 import { THEME_STORAGE_KEY } from "@/lib/theme/theme";
 
 import "./globals.css";
 
 const siteUrl = getSiteUrl();
+const supabaseConfig = getSupabaseConfig();
+const authCookieName = supabaseConfig
+  ? supabaseAuthCookieName(supabaseConfig.url)
+  : null;
 const defaultDescription = "Colecione momentos, não coisas.";
 const defaultOgImage = {
   url: "/brand/icon-512.png",
@@ -125,6 +135,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <style dangerouslySetInnerHTML={{ __html: criticalBootCss }} />
         <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
         <script dangerouslySetInnerHTML={{ __html: bootSplashSkipScript() }} />
+        {authCookieName ? (
+          <script
+            dangerouslySetInnerHTML={{
+              __html: nativeLaunchRedirectScript(authCookieName),
+            }}
+          />
+        ) : null}
+        <script dangerouslySetInnerHTML={{ __html: bootReadyScript() }} />
         {IOS_STARTUP_IMAGES.flatMap((image) =>
           iosStartupImageMedia(image).map((media) => (
             <link

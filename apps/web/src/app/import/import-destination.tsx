@@ -458,26 +458,74 @@ export function ImportDestination({
         <div className={styles.destinationChoices}>
           <button
             className={styles.destinationChoice}
+            data-tone="new"
             disabled={busy}
             onClick={() => setMode("new")}
             type="button"
           >
-            <strong>Criar um álbum novo de viagem</strong>
-            <span>Dê um nome e conte a história dessa viagem.</span>
+            <span aria-hidden="true" className={styles.destinationChoiceIcon}>
+              <svg fill="none" viewBox="0 0 24 24">
+                <path
+                  d="M12 5v14M5 12h14"
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeWidth="1.8"
+                />
+              </svg>
+            </span>
+            <span className={styles.destinationChoiceCopy}>
+              <strong>Criar um álbum novo de viagem</strong>
+              <span>Dê um nome e conte a história dessa viagem.</span>
+            </span>
+            <span aria-hidden="true" className={styles.destinationChoiceArrow}>
+              <svg fill="none" viewBox="0 0 24 24">
+                <path
+                  d="m9 6 6 6-6 6"
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                />
+              </svg>
+            </span>
           </button>
           <button
             className={styles.destinationChoice}
+            data-tone="existing"
             disabled={busy || (albums !== null && albums.length === 0)}
             onClick={() => setMode("existing")}
             type="button"
           >
-            <strong>Adicionar a um álbum existente</strong>
-            <span>
-              {albums === null
-                ? "Carregando seus álbuns…"
-                : albums.length === 0
-                  ? "Você ainda não tem álbuns."
-                  : `Você tem ${albums.length} álbum${albums.length === 1 ? "" : "s"}.`}
+            <span aria-hidden="true" className={styles.destinationChoiceIcon}>
+              <svg fill="none" viewBox="0 0 24 24">
+                <path
+                  d="M3.5 7.5a2 2 0 0 1 2-2h3.6l2 2.2h7.4a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2V7.5Z"
+                  stroke="currentColor"
+                  strokeLinejoin="round"
+                  strokeWidth="1.7"
+                />
+              </svg>
+            </span>
+            <span className={styles.destinationChoiceCopy}>
+              <strong>Adicionar a um álbum existente</strong>
+              <span>
+                {albums === null
+                  ? "Carregando seus álbuns…"
+                  : albums.length === 0
+                    ? "Você ainda não tem álbuns."
+                    : `Você tem ${albums.length} álbum${albums.length === 1 ? "" : "s"}.`}
+              </span>
+            </span>
+            <span aria-hidden="true" className={styles.destinationChoiceArrow}>
+              <svg fill="none" viewBox="0 0 24 24">
+                <path
+                  d="m9 6 6 6-6 6"
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                />
+              </svg>
             </span>
           </button>
         </div>

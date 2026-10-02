@@ -13,7 +13,8 @@ export async function GET(request: NextRequest) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
   const nextParam = url.searchParams.get("next");
-  const nextPath = nextParam && ALLOWED_NEXT_PATHS.has(nextParam) ? nextParam : "/login";
+  const hasNext = Boolean(nextParam && ALLOWED_NEXT_PATHS.has(nextParam));
+  const nextPath = hasNext ? (nextParam as string) : "/login";
   const destination = new URL(nextPath, url.origin);
 
   if (!code) {
@@ -30,7 +31,10 @@ export async function GET(request: NextRequest) {
   const { error } = await client.auth.exchangeCodeForSession(code);
   if (error) {
     destination.searchParams.set("error", "auth_callback_failed");
+    return NextResponse.redirect(destination);
   }
 
-  return NextResponse.redirect(destination);
+  // A plain login (no explicit `next`) goes straight to the profile instead of
+  // bouncing through /login first.
+  return NextResponse.redirect(hasNext ? destination : new URL("/perfil", url.origin));
 }

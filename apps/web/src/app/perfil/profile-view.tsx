@@ -146,7 +146,11 @@ export function ProfileView({
           ? (carouselSlot ?? <ProfileCarousel photos={carouselPhotos} />)
           : null}
 
-        {!loadError && !gridPending && places.length === 0 ? (
+        {/* While the license prompt is up, "Começar com fotos" would only lead to the same prompt. */}
+        {!loadError &&
+        !gridPending &&
+        places.length === 0 &&
+        !(isOwner && licenseSlot) ? (
           <div className={styles.empty} data-reveal>
             {isOwner ? (
               <>

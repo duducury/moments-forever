@@ -7,6 +7,7 @@ import { HomeFooterNav } from "./home-footer-nav";
 import { HomeHeader } from "./home-header";
 import { PremiumSection } from "./premium-section";
 import { PricingSection, type PricingPlanRow } from "./pricing-section";
+import { StoryScroll } from "./story-scroll";
 import { TravelJourney } from "./travel-journey";
 import styles from "./home.module.css";
 
@@ -115,6 +116,8 @@ export default async function Home() {
             <p className={styles.heroAside}>Viagens · Lugares · Momentos</p>
           </div>
         </section>
+
+        <StoryScroll />
 
         <TravelJourney />
 

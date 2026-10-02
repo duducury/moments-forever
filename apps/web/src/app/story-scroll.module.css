@@ -1,0 +1,230 @@
+/* Scroll-pinned storytelling: a tall runway + a sticky stage. The image never
+   changes; only the phrase on the left swaps as the visitor scrolls. */
+
+.story {
+  /* Total of the step weights in story-scroll.tsx — set inline from there. */
+  --story-units: 5.6;
+  position: relative;
+  /* One viewport (the pinned stage) + the scroll distance that drives the steps. */
+  height: calc(100svh + var(--story-units) * 65svh);
+}
+
+.stage {
+  position: sticky;
+  top: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: clamp(12px, 2.4svh, 24px);
+  box-sizing: border-box;
+  height: 100svh;
+  /* Top padding clears the floating home header. */
+  padding: calc(60px + env(safe-area-inset-top, 0px)) 0 clamp(14px, 3svh, 28px);
+}
+
+/* —— Copy —— */
+
+.copy {
+  display: grid;
+  align-content: start;
+  justify-items: center;
+  gap: clamp(14px, 2.6svh, 22px);
+  text-align: center;
+}
+
+/* Every phrase shares one grid cell, so the block is as tall as the tallest
+   one (the closing phrase) and nothing shifts when they swap. */
+.phrases {
+  display: grid;
+  width: 100%;
+  justify-items: center;
+}
+
+.phrase {
+  grid-area: 1 / 1;
+  align-self: center;
+  opacity: 0;
+  transform: translate3d(0, 16px, 0);
+  transition:
+    opacity 380ms ease,
+    transform 560ms cubic-bezier(0.22, 0.8, 0.3, 1);
+  will-change: opacity, transform;
+}
+
+.phrase[data-pos="past"] {
+  transform: translate3d(0, -14px, 0);
+}
+
+/* The incoming phrase waits for the outgoing one to clear — a clean hand-off
+   instead of two phrases overlapping. */
+.phrase[data-pos="active"] {
+  opacity: 1;
+  transform: none;
+  transition-delay: 200ms;
+}
+
+.line {
+  max-width: 16ch;
+  margin: 0 auto;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.9rem, 8vw, 2.5rem);
+  font-weight: 500;
+  letter-spacing: -0.04em;
+  line-height: 1.07;
+  text-wrap: balance;
+}
+
+.finalLine {
+  font-size: clamp(1.7rem, 7.2vw, 2.25rem);
+  max-width: 18ch;
+}
+
+.finalLine em {
+  color: var(--accent);
+  font-style: normal;
+}
+
+.support {
+  max-width: 34ch;
+  margin: clamp(10px, 2svh, 16px) auto 0;
+  color: var(--text-secondary);
+  font-size: clamp(0.92rem, 3.6vw, 1.02rem);
+  line-height: 1.5;
+  opacity: 0;
+  transform: translate3d(0, 10px, 0);
+  transition:
+    opacity 380ms ease,
+    transform 560ms cubic-bezier(0.22, 0.8, 0.3, 1);
+}
+
+.phrase[data-pos="active"] .support {
+  opacity: 1;
+  transform: none;
+  transition-delay: 460ms;
+}
+
+/* —— Step indicator —— */
+
+.dots {
+  display: flex;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  opacity: 0;
+  transition: opacity 500ms ease;
+}
+
+.dots[data-entered="true"] {
+  opacity: 1;
+}
+
+.dot {
+  width: 6px;
+  height: 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--border) 85%, transparent);
+  transition:
+    width 400ms ease,
+    background 400ms ease;
+}
+
+.dot[data-active="true"] {
+  width: 22px;
+  background: var(--accent);
+}
+
+/* —— Image (static through every step) —— */
+
+.visual {
+  position: relative;
+  min-height: 0;
+}
+
+.image {
+  object-fit: contain;
+  object-position: center;
+}
+
+/* —— Desktop: two columns, text left / image right —— */
+
+@media (min-width: 720px) {
+  .stage {
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+    grid-template-rows: minmax(0, 1fr);
+    align-items: center;
+    column-gap: clamp(32px, 6vw, 88px);
+    padding: calc(72px + env(safe-area-inset-top, 0px)) 0 32px;
+  }
+
+  .copy {
+    align-content: center;
+    justify-items: start;
+    text-align: left;
+  }
+
+  .phrases {
+    justify-items: start;
+  }
+
+  .line {
+    margin-inline: 0;
+    font-size: clamp(2.5rem, 4.6vw, 3.9rem);
+    letter-spacing: -0.045em;
+  }
+
+  .finalLine {
+    max-width: 17ch;
+    font-size: clamp(2.3rem, 4.1vw, 3.4rem);
+  }
+
+  .support {
+    margin-inline: 0;
+    max-width: 38ch;
+    font-size: 1.05rem;
+  }
+
+  .visual {
+    height: 100%;
+    max-height: 780px;
+  }
+}
+
+/* —— Reduced motion: no pinning, no swapping — every phrase just reads in
+   order, followed by the image. —— */
+
+@media (prefers-reduced-motion: reduce) {
+  .story {
+    height: auto;
+  }
+
+  .stage {
+    position: static;
+    height: auto;
+    padding-block: 24px;
+    gap: 28px;
+  }
+
+  .phrases {
+    gap: 28px;
+  }
+
+  .phrase,
+  .support {
+    grid-area: auto;
+    opacity: 1;
+    transform: none;
+    transition: none;
+    will-change: auto;
+  }
+
+  .dots {
+    display: none;
+  }
+
+  .visual {
+    width: min(100%, 440px);
+    height: auto;
+    aspect-ratio: 1122 / 1402;
+    justify-self: center;
+  }
+}

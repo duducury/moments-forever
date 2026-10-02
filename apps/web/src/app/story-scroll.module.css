@@ -1,24 +1,86 @@
 /* Scroll-pinned storytelling: a tall runway + a sticky stage. The image never
-   changes; only the phrase on the left swaps as the visitor scrolls. */
+   changes; only the phrase swaps as the visitor scrolls. Dark "night sky"
+   panel with drifting particles and a blue → violet → pink accent gradient. */
 
 .story {
   /* Total of the step weights in story-scroll.tsx — set inline from there. */
   --story-units: 5.6;
+  /* Driven by scroll in story-scroll.tsx. */
+  --gp: 0;
+  --ga: 90deg;
+
+  --c1: #78a6ff;
+  --c2: #b07aff;
+  --c3: #ff6e9a;
+  --story-bg: #05070b;
+  --story-fg: #e9eefb;
+  --story-muted: rgb(233 238 251 / 72%);
+  --story-dot: rgb(233 238 251 / 22%);
+  --g-accent: linear-gradient(var(--ga), var(--c1), var(--c2), var(--c3));
+
   position: relative;
+  /* Full-bleed: the dark panel spans the whole viewport, not just the 1120px
+     content column. */
+  width: 100vw;
+  margin-inline: calc(50% - 50vw);
   /* One viewport (the pinned stage) + the scroll distance that drives the steps. */
   height: calc(100svh + var(--story-units) * 65svh);
+}
+
+/* The page's header floats (transparent) over this panel — in the light theme
+   keep the panel light too, so the header stays legible. */
+html[data-resolved-theme="light"] .story {
+  --c1: #2f5fd0;
+  --c2: #7c3fd6;
+  --c3: #d6336c;
+  --story-bg: transparent;
+  --story-fg: var(--text);
+  --story-muted: var(--text-secondary);
+  --story-dot: var(--border);
 }
 
 .stage {
   position: sticky;
   top: 0;
+  height: 100svh;
+  overflow: hidden;
+  background: var(--story-bg);
+}
+
+.space {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.inner {
+  position: relative;
+  z-index: 1;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto;
   gap: clamp(12px, 2.4svh, 24px);
   box-sizing: border-box;
-  height: 100svh;
+  height: 100%;
+  max-width: 1120px;
+  margin-inline: auto;
   /* Top padding clears the floating home header. */
-  padding: calc(60px + env(safe-area-inset-top, 0px)) 0 clamp(14px, 3svh, 28px);
+  padding: calc(60px + env(safe-area-inset-top, 0px)) 16px clamp(16px, 3svh, 28px);
+}
+
+/* —— Image (static through every step) —— */
+
+/* Mobile: image on top, text below. */
+.visual {
+  position: relative;
+  order: -1;
+  min-height: 0;
+}
+
+.image {
+  object-fit: contain;
+  object-position: center;
 }
 
 /* —— Copy —— */
@@ -27,7 +89,7 @@
   display: grid;
   align-content: start;
   justify-items: center;
-  gap: clamp(14px, 2.6svh, 22px);
+  gap: clamp(12px, 2.2svh, 20px);
   text-align: center;
 }
 
@@ -42,53 +104,60 @@
 .phrase {
   grid-area: 1 / 1;
   align-self: center;
-  opacity: 0;
-  transform: translate3d(0, 16px, 0);
-  transition:
-    opacity 380ms ease,
-    transform 560ms cubic-bezier(0.22, 0.8, 0.3, 1);
-  will-change: opacity, transform;
-}
-
-.phrase[data-pos="past"] {
-  transform: translate3d(0, -14px, 0);
-}
-
-/* The incoming phrase waits for the outgoing one to clear — a clean hand-off
-   instead of two phrases overlapping. */
-.phrase[data-pos="active"] {
-  opacity: 1;
-  transform: none;
-  transition-delay: 200ms;
 }
 
 .line {
-  max-width: 16ch;
-  margin: 0 auto;
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(1.9rem, 8vw, 2.5rem);
-  font-weight: 500;
-  letter-spacing: -0.04em;
-  line-height: 1.07;
+  margin: 0;
+  color: var(--story-fg);
+  font-family: var(--font-story-display), "Plus Jakarta Sans", Inter, system-ui,
+    sans-serif;
+  font-size: clamp(1.45rem, 6.2vw, 1.95rem);
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  line-height: 1.06;
+  text-transform: uppercase;
   text-wrap: balance;
 }
 
-.finalLine {
-  font-size: clamp(1.7rem, 7.2vw, 2.25rem);
-  max-width: 18ch;
+.word {
+  display: inline-block;
+  padding: 0.04em 0.06em;
+  opacity: 0;
+  transform: translate3d(0, 18px, 0);
+  transition:
+    opacity 420ms ease,
+    transform 600ms cubic-bezier(0.22, 0.8, 0.3, 1);
+  will-change: opacity, transform;
 }
 
-.finalLine em {
-  color: var(--accent);
-  font-style: normal;
+.phrase[data-pos="past"] .word {
+  transform: translate3d(0, -14px, 0);
+}
+
+/* Words arrive one after another, and only once the outgoing phrase has
+   cleared. */
+.phrase[data-pos="active"] .word {
+  opacity: 1;
+  transform: none;
+  transition-delay: calc(180ms + var(--i) * 55ms);
+}
+
+.accent {
+  background-image: var(--g-accent);
+  background-position: calc(var(--gp) * 1%) 50%;
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .support {
   max-width: 34ch;
   margin: clamp(10px, 2svh, 16px) auto 0;
-  color: var(--text-secondary);
-  font-size: clamp(0.92rem, 3.6vw, 1.02rem);
-  line-height: 1.5;
+  color: var(--story-muted);
+  font-family: var(--font-story-body), Inter, system-ui, sans-serif;
+  font-size: clamp(0.9rem, 3.5vw, 1rem);
+  line-height: 1.55;
   opacity: 0;
   transform: translate3d(0, 10px, 0);
   transition:
@@ -99,7 +168,7 @@
 .phrase[data-pos="active"] .support {
   opacity: 1;
   transform: none;
-  transition-delay: 460ms;
+  transition-delay: 700ms;
 }
 
 /* —— Step indicator —— */
@@ -122,7 +191,7 @@
   width: 6px;
   height: 4px;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--border) 85%, transparent);
+  background: var(--story-dot);
   transition:
     width 400ms ease,
     background 400ms ease;
@@ -130,30 +199,24 @@
 
 .dot[data-active="true"] {
   width: 22px;
-  background: var(--accent);
-}
-
-/* —— Image (static through every step) —— */
-
-.visual {
-  position: relative;
-  min-height: 0;
-}
-
-.image {
-  object-fit: contain;
-  object-position: center;
+  background: var(--g-accent);
 }
 
 /* —— Desktop: two columns, text left / image right —— */
 
 @media (min-width: 720px) {
-  .stage {
+  .inner {
     grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
     grid-template-rows: minmax(0, 1fr);
     align-items: center;
     column-gap: clamp(32px, 6vw, 88px);
-    padding: calc(72px + env(safe-area-inset-top, 0px)) 0 32px;
+    padding: calc(72px + env(safe-area-inset-top, 0px)) 16px 32px;
+  }
+
+  .visual {
+    order: 0;
+    height: 100%;
+    max-height: 780px;
   }
 
   .copy {
@@ -167,30 +230,18 @@
   }
 
   .line {
-    margin-inline: 0;
-    font-size: clamp(2.5rem, 4.6vw, 3.9rem);
-    letter-spacing: -0.045em;
-  }
-
-  .finalLine {
-    max-width: 17ch;
-    font-size: clamp(2.3rem, 4.1vw, 3.4rem);
+    font-size: clamp(1.9rem, 3.5vw, 3.2rem);
   }
 
   .support {
-    margin-inline: 0;
     max-width: 38ch;
+    margin-inline: 0;
     font-size: 1.05rem;
-  }
-
-  .visual {
-    height: 100%;
-    max-height: 780px;
   }
 }
 
 /* —— Reduced motion: no pinning, no swapping — every phrase just reads in
-   order, followed by the image. —— */
+   order, with the image first on mobile. —— */
 
 @media (prefers-reduced-motion: reduce) {
   .story {
@@ -200,17 +251,23 @@
   .stage {
     position: static;
     height: auto;
-    padding-block: 24px;
-    gap: 28px;
+  }
+
+  .inner {
+    height: auto;
+    padding-block: 56px 40px;
   }
 
   .phrases {
     gap: 28px;
   }
 
-  .phrase,
-  .support {
+  .phrase {
     grid-area: auto;
+  }
+
+  .word,
+  .support {
     opacity: 1;
     transform: none;
     transition: none;

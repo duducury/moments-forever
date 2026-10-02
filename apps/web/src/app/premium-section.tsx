@@ -67,7 +67,31 @@ const BENEFITS = [
 
 export function PremiumSection() {
   const copyRef = useRef<HTMLDivElement>(null);
+  const visualRef = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
+  const [loadVideo, setLoadVideo] = useState(false);
+
+  // The mp4 is ~1.2 MB and this section is far below the fold: don't let it
+  // compete with the hero for bandwidth while the app is opening. The <source>
+  // is only added once the video is about to scroll into view; inserting it
+  // into a source-less <video> starts loading, and autoPlay then takes over.
+  useEffect(() => {
+    const node = visualRef.current;
+    if (!node) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setLoadVideo(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "300px 0px" },
+    );
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const node = copyRef.current;
@@ -90,7 +114,7 @@ export function PremiumSection() {
   return (
     <section className={styles.premiumSection} aria-labelledby="premium-title">
       <div className={styles.premiumInner}>
-        <div className={styles.premiumVisual}>
+        <div className={styles.premiumVisual} ref={visualRef}>
           <video
             className={styles.premiumVideo}
             autoPlay
@@ -99,7 +123,9 @@ export function PremiumSection() {
             playsInline
             preload="auto"
           >
-            <source src="/premium-animation.mp4" type="video/mp4" />
+            {loadVideo ? (
+              <source src="/premium-animation.mp4" type="video/mp4" />
+            ) : null}
           </video>
         </div>
 

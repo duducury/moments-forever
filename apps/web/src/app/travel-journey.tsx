@@ -161,7 +161,7 @@ export function TravelJourney() {
           </g>
       </svg>
       <div className={styles.plane} ref={planeRef} aria-hidden="true">
-          <Image src="/home/airplane-v2.png" alt="" fill sizes="128px" priority />
+          <Image src="/home/airplane-v2.png" alt="" fill sizes="128px" />
       </div>
       <div className={styles.journeyInner}>
         <header className={`${styles.intro} ${styles.storyRow}`} data-stop="0">

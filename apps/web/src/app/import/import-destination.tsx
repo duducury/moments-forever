@@ -178,6 +178,9 @@ export function ImportDestination({
   const [mode, setMode] = useState<DestinationMode>("choose");
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<string | null>(null);
+  /** Feeds the full-screen "sending" confirmation shown from the first tap until the album opens. */
+  const [sendKind, setSendKind] = useState<"new" | "existing">("existing");
+  const [sendDone, setSendDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [newName, setNewName] = useState("");
   const [newStory, setNewStory] = useState("");
@@ -305,6 +308,19 @@ export function ImportDestination({
   async function addToAlbum(album: DestinationAlbum) {
     setBusy(true);
     setError(null);
+    setSendKind("existing");
+    setSendDone(false);
+    setProgress("Preparando suas fotos…");
+    // The destination is known up front: warm it while the photos upload.
+    const destination = profileTripAlbumPath(
+      album.experienceSlug,
+      album.albumId,
+    );
+    router.prefetch(destination);
+    // Once the upload is done the page stays "busy" (overlay + disabled
+    // controls) until the album route replaces it, so the wait for the next
+    // page never looks like nothing is happening.
+    let navigating = false;
     try {
       const result = await uploadFilesToAlbum({
         experienceId: album.experienceId,
@@ -318,14 +334,16 @@ export function ImportDestination({
         );
         return;
       }
-      router.replace(
-        profileTripAlbumPath(album.experienceSlug, album.albumId),
-      );
+      navigating = true;
+      setSendDone(true);
+      router.replace(destination);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Falha ao adicionar fotos.");
     } finally {
-      setBusy(false);
-      setProgress(null);
+      if (!navigating) {
+        setBusy(false);
+        setProgress(null);
+      }
     }
   }
 
@@ -346,6 +364,10 @@ export function ImportDestination({
 
     setBusy(true);
     setError(null);
+    setSendKind("new");
+    setSendDone(false);
+    setProgress("Preparando suas fotos…");
+    let navigating = false;
     try {
       const chosenCover =
         coverFile && files.includes(coverFile) ? coverFile : null;
@@ -365,6 +387,8 @@ export function ImportDestination({
         );
         return;
       }
+      navigating = true;
+      setSendDone(true);
       router.replace(profileTripAlbumPath(result.slug, result.albumId));
     } catch (err) {
       if (err instanceof TripLicenseError) {
@@ -373,8 +397,10 @@ export function ImportDestination({
       }
       setError(err instanceof Error ? err.message : "Falha ao criar o álbum.");
     } finally {
-      setBusy(false);
-      setProgress(null);
+      if (!navigating) {
+        setBusy(false);
+        setProgress(null);
+      }
     }
   }
 
@@ -686,7 +712,43 @@ export function ImportDestination({
         </>
       ) : null}
 
-      {progress ? <p className={styles.lead}>{progress}</p> : null}
+      {busy ? (
+        <div className={styles.sending} role="status" aria-live="polite">
+          <div className={styles.sendingCard}>
+            <span
+              aria-hidden="true"
+              className={styles.sendingIcon}
+              data-done={sendDone ? "true" : "false"}
+            >
+              {sendDone ? (
+                <svg fill="none" viewBox="0 0 24 24">
+                  <path
+                    d="m5 12.5 4.5 4.5L19 7.5"
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2.2"
+                  />
+                </svg>
+              ) : null}
+            </span>
+            <strong>
+              {sendDone
+                ? "Tudo certo!"
+                : sendKind === "new"
+                  ? "Criando seu álbum…"
+                  : "Adicionando suas fotos…"}
+            </strong>
+            <span>
+              {sendDone
+                ? sendKind === "new"
+                  ? "Abrindo seu novo álbum…"
+                  : "Abrindo o álbum…"
+                : (progress ?? "Preparando suas fotos…")}
+            </span>
+          </div>
+        </div>
+      ) : null}
       {error || loadError ? (
         <p className={styles.error} role="alert">
           {error ?? loadError}

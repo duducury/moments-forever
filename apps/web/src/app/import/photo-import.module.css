@@ -1121,3 +1121,75 @@
   gap: 10px;
   margin-top: 28px;
 }
+
+/* Confirmation shown from the first tap on "Criar álbum"/an album until the
+   album page replaces this screen. */
+.sending {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal, 2100);
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: color-mix(in srgb, var(--background) 84%, transparent);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.sendingCard {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  width: min(100%, 320px);
+  padding: 28px 24px;
+  border: 1px solid color-mix(in srgb, var(--accent) 26%, var(--border));
+  border-radius: 20px;
+  background: var(--surface);
+  box-shadow: 0 18px 44px -20px color-mix(in srgb, var(--accent) 60%, transparent);
+  text-align: center;
+}
+
+.sendingCard strong {
+  font-size: 1.05rem;
+}
+
+.sendingCard > span:last-child {
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.sendingIcon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 6px;
+  border: 3px solid color-mix(in srgb, var(--accent) 22%, transparent);
+  border-top-color: var(--accent);
+  border-radius: 999px;
+  color: var(--accent);
+  animation: sendingSpin 0.9s linear infinite;
+}
+
+.sendingIcon[data-done="true"] {
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  animation: none;
+}
+
+.sendingIcon svg {
+  width: 24px;
+  height: 24px;
+}
+
+@keyframes sendingSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sendingIcon {
+    animation: none;
+  }
+}

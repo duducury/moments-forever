@@ -5,6 +5,7 @@ import { createSupabaseAnonClient } from "@/lib/supabase/anon";
 import { HomePrimaryCta } from "./home-cta";
 import { HomeFooterNav } from "./home-footer-nav";
 import { HomeHeader } from "./home-header";
+import { JourneySky } from "./journey-sky";
 import { PremiumSection } from "./premium-section";
 import { PricingSection, type PricingPlanRow } from "./pricing-section";
 import { StoryScroll } from "./story-scroll";
@@ -117,7 +118,9 @@ export default async function Home() {
           </div>
         </section>
 
-        <TravelJourney />
+        <JourneySky>
+          <TravelJourney />
+        </JourneySky>
 
         <StoryScroll />
 

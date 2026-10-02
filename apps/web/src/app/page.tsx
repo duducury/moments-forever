@@ -148,9 +148,10 @@ export default async function Home() {
             className={styles.memories}
           >
             <div className={styles.memoriesHead}>
-              <p className={styles.memoriesEyebrow}>Memórias que ficam</p>
+              <p className={styles.memoriesEyebrow}>Leve suas viagens com você.</p>
               <h2 className={styles.memoriesTitle} id="home-memories-title">
-                Lugares que merecem ser visitados.
+                Cada lugar, foto e história reunidos em uma coleção que você
+                pode revisitar sempre que quiser.
               </h2>
             </div>
             <div className={styles.memoryMosaic}>

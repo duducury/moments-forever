@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Map as LeafletMap, Marker } from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -94,6 +95,37 @@ function dominantAlbumId(photos: readonly TripPhoto[]): string | null {
   return best;
 }
 
+/** Zoom at which a pin that still mixes several folders is as split as it gets. */
+const MIN_ZOOM_TO_OPEN_MIXED_PIN = 15.5;
+
+/**
+ * Where tapping a pin should go: the folder (album) its photo(s) belong to.
+ * `href` is null when there is nowhere else to go (no folder/trip known, or
+ * the folder is the one already open). `mixed` means the pin groups photos
+ * from more than one folder, so the tap should zoom in first to tell them
+ * apart instead of guessing.
+ */
+function pinDestination(
+  photos: readonly TripPhoto[],
+  currentAlbumId: string | null,
+  experienceSlug: string | null,
+): { readonly href: string | null; readonly mixed: boolean } {
+  const albumId = dominantAlbumId(photos);
+  if (!albumId || albumId === currentAlbumId) return { href: null, mixed: false };
+  const slug =
+    experienceSlug ??
+    photos.find((photo) => photo.albumId === albumId)?.experienceSlug ??
+    photos.find((photo) => photo.experienceSlug)?.experienceSlug ??
+    null;
+  if (!slug) return { href: null, mixed: false };
+  const mixed =
+    new Set(photos.map((photo) => photo.albumId).filter(Boolean)).size > 1;
+  return {
+    href: `/perfil/${encodeURIComponent(slug)}/album/${albumId}`,
+    mixed,
+  };
+}
+
 function flyToSelection(
   map: LeafletMap,
   points: readonly GeoPoint<TripPhoto>[],
@@ -140,6 +172,7 @@ export function TripMapCanvas({
   readonly initialFit?: TripMapInitialFit;
   readonly currentAlbumId?: string | null;
 }) {
+  const router = useRouter();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<LeafletMap | null>(null);
   const markersRef = useRef<Marker[]>([]);
@@ -454,6 +487,24 @@ export function TripMapCanvas({
 
         marker.on("click", (event) => {
           leaflet.DomEvent.stopPropagation(event);
+
+          // A pin goes straight to its folder — no preview sheet in between.
+          const destination = pinDestination(
+            cluster.points.map((point) => point.data),
+            currentAlbumId,
+            experienceSlug ?? null,
+          );
+          if (destination.href) {
+            if (destination.mixed && map.getZoom() < MIN_ZOOM_TO_OPEN_MIXED_PIN) {
+              // Several folders share this pin: zoom in so a tap picks one.
+              flyToSelection(map, cluster.points, leaflet);
+              return;
+            }
+            router.push(destination.href);
+            return;
+          }
+
+          // Nowhere else to go (this folder, or no folder info): keep the preview.
           const ids = cluster.points.map((point) => point.data.id);
           setSelectedPhotoIds(ids);
           setLightboxId(null);
@@ -467,7 +518,15 @@ export function TripMapCanvas({
     return () => {
       cancelled = true;
     };
-  }, [clusters, geoPoints.length, pinThumbs, selectedIdSet]);
+  }, [
+    clusters,
+    currentAlbumId,
+    experienceSlug,
+    geoPoints.length,
+    pinThumbs,
+    router,
+    selectedIdSet,
+  ]);
 
   const layoutClass = compact
     ? styles.mapLayoutCompact

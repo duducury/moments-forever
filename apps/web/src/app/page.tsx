@@ -61,19 +61,13 @@ const MEMORY_PHOTOS = [
   },
 ] as const;
 
-/**
- * Nothing on this page depends on the request (auth state is resolved on the
- * client, and the plans query uses the cookie-less anon client), so it is
- * served as a static page regenerated at most once a minute instead of
- * running a function + a Supabase query on every open.
- */
-export const revalidate = 60;
+export const dynamic = "force-dynamic";
 
 async function getPricingPlans(): Promise<readonly PricingPlanRow[]> {
   const supabase = createSupabaseAnonClient();
   if (!supabase) return [];
 
-  const { data, error } = await supabase
+  const { data } = await supabase
     .from("plans")
     .select(
       "name, max_nfc_tags, max_photos_per_trip, price_label, price_note, highlight",
@@ -81,14 +75,6 @@ async function getPricingPlans(): Promise<readonly PricingPlanRow[]> {
     .neq("name", "LEGACY")
     .not("price_label", "is", null)
     .order("max_nfc_tags", { ascending: true });
-
-  // The pricing section renders nothing for an empty list, so a failed query
-  // must not become the cached page: throwing during a background
-  // revalidation keeps the last good page being served. The build itself must
-  // not fail on it, so it falls back to empty (healed on the next revalidate).
-  if (error && process.env.NEXT_PHASE !== "phase-production-build") {
-    throw error;
-  }
 
   return (data ?? []).map((plan) => ({
     name: plan.name as string,

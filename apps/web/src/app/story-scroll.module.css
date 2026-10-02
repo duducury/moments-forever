@@ -4,7 +4,7 @@
 
 .story {
   /* Total of the step weights in story-scroll.tsx — set inline from there. */
-  --story-units: 5.6;
+  --story-units: 4.6;
   /* Driven by scroll in story-scroll.tsx. */
   --gp: 0;
   --ga: 90deg;

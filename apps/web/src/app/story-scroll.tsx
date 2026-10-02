@@ -25,8 +25,12 @@ type Word = { readonly text: string; readonly accent: boolean; readonly index: n
 const STEPS: readonly (readonly Segment[])[] = [
   [{ text: "Suas viagens são feitas de " }, { text: "momentos.", accent: true }],
   [{ text: "Cada destino guarda uma " }, { text: "história.", accent: true }],
-  [{ text: "Cada foto guarda um " }, { text: "pedaço dela.", accent: true }],
-  [{ text: "E algumas memórias merecem ficar " }, { text: "por perto.", accent: true }],
+  [
+    { text: "Cada foto guarda um " },
+    { text: "pedaço dessa história.", accent: true },
+    { text: " E algumas memórias merecem ficar " },
+    { text: "por perto.", accent: true },
+  ],
   [
     { text: "Transforme suas viagens em " },
     { text: "uma coleção de histórias.", accent: true },
@@ -49,7 +53,7 @@ const FINAL_INDEX = PHRASES.length - 1;
 
 // How much scroll each step owns. The last one is longer so the closing
 // phrase stays on screen for a beat before the section releases.
-const WEIGHTS = [1, 1, 1, 1, 1.6] as const;
+const WEIGHTS = [1, 1, 1, 1.6] as const;
 const TOTAL_WEIGHT = WEIGHTS.reduce((sum, weight) => sum + weight, 0);
 const THRESHOLDS = WEIGHTS.map(
   (_, index) =>

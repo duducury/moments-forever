@@ -185,7 +185,7 @@ export function StoryScroll() {
         y: random(-1, 1) * height * 0.85,
         z: random(250, 1900),
         r: random(0.6, 1.6),
-        h: 210 + Math.random() * 60,
+        h: 14 + Math.random() * 28,
         a: random(0.05, 0.12),
       }));
       if (!running) draw();

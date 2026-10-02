@@ -1,6 +1,6 @@
 /* Scroll-pinned storytelling: a tall runway + a sticky stage. The image never
    changes; only the phrase swaps as the visitor scrolls. Dark "night sky"
-   panel with drifting particles and a blue → violet → pink accent gradient. */
+   panel with drifting particles and a warm orange accent gradient. */
 
 .story {
   /* Total of the step weights in story-scroll.tsx — set inline from there. */
@@ -9,9 +9,9 @@
   --gp: 0;
   --ga: 90deg;
 
-  --c1: #78a6ff;
-  --c2: #b07aff;
-  --c3: #ff6e9a;
+  --c1: #f7b787;
+  --c2: #ee7a4f;
+  --c3: #d94f3a;
   --story-bg: #05070b;
   --story-fg: #e9eefb;
   --story-muted: rgb(233 238 251 / 72%);
@@ -30,9 +30,9 @@
 /* The page's header floats (transparent) over this panel — in the light theme
    keep the panel light too, so the header stays legible. */
 html[data-resolved-theme="light"] .story {
-  --c1: #2f5fd0;
-  --c2: #7c3fd6;
-  --c3: #d6336c;
+  --c1: #c2602f;
+  --c2: #a8431f;
+  --c3: #8b3f28;
   --story-bg: transparent;
   --story-fg: var(--text);
   --story-muted: var(--text-secondary);

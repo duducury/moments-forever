@@ -1066,6 +1066,15 @@ html[data-nav-hidden="true"] .header {
 .premiumSection {
   display: grid;
   gap: 32px;
+  /* Breathing room above/below — on top of the page's section gap — so it
+     doesn't feel squeezed between the storytelling panel and the mosaic. */
+  padding-block: 36px;
+}
+
+@media (min-width: 720px) {
+  .premiumSection {
+    padding-block: 12px;
+  }
 }
 
 .premiumInner {

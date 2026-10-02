@@ -6,6 +6,7 @@ import {
   attachPhotoLocationLabels,
   loadTripAlbums,
 } from "@/lib/location/trip-albums";
+import { getOwnerProfileSlug } from "@/lib/profile/profile-slug";
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import type {
@@ -22,6 +23,8 @@ export type TripPageData = {
   readonly experience: TripExperience;
   readonly albums: readonly TripAlbum[];
   readonly photos: readonly TripPhoto[];
+  /** Owner's public profile slug (null when they have none). */
+  readonly ownerProfileSlug: string | null;
 };
 
 export async function loadTripPageData(
@@ -41,7 +44,9 @@ export async function loadTripPageData(
   }
 
   const experienceRow = experienceResult.data;
-  const [albums, photosResult] = await Promise.all([
+  // The owner's slug only needs owner_id, which we already have — fetch it
+  // alongside albums/photos instead of as a third sequential round trip.
+  const [albums, photosResult, ownerProfileSlug] = await Promise.all([
     loadTripAlbums(supabase, experienceRow.id as string),
     supabase
       .from("photos")
@@ -50,6 +55,7 @@ export async function loadTripPageData(
       )
       .eq("experience_id", experienceRow.id as string)
       .order("position_in_album"),
+    getOwnerProfileSlug(supabase, experienceRow.owner_id as string),
   ]);
 
   const photos: TripPhoto[] = attachPhotoLocationLabels(
@@ -88,5 +94,6 @@ export async function loadTripPageData(
     },
     albums,
     photos,
+    ownerProfileSlug,
   };
 }

@@ -5,6 +5,7 @@ import { AutoHideNavOnScroll } from "@/components/auto-hide-nav";
 import { PwaSplashDismiss } from "@/components/pwa-splash-dismiss";
 import { RevealOnScroll } from "@/components/reveal-on-scroll";
 import { ThemeProvider } from "@/components/theme-provider";
+import { bootSplashSkipScript } from "@/lib/pwa/boot-splash";
 import { IOS_STARTUP_IMAGES, iosStartupImageMedia } from "@/lib/pwa/ios-startup-images";
 import { getSiteUrl } from "@/lib/site-url";
 import { THEME_STORAGE_KEY } from "@/lib/theme/theme";
@@ -82,6 +83,7 @@ export const viewport: Viewport = {
 const criticalBootCss = `
 html,body{margin:0;min-height:100%;background:var(--background,#121110);color:var(--text,#f3efe8)}
 #pwa-boot-splash{position:fixed;inset:0;z-index:2147483646;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:radial-gradient(90% 60% at 50% 18%,rgba(208,138,110,.18),transparent 58%),#121110;color:#f3efe8;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;text-align:center;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+html[data-boot-splash="skip"] #pwa-boot-splash{display:none}
 #pwa-boot-splash img{width:88px;height:88px;border-radius:22px}
 #pwa-boot-splash .mf-boot-title{margin:0;font-family:Georgia,"Times New Roman",serif;font-size:1.45rem;font-weight:500;letter-spacing:-0.03em}
 #pwa-boot-splash .mf-boot-copy{margin:0;color:#a8a29a;font-size:15px;line-height:1.45}
@@ -122,6 +124,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <head>
         <style dangerouslySetInnerHTML={{ __html: criticalBootCss }} />
         <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
+        <script dangerouslySetInnerHTML={{ __html: bootSplashSkipScript() }} />
         {IOS_STARTUP_IMAGES.flatMap((image) =>
           iosStartupImageMedia(image).map((media) => (
             <link

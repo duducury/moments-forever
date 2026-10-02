@@ -7,10 +7,7 @@ import { ProfileHomeProvider } from "@/components/profile-home";
 import { SignalPwaBootReady } from "@/components/signal-pwa-boot-ready";
 import { AlbumFolderView } from "@/app/trip/[slug]/album/[albumId]/album-folder-view";
 import { loadTripPageData } from "@/lib/experiences/load-trip-page-data";
-import {
-  getOwnerProfileSlug,
-  publicProfilePath,
-} from "@/lib/profile/profile-slug";
+import { publicProfilePath } from "@/lib/profile/profile-slug";
 import { profilePath } from "@/lib/routes/app-routes";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -70,10 +67,7 @@ export default async function ProfileTripAlbumPage({
     );
   }
 
-  const ownerSlug = await getOwnerProfileSlug(
-    supabase,
-    data.experience.ownerId,
-  );
+  const ownerSlug = data.ownerProfileSlug;
   const profileHomeHref = ownerSlug ? publicProfilePath(ownerSlug) : null;
   const backHref = profileHomeHref ?? profilePath();
 

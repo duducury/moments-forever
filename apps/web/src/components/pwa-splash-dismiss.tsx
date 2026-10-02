@@ -5,8 +5,19 @@ import { useEffect } from "react";
 
 const BOOT_READY_EVENT = "mf-boot-ready";
 
+declare global {
+  interface Window {
+    __mfBootReady?: boolean;
+  }
+}
+
 export function signalPwaBootReady() {
   if (typeof window === "undefined") return;
+  // Remembered, not just broadcast: a route's "ready" effect can run before
+  // PwaSplashDismiss below has attached its listener (the loading skeleton is
+  // hydrated together with the layout), and a missed event would leave the
+  // splash up until the failsafe timeout.
+  window.__mfBootReady = true;
   window.dispatchEvent(new Event(BOOT_READY_EVENT));
 }
 
@@ -43,6 +54,10 @@ export function PwaSplashDismiss() {
     if (!splash) return;
 
     const hide = () => hideSplash(splash);
+    if (window.__mfBootReady) {
+      hide();
+      return;
+    }
     window.addEventListener(BOOT_READY_EVENT, hide);
     const failsafe = window.setTimeout(hide, 12000);
 

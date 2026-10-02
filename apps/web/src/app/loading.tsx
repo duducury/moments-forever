@@ -1,5 +1,5 @@
-import { AppBootSplash } from "@/components/app-boot-splash";
+import { RootBootLoading } from "@/components/root-boot-loading";
 
 export default function RootLoading() {
-  return <AppBootSplash hint="Abrindo Moments Forever…" />;
+  return <RootBootLoading />;
 }

@@ -1117,6 +1117,62 @@
   font-size: 0.9rem;
 }
 
+/* Phones: trips two per row (it already was two from 560px up). Cards are about
+   half as wide, so the cover gets taller and the caption stacks. */
+@media (max-width: 559px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .grid .cover,
+  .grid .coverFallback {
+    aspect-ratio: 4 / 5;
+  }
+
+  .grid .card {
+    border-radius: 16px;
+  }
+
+  .grid .cardTitleBlock {
+    padding: 16px 10px 10px;
+  }
+
+  .grid .cardFooterRow {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+
+  .grid .cardCountryLine {
+    gap: 6px;
+    width: 100%;
+    font-size: 0.86rem;
+  }
+
+  .grid .cardFlag {
+    width: 18px;
+    height: 13px;
+  }
+
+  .grid .cardDate {
+    max-width: 100%;
+    font-size: 0.72rem;
+    white-space: normal;
+  }
+
+  .grid .cardMenu {
+    top: 6px;
+    right: 6px;
+  }
+
+  .grid .cardMenuButton {
+    width: 28px;
+    height: 28px;
+    font-size: 1rem;
+  }
+}
+
 @media (min-width: 560px) {
   .grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));

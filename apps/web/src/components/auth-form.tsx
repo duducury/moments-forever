@@ -4,7 +4,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { OAuthButtons } from "@/components/oauth-buttons";
+import { OAuthButtons, type OAuthProvider } from "@/components/oauth-buttons";
+import { signInWithAppleNative } from "@/lib/auth/apple-sign-in";
 
 import { AppBootSplash } from "./app-boot-splash";
 import { useAuth } from "./auth-provider";
@@ -109,9 +110,17 @@ export function AuthForm() {
     setBusy(false);
   }
 
-  async function handleOAuth(provider: "google" | "facebook") {
+  async function handleOAuth(provider: OAuthProvider) {
     setBusy(true);
     setMessage(null);
+    if (provider === "apple") {
+      // Native sheet, no redirect: on success the session shows up through
+      // AuthProvider and the effect above sends the user to /perfil.
+      const result = await signInWithAppleNative(authClient);
+      if (result.status === "error") setMessage(result.message);
+      setBusy(false);
+      return;
+    }
     const redirectTo = `${window.location.origin}/auth/callback`;
     const { error } = await authClient.auth.signInWithOAuth({
       provider,

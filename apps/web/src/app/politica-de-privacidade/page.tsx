@@ -59,7 +59,7 @@ export default function PrivacyPolicyPage() {
           <h2>Quais dados coletamos</h2>
           <p>
             <strong>Conta.</strong> Para criar uma conta usamos e-mail e
-            senha, ou login com Google/Facebook. A autenticação é feita
+            senha, ou login com Apple, Google ou Facebook. A autenticação é feita
             pelo Supabase, que armazena seu e-mail e a credencial de login;
             nós não vemos nem guardamos sua senha.
           </p>

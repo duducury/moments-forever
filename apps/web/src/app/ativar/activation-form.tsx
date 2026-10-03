@@ -5,8 +5,9 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import { AppBootSplash } from "@/components/app-boot-splash";
 import { useAuth } from "@/components/auth-provider";
-import { OAuthButtons } from "@/components/oauth-buttons";
+import { OAuthButtons, type OAuthProvider } from "@/components/oauth-buttons";
 import { signalPwaBootReady } from "@/components/pwa-splash-dismiss";
+import { signInWithAppleNative } from "@/lib/auth/apple-sign-in";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 import styles from "./ativar.module.css";
@@ -20,9 +21,11 @@ interface ActivatedResult {
 }
 
 /**
- * OAuth sign-up leaves the page entirely (Apple/Google/Facebook), so the
- * typed code can't just live in React state across that redirect — it has
- * to survive in sessionStorage until /auth/callback brings the user back.
+ * Google/Facebook sign-up leaves the page entirely, so the typed code can't
+ * just live in React state across that redirect — it has to survive in
+ * sessionStorage until /auth/callback brings the user back. Sign in with Apple
+ * (native sheet) doesn't redirect, but uses the same key: the effect below
+ * redeems it as soon as the new session appears.
  */
 const PENDING_CODE_KEY = "mf-pending-activation-code";
 
@@ -109,7 +112,7 @@ export function ActivationForm() {
     });
   }
 
-  async function handleOAuth(provider: "google" | "facebook") {
+  async function handleOAuth(provider: OAuthProvider) {
     const trimmedCode = code.trim().toUpperCase();
     if (!/^MF-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{2}$/.test(trimmedCode)) {
       setMessage("Digite o código no formato MF-XXXX-XXXX-XX.");
@@ -118,6 +121,14 @@ export function ActivationForm() {
     setBusy(true);
     setMessage(null);
     sessionStorage.setItem(PENDING_CODE_KEY, trimmedCode);
+    if (provider === "apple") {
+      const result = await signInWithAppleNative(authClient);
+      if (result.status === "signed-in") return; // the session effect redeems the code
+      sessionStorage.removeItem(PENDING_CODE_KEY);
+      if (result.status === "error") setMessage(result.message);
+      setBusy(false);
+      return;
+    }
     const redirectTo = `${window.location.origin}/auth/callback?next=/ativar`;
     const { error } = await authClient.auth.signInWithOAuth({
       provider,

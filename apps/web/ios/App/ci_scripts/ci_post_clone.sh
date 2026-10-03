@@ -17,6 +17,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="${CI_PRIMARY_REPOSITORY_PATH:-$(cd "$SCRIPT_DIR/../../../../.." && pwd)}"
 WEB_DIR="$REPO_ROOT/apps/web"
 PLUGIN_DIR="$REPO_ROOT/node_modules/@exxili/capacitor-nfc"
+APPLE_PLUGIN_DIR="$REPO_ROOT/node_modules/@capacitor-community/apple-sign-in"
 NODE_FORMULA="node@22"
 
 log() { echo "[ci_post_clone] $*"; }
@@ -52,6 +53,14 @@ node "$WEB_DIR/scripts/fix-capacitor-nfc-plugin.mjs"
 grep -q 'name: "ExxiliCapacitorNfc"' "$PLUGIN_DIR/Package.swift" \
   || fail "@exxili/capacitor-nfc Package.swift was not patched (expected product ExxiliCapacitorNfc)"
 
+# 2b. Same for the Sign in with Apple plugin: it ships for Capacitor 7 and its
+#     Package.swift would clash with this app's capacitor-swift-pm 8.x pin.
+node "$WEB_DIR/scripts/fix-capacitor-apple-sign-in.mjs"
+
+[ -f "$APPLE_PLUGIN_DIR/Package.swift" ] || fail "$APPLE_PLUGIN_DIR/Package.swift is missing after npm ci"
+grep -q 'capacitor-swift-pm.git", from: "8.0.0"' "$APPLE_PLUGIN_DIR/Package.swift" \
+  || fail "@capacitor-community/apple-sign-in Package.swift was not patched (expected capacitor-swift-pm from 8.0.0)"
+
 # 3. Generate what is gitignored but required to build: capacitor.config.json,
 #    the copied web assets, and CapApp-SPM/Package.swift.
 cd "$WEB_DIR"
@@ -61,7 +70,10 @@ npx --no-install cap sync ios
 CONFIG_JSON="$WEB_DIR/ios/App/App/capacitor.config.json"
 [ -f "$CONFIG_JSON" ] || fail "$CONFIG_JSON was not generated"
 grep -q 'NFCPlugin' "$CONFIG_JSON" || fail "NFCPlugin is missing from packageClassList in $CONFIG_JSON"
+grep -q 'SignInWithApple' "$CONFIG_JSON" || fail "SignInWithApple is missing from packageClassList in $CONFIG_JSON"
 grep -q 'ExxiliCapacitorNfc' "$WEB_DIR/ios/App/CapApp-SPM/Package.swift" \
   || fail "CapApp-SPM/Package.swift does not reference ExxiliCapacitorNfc"
+grep -q 'CapacitorCommunityAppleSignIn' "$WEB_DIR/ios/App/CapApp-SPM/Package.swift" \
+  || fail "CapApp-SPM/Package.swift does not reference CapacitorCommunityAppleSignIn"
 
 log "done: Swift packages can be resolved"

@@ -525,6 +525,7 @@ form .button {
   gap: 12px;
 }
 
+.oauth-apple,
 .oauth-google,
 .oauth-facebook {
   gap: 10px;
@@ -532,6 +533,27 @@ form .button {
 
 .oauth-icon {
   flex: 0 0 auto;
+}
+
+/* Apple's guidelines: a solid black or white button with the Apple logo —
+   black on the light theme (the stylesheet default), white on the dark one. */
+.oauth-apple {
+  border-color: transparent;
+  color: #fff;
+  background: #000;
+}
+
+.oauth-apple:hover:not(:disabled) {
+  background: #2a2a2a;
+}
+
+html[data-resolved-theme="dark"] .oauth-apple {
+  color: #000;
+  background: #fff;
+}
+
+html[data-resolved-theme="dark"] .oauth-apple:hover:not(:disabled) {
+  background: #e9e9e9;
 }
 
 .oauth-google {

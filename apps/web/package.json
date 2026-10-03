@@ -12,11 +12,12 @@
     "reprocess-photos": "node --env-file=.env.local --import tsx scripts/reprocess-legacy-photos.ts",
     "cap:sync": "cap sync ios",
     "cap:open:ios": "cap open ios",
-    "postinstall": "node scripts/fix-capacitor-nfc-plugin.mjs"
+    "postinstall": "node scripts/fix-capacitor-nfc-plugin.mjs && node scripts/fix-capacitor-apple-sign-in.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1106.0",
     "@aws-sdk/s3-request-presigner": "^3.1106.0",
+    "@capacitor-community/apple-sign-in": "^7.1.0",
     "@capacitor/core": "^8.5.2",
     "@capacitor/ios": "^8.5.2",
     "@exxili/capacitor-nfc": "^0.0.14",

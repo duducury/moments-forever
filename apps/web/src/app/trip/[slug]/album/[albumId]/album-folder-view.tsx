@@ -639,6 +639,7 @@ export function AlbumFolderView({
               <ExperienceCoverThumb
                 coverPhotoId={heroCoverId}
                 fallbackClassName={styles.albumHeroFallback}
+                focus={album.coverPhotoId ? album.coverFocus : null}
                 imageClassName={styles.albumHeroImage}
                 priority
                 title={album.displayName}

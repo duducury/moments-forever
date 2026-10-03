@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+import type { CoverFocus } from "@/lib/experiences/cover-focus";
+import { focusObjectPosition } from "@/lib/experiences/cover-focus";
 import { useLocalPhotoObjectUrl } from "@/lib/local-photos/use-local-photo-urls";
 
 /**
@@ -17,6 +19,7 @@ export function ExperienceCoverThumb({
   fallbackClassName,
   variant = "cover",
   priority = false,
+  focus = null,
 }: {
   readonly coverPhotoId: string | null;
   readonly title: string;
@@ -27,7 +30,10 @@ export function ExperienceCoverThumb({
   readonly variant?: "cover" | "thumbnail";
   /** LCP hero — start the network with high priority. */
   readonly priority?: boolean;
+  /** Where the owner centred the cover; null keeps the stylesheet's centre. */
+  readonly focus?: CoverFocus | null;
 }) {
+  const objectPosition = focusObjectPosition(focus);
   const initial = title.trim().slice(0, 1).toUpperCase() || "·";
 
   if (variant === "thumbnail") {
@@ -38,6 +44,7 @@ export function ExperienceCoverThumb({
         fallbackClassName={fallbackClassName}
         imageClassName={imageClassName}
         initial={initial}
+        objectPosition={objectPosition}
         priority={priority}
       />
     );
@@ -50,6 +57,7 @@ export function ExperienceCoverThumb({
       fallbackClassName={fallbackClassName}
       imageClassName={imageClassName}
       initial={initial}
+      objectPosition={objectPosition}
       priority={priority}
     />
   );
@@ -62,6 +70,7 @@ function CoverThumbOnly({
   fallbackClassName,
   initial,
   priority,
+  objectPosition,
 }: {
   readonly coverPhotoId: string | null;
   readonly className?: string;
@@ -69,6 +78,7 @@ function CoverThumbOnly({
   readonly fallbackClassName?: string;
   readonly initial: string;
   readonly priority: boolean;
+  readonly objectPosition: string | undefined;
 }) {
   const src = useLocalPhotoObjectUrl(coverPhotoId, "thumbnail");
   if (src) {
@@ -82,6 +92,7 @@ function CoverThumbOnly({
           fetchPriority={priority ? "high" : "low"}
           loading={priority ? "eager" : "lazy"}
           src={src}
+          style={objectPosition ? { objectPosition } : undefined}
         />
       </span>
     );
@@ -102,6 +113,7 @@ function CoverFull({
   fallbackClassName,
   initial,
   priority,
+  objectPosition,
 }: {
   readonly coverPhotoId: string | null;
   readonly className?: string;
@@ -109,6 +121,7 @@ function CoverFull({
   readonly fallbackClassName?: string;
   readonly initial: string;
   readonly priority: boolean;
+  readonly objectPosition: string | undefined;
 }) {
   const thumbSrc = useLocalPhotoObjectUrl(coverPhotoId, "thumbnail");
   const fullSrc = useLocalPhotoObjectUrl(coverPhotoId, "full");
@@ -140,6 +153,7 @@ function CoverFull({
           className={imageClassName}
           decoding="async"
           src={thumbSrc}
+          style={objectPosition ? { objectPosition } : undefined}
         />
       ) : null}
       {fullSrc ? (
@@ -153,7 +167,7 @@ function CoverFull({
           onError={() => setLoadedSrc(fullSrc)}
           onLoad={() => setLoadedSrc(fullSrc)}
           src={fullSrc}
-          style={{ opacity: showFull ? 1 : 0 }}
+          style={{ opacity: showFull ? 1 : 0, objectPosition }}
         />
       ) : null}
     </span>

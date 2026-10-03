@@ -1,3 +1,5 @@
+import type { CoverFocus } from "@/lib/experiences/cover-focus";
+
 export interface TripExperience {
   readonly id: string;
   readonly slug: string;
@@ -22,6 +24,8 @@ export interface TripAlbum {
   readonly displayName: string;
   readonly description: string | null;
   readonly coverPhotoId: string | null;
+  /** Where the owner centred the cover (undefined/null = default centre). */
+  readonly coverFocus?: CoverFocus | null;
   readonly position: number;
   readonly placeId: string | null;
   readonly placeName: string | null;

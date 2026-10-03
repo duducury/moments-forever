@@ -79,6 +79,7 @@ export function ProfilePlaceCard({
         className={styles.cover}
         coverPhotoId={place.coverPhotoId}
         fallbackClassName={styles.coverFallback}
+        focus={place.coverFocus}
         imageClassName={styles.coverImage}
         title={place.title}
         variant="thumbnail"

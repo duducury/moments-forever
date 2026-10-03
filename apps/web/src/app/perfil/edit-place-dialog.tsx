@@ -4,10 +4,16 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 
 import { ExperienceCoverThumb } from "@/components/experience-cover-thumb";
+import {
+  CENTER_FOCUS,
+  isCenterFocus,
+  type CoverFocus,
+} from "@/lib/experiences/cover-focus";
 import type { OwnerPlaceCardItem } from "@/lib/experiences/load-owner-place-cards";
 import { deleteLocalPhotoBlobs } from "@/lib/local-photos/photo-blob-store";
 import { clearCardPreviewPrefs } from "@/lib/profile/card-preview-prefs";
 
+import { CoverFocusEditor } from "./cover-focus-editor";
 import styles from "./perfil.module.css";
 
 interface PhotoOption {
@@ -32,6 +38,15 @@ export function EditPlaceDialog({
   const [photos, setPhotos] = useState<readonly PhotoOption[]>([]);
   const [name, setName] = useState(place.title);
   const [coverPhotoId, setCoverPhotoId] = useState(place.coverPhotoId);
+  const initialFocus = place.coverFocus ?? CENTER_FOCUS;
+  const [focus, setFocus] = useState<CoverFocus>(initialFocus);
+
+  function chooseCover(photoId: string) {
+    if (photoId === coverPhotoId) return;
+    setCoverPhotoId(photoId);
+    // A different photo starts centred; its old focus point means nothing here.
+    setFocus(photoId === place.coverPhotoId ? initialFocus : CENTER_FOCUS);
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -86,6 +101,11 @@ export function EditPlaceDialog({
         body: JSON.stringify({
           name: nextName,
           cover_photo_id: coverPhotoId,
+          // Only sent when it changed (or the cover did and it isn't centred),
+          // so saving a name never rewrites the focus.
+          ...(focus.x !== initialFocus.x || focus.y !== initialFocus.y
+            ? { cover_focus: isCenterFocus(focus) ? null : focus }
+            : {}),
         }),
       });
       const payload = (await response.json()) as { readonly error?: string };
@@ -207,7 +227,7 @@ export function EditPlaceDialog({
                           coverPhotoId === photo.id ? "true" : "false"
                         }
                         key={photo.id}
-                        onClick={() => setCoverPhotoId(photo.id)}
+                        onClick={() => chooseCover(photo.id)}
                         type="button"
                       >
                         <ExperienceCoverThumb
@@ -222,6 +242,14 @@ export function EditPlaceDialog({
                     ))}
                   </div>
                 </fieldset>
+                {coverPhotoId ? (
+                  <CoverFocusEditor
+                    coverPhotoId={coverPhotoId}
+                    focus={focus}
+                    onChange={setFocus}
+                    title={place.title}
+                  />
+                ) : null}
               </>
             )}
 

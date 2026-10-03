@@ -15,6 +15,7 @@ function place(overrides: Partial<OwnerPlaceCardItem>): OwnerPlaceCardItem {
     startsAt: null,
     endsAt: null,
     coverPhotoId: null,
+    coverFocus: null,
     previewPhotoIds: [],
     photoCount: 0,
     ...overrides,

@@ -8,6 +8,7 @@ import {
   resolveLocationDisplayName,
 } from "@moments-forever/shared";
 
+import { loadCoverFocusByAlbum, type CoverFocus } from "./cover-focus";
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type ServerSupabase = NonNullable<
@@ -25,6 +26,8 @@ export interface OwnerPlaceCardItem {
   readonly startsAt: string | null;
   readonly endsAt: string | null;
   readonly coverPhotoId: string | null;
+  /** Where the owner centred the cover (null = default centre). */
+  readonly coverFocus: CoverFocus | null;
   readonly previewPhotoIds: readonly string[];
   readonly photoCount: number;
 }
@@ -210,6 +213,11 @@ export async function loadOwnerPlaceCards(
     statsByAlbum.set(albumId, current);
   }
 
+  const focusByAlbum = await loadCoverFocusByAlbum(
+    supabase,
+    albumRows.map((album) => album.id),
+  );
+
   const places: OwnerPlaceCardItem[] = albumRows.map((album) => {
     const experienceId = album.experience_id;
     const experience = experienceById.get(experienceId);
@@ -236,6 +244,7 @@ export async function loadOwnerPlaceCards(
       startsAt: stats?.startsAt ?? null,
       endsAt: stats?.endsAt ?? null,
       coverPhotoId,
+      coverFocus: focusByAlbum.get(album.id) ?? null,
       previewPhotoIds: coverPhotoId ? [coverPhotoId] : [],
       photoCount: stats?.count ?? 0,
     };

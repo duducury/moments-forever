@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { clampFocus, isCenterFocus } from "@/lib/experiences/cover-focus";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 interface PatchAlbumBody {
@@ -8,6 +9,8 @@ interface PatchAlbumBody {
   readonly position?: number;
   readonly parent_album_id?: string | null;
   readonly cover_photo_id?: string | null;
+  /** Where the cover is centred (0–100 %); null/centre clears it. */
+  readonly cover_focus?: { readonly x: number; readonly y: number } | null;
   readonly reorder?: "up" | "down";
   /** Full ordered photo ids for this album (drag-and-drop reorder). */
   readonly photo_order?: readonly string[];
@@ -288,8 +291,53 @@ export async function PATCH(
     }
   }
 
-  if (Object.keys(patch).length === 0) {
+  const focusRequested = body.cover_focus !== undefined;
+  if (
+    focusRequested &&
+    body.cover_focus !== null &&
+    (typeof body.cover_focus !== "object" ||
+      !Number.isFinite(Number(body.cover_focus.x)) ||
+      !Number.isFinite(Number(body.cover_focus.y)))
+  ) {
+    return NextResponse.json({ error: "Enquadramento inválido." }, { status: 400 });
+  }
+
+  if (Object.keys(patch).length === 0 && !focusRequested) {
     return NextResponse.json({ error: "Nada para atualizar." }, { status: 400 });
+  }
+
+  // The cover focus is an optional extra stored in its own table: if that
+  // migration isn't applied yet these writes just fail quietly and the cover
+  // stays centred. A new cover photo resets the focus unless one is sent along.
+  const coverChanged =
+    patch.cover_photo_id !== undefined &&
+    patch.cover_photo_id !== album.cover_photo_id;
+  if (focusRequested || coverChanged) {
+    try {
+      const focus =
+        focusRequested && body.cover_focus
+          ? clampFocus(body.cover_focus)
+          : null;
+      if (focus && !isCenterFocus(focus)) {
+        await supabase.from("album_cover_focus").upsert(
+          {
+            album_id: album.id,
+            focus_x: focus.x,
+            focus_y: focus.y,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "album_id" },
+        );
+      } else {
+        await supabase.from("album_cover_focus").delete().eq("album_id", album.id);
+      }
+    } catch {
+      // Optional data: never fail the album update because of it.
+    }
+  }
+
+  if (Object.keys(patch).length === 0) {
+    return NextResponse.json({ album });
   }
 
   const updated = await supabase

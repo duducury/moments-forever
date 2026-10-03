@@ -1,5 +1,6 @@
 import { resolveLocationDisplayName } from "@moments-forever/shared";
 
+import { loadCoverFocusByAlbum } from "@/lib/experiences/cover-focus";
 import type { TripAlbum, TripPhoto } from "@/app/trip/[slug]/album-types";
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -42,6 +43,11 @@ export async function loadTripAlbums(
     .order("position");
 
   const rows = (albumsResult.data ?? []) as AlbumRow[];
+  // Optional extra (own table); runs alongside the place lookups below.
+  const focusPromise = loadCoverFocusByAlbum(
+    supabase,
+    rows.map((album) => album.id),
+  );
   const momentIds = [
     ...new Set(
       rows
@@ -90,6 +96,8 @@ export async function loadTripAlbums(
     }
   }
 
+  const focusByAlbum = await focusPromise;
+
   return rows.map((album) => {
     const place = album.source_moment_id
       ? (placeByMomentId.get(album.source_moment_id) ?? null)
@@ -109,6 +117,7 @@ export async function loadTripAlbums(
       }),
       description: album.description,
       coverPhotoId: album.cover_photo_id,
+      coverFocus: focusByAlbum.get(album.id) ?? null,
       position: album.position,
       placeId: place?.id ?? null,
       placeName,

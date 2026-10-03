@@ -1,7 +1,9 @@
 "use client";
 
 import {
+  useEffect,
   useMemo,
+  useRef,
   useState,
   type DragEvent as ReactDragEvent,
   type PointerEvent as ReactPointerEvent,
@@ -11,6 +13,11 @@ import {
   comparePlaceRecency,
   type OwnerPlaceCardItem,
 } from "@/lib/experiences/load-owner-place-cards";
+import {
+  filterPlacesByYear,
+  placeYearOptions,
+  type PlaceYearFilter,
+} from "@/lib/experiences/place-years";
 import { setPlaceOrderPrefs } from "@/lib/profile/place-order-prefs";
 
 import { ProfilePlaceCard } from "./profile-place-card";
@@ -61,8 +68,41 @@ export function ProfilePlacesSection({
   const [error, setError] = useState<string | null>(null);
   const [touchPickId, setTouchPickId] = useState<string | null>(null);
 
+  const [yearFilter, setYearFilter] = useState<PlaceYearFilter>("all");
+  const rowRef = useRef<HTMLUListElement | null>(null);
+
   const editing = draft !== null;
   const items = draft ?? datedPlaces;
+
+  const yearOptions = useMemo(
+    () => placeYearOptions(datedPlaces),
+    [datedPlaces],
+  );
+  // A year that no longer has trips (the list changed) counts as Todos.
+  const validFilter: PlaceYearFilter =
+    (typeof yearFilter === "number" && !yearOptions.years.includes(yearFilter)) ||
+    (yearFilter === "none" && !yearOptions.hasUndated)
+      ? "all"
+      : yearFilter;
+  // Reordering always works on the whole list; the filter only applies when browsing.
+  const effectiveFilter: PlaceYearFilter = editing ? "all" : validFilter;
+  const shown = useMemo(
+    () => filterPlacesByYear(items, effectiveFilter),
+    [items, effectiveFilter],
+  );
+  const shownPhotos =
+    effectiveFilter === "all"
+      ? totalPhotos
+      : shown.reduce((sum, place) => sum + place.photoCount, 0);
+  // One year (or none) has nothing to filter between — keep the header quiet.
+  const showYearFilter =
+    !editing &&
+    yearOptions.years.length + (yearOptions.hasUndated ? 1 : 0) >= 2;
+
+  // New filter → start the row from its first card.
+  useEffect(() => {
+    rowRef.current?.scrollTo({ left: 0 });
+  }, [effectiveFilter]);
 
   function moveItem(fromId: string, toId: string) {
     if (fromId === toId) return;
@@ -179,14 +219,47 @@ export function ProfilePlacesSection({
           ) : null}
         </div>
         <p className={styles.sectionMeta}>
-          {items.length} {items.length === 1 ? "viagem" : "viagens"}
-          {totalPhotos > 0
-            ? ` · ${totalPhotos} foto${totalPhotos === 1 ? "" : "s"}`
+          {shown.length} {shown.length === 1 ? "viagem" : "viagens"}
+          {shownPhotos > 0
+            ? ` · ${shownPhotos} foto${shownPhotos === 1 ? "" : "s"}`
             : ""}
           {editing
             ? " · Arraste para reordenar (no celular: toque origem e destino)"
             : ""}
         </p>
+        {showYearFilter ? (
+          <div aria-label="Filtrar viagens por ano" className={styles.yearFilter} role="group">
+            <button
+              aria-pressed={validFilter === "all"}
+              className={styles.yearChip}
+              onClick={() => setYearFilter("all")}
+              type="button"
+            >
+              Todos
+            </button>
+            {yearOptions.years.map((year) => (
+              <button
+                aria-pressed={validFilter === year}
+                className={styles.yearChip}
+                key={year}
+                onClick={() => setYearFilter(year)}
+                type="button"
+              >
+                {year}
+              </button>
+            ))}
+            {yearOptions.hasUndated ? (
+              <button
+                aria-pressed={validFilter === "none"}
+                className={styles.yearChip}
+                onClick={() => setYearFilter("none")}
+                type="button"
+              >
+                Sem data
+              </button>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       {error ? (
@@ -197,10 +270,12 @@ export function ProfilePlacesSection({
 
       <ul
         className={styles.grid}
+        data-layout={editing ? "grid" : "row"}
         data-reorder={editing ? "true" : "false"}
         data-reveal-stagger
+        ref={rowRef}
       >
-        {items.map((place) => (
+        {shown.map((place) => (
           <li
             className={styles.reorderItem}
             data-dragging={dragAlbumId === place.albumId ? "true" : "false"}

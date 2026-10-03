@@ -451,53 +451,6 @@
   color: var(--accent);
 }
 
-/* Trips are one swipeable row (not a tall stack); "Editar" keeps the grid for reordering. */
-.grid[data-layout="row"] {
-  display: flex;
-  gap: 14px;
-  overflow-x: auto;
-  padding-bottom: 6px;
-  scroll-snap-type: x proximity;
-  scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior-x: contain;
-}
-
-.grid[data-layout="row"]::-webkit-scrollbar {
-  display: none;
-}
-
-.grid[data-layout="row"] > li {
-  flex: 0 0 78%;
-  scroll-snap-align: start;
-}
-
-@media (min-width: 560px) {
-  .grid[data-layout="row"] > li {
-    flex-basis: calc((100% - 14px) / 2 - 24px);
-  }
-}
-
-@media (min-width: 720px) {
-  .grid[data-layout="row"] {
-    gap: 20px;
-  }
-
-  .grid[data-layout="row"] > li {
-    flex-basis: calc((100% - 20px) / 2 - 32px);
-  }
-}
-
-@media (min-width: 1024px) {
-  .grid[data-layout="row"] {
-    gap: 22px;
-  }
-
-  .grid[data-layout="row"] > li {
-    flex-basis: calc((100% - 44px) / 3 - 24px);
-  }
-}
-
 .card {
   display: block;
   height: 100%;

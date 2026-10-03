@@ -1,9 +1,7 @@
 "use client";
 
 import {
-  useEffect,
   useMemo,
-  useRef,
   useState,
   type DragEvent as ReactDragEvent,
   type PointerEvent as ReactPointerEvent,
@@ -69,7 +67,6 @@ export function ProfilePlacesSection({
   const [touchPickId, setTouchPickId] = useState<string | null>(null);
 
   const [yearFilter, setYearFilter] = useState<PlaceYearFilter>("all");
-  const rowRef = useRef<HTMLUListElement | null>(null);
 
   const editing = draft !== null;
   const items = draft ?? datedPlaces;
@@ -98,11 +95,6 @@ export function ProfilePlacesSection({
   const showYearFilter =
     !editing &&
     yearOptions.years.length + (yearOptions.hasUndated ? 1 : 0) >= 2;
-
-  // New filter → start the row from its first card.
-  useEffect(() => {
-    rowRef.current?.scrollTo({ left: 0 });
-  }, [effectiveFilter]);
 
   function moveItem(fromId: string, toId: string) {
     if (fromId === toId) return;
@@ -270,10 +262,8 @@ export function ProfilePlacesSection({
 
       <ul
         className={styles.grid}
-        data-layout={editing ? "grid" : "row"}
         data-reorder={editing ? "true" : "false"}
         data-reveal-stagger
-        ref={rowRef}
       >
         {shown.map((place) => (
           <li

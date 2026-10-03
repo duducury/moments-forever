@@ -310,6 +310,20 @@
   display: grid;
   gap: 6px;
   margin-bottom: 14px;
+  /* Stays at the top while the trips scroll under it, and lets go on its own
+     once the section ends (sticky is bounded by .tripsSection). */
+  position: sticky;
+  top: env(safe-area-inset-top, 0px);
+  z-index: calc(var(--z-sticky, 10) - 1);
+  padding: 8px 0 10px;
+  background: var(--background);
+  transition: top 220ms ease;
+}
+
+/* The app's top bar slides away on scroll-down and back on scroll-up; while it
+   is showing, park the heading right below it instead of underneath it. */
+html:not([data-nav-hidden="true"]) .sectionHeading {
+  top: calc(env(safe-area-inset-top, 0px) + 56px);
 }
 
 .sectionHeadingMain {

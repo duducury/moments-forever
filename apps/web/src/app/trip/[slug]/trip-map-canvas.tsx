@@ -160,6 +160,7 @@ export function TripMapCanvas({
   focus = null,
   initialFit = "all",
   currentAlbumId = null,
+  onOpenPhoto,
 }: {
   readonly photos: readonly TripPhoto[];
   readonly experienceSlug?: string | null;
@@ -171,6 +172,7 @@ export function TripMapCanvas({
   readonly focus?: TripMapFocus | null;
   readonly initialFit?: TripMapInitialFit;
   readonly currentAlbumId?: string | null;
+  readonly onOpenPhoto?: (photoId: string) => void;
 }) {
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -181,6 +183,10 @@ export function TripMapCanvas({
     [],
   );
   const [lightboxId, setLightboxId] = useState<string | null>(null);
+  // The map is created asynchronously (Leaflet is imported on demand). Pins are
+  // drawn from an effect, so it has to re-run once the map exists — otherwise
+  // they only showed up if some other state happened to change afterwards.
+  const [mapCreated, setMapCreated] = useState(false);
   const [pinThumbs, setPinThumbs] = useState<Readonly<Record<string, string>>>(
     {},
   );
@@ -370,6 +376,7 @@ export function TripMapCanvas({
       });
 
       mapRef.current = map;
+      setMapCreated(true);
       requestAnimationFrame(() => {
         map.invalidateSize();
         window.setTimeout(() => {
@@ -504,7 +511,14 @@ export function TripMapCanvas({
             return;
           }
 
-          // Nowhere else to go (this folder, or no folder info): keep the preview.
+          // Nowhere else to go (this folder, or no folder info). When the host
+          // page can show the photo itself, open it there — no sheet inside the map.
+          const firstPhotoId = cluster.points[0]?.data.id;
+          if (onOpenPhoto && firstPhotoId) {
+            onOpenPhoto(firstPhotoId);
+            return;
+          }
+
           const ids = cluster.points.map((point) => point.data.id);
           setSelectedPhotoIds(ids);
           setLightboxId(null);
@@ -523,6 +537,8 @@ export function TripMapCanvas({
     currentAlbumId,
     experienceSlug,
     geoPoints.length,
+    mapCreated,
+    onOpenPhoto,
     pinThumbs,
     router,
     selectedIdSet,

@@ -52,6 +52,7 @@ export function TripMap({
   focus = null,
   initialFit = "all",
   currentAlbumId = null,
+  onOpenPhoto,
 }: {
   readonly photos: readonly TripPhoto[];
   readonly experienceSlug?: string | null;
@@ -63,6 +64,12 @@ export function TripMap({
   readonly focus?: TripMapFocus | null;
   readonly initialFit?: TripMapInitialFit;
   readonly currentAlbumId?: string | null;
+  /**
+   * When the map is embedded in a folder that can show photos itself, tapping
+   * a pin of that folder calls this with the photo to open instead of showing
+   * the map's own preview sheet.
+   */
+  readonly onOpenPhoto?: (photoId: string) => void;
 }) {
   if (variant === "immersive") {
     return (
@@ -87,6 +94,7 @@ export function TripMap({
       experienceTitle={experienceTitle}
       focus={focus}
       initialFit={initialFit}
+      onOpenPhoto={onOpenPhoto}
       photos={photos}
       variant={variant}
     />

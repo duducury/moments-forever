@@ -704,6 +704,7 @@ export function AlbumFolderView({
               experienceTitle={experience.title}
               focus={placeMapFocus}
               initialFit="focus"
+              onOpenPhoto={setLightboxId}
               photos={albumPhotos}
               variant="featured"
             />

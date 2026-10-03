@@ -306,6 +306,12 @@
   scroll-margin-bottom: 100px;
 }
 
+.stickySentinel {
+  height: 1px;
+  margin-bottom: -1px;
+  pointer-events: none;
+}
+
 .sectionHeading {
   display: grid;
   gap: 6px;
@@ -317,13 +323,19 @@
   z-index: calc(var(--z-sticky, 10) - 1);
   padding: 8px 0 10px;
   background: var(--background);
-  transition: top 220ms ease;
+  transition:
+    transform 200ms ease,
+    opacity 200ms ease;
 }
 
-/* The app's top bar slides away on scroll-down and back on scroll-up; while it
-   is showing, park the heading right below it instead of underneath it. */
-html:not([data-nav-hidden="true"]) .sectionHeading {
-  top: calc(env(safe-area-inset-top, 0px) + 56px);
+/* The app's top bar slides away on scroll-down and comes back on scroll-up. It
+   is see-through with the logo, so while it is showing, a pinned heading would
+   sit right under it and look like a stray coloured block: tuck the pinned
+   heading away until the bar hides again (typing in the search keeps it). */
+html:not([data-nav-hidden="true"]) .sectionHeading[data-stuck="true"]:not(:focus-within) {
+  transform: translateY(-120%);
+  opacity: 0;
+  pointer-events: none;
 }
 
 .sectionHeadingMain {
@@ -341,19 +353,46 @@ html:not([data-nav-hidden="true"]) .sectionHeading {
 }
 
 .sectionEditButton {
-  padding: 6px 12px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
+  padding: 4px 6px;
+  border: 0;
+  border-radius: 8px;
   background: transparent;
-  color: var(--text);
+  color: var(--muted);
   font: inherit;
-  font-size: 0.88rem;
-  font-weight: 650;
+  font-size: 0.8rem;
+  font-weight: 500;
   cursor: pointer;
 }
 
 .sectionEditButton:hover {
-  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+  color: var(--text);
+}
+
+.placeSearch {
+  flex: 1 1 140px;
+  min-width: 0;
+  max-width: 280px;
+}
+
+.placeSearchInput {
+  width: 100%;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
+  color: var(--text);
+  font: inherit;
+  /* 16px+ keeps iOS from zooming the page when the field is focused. */
+  font-size: 1rem;
+}
+
+.placeSearchInput::placeholder {
+  color: var(--muted);
+}
+
+.placeSearchInput:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 60%, transparent);
+  outline-offset: 1px;
 }
 
 .sectionMeta {

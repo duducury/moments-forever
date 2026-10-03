@@ -1,7 +1,9 @@
 "use client";
 
 import {
+  useEffect,
   useMemo,
+  useRef,
   useState,
   type DragEvent as ReactDragEvent,
   type PointerEvent as ReactPointerEvent,
@@ -16,6 +18,7 @@ import {
   placeYearOptions,
   type PlaceYearFilter,
 } from "@/lib/experiences/place-years";
+import { filterPlacesByQuery } from "@/lib/experiences/search-places";
 import { setPlaceOrderPrefs } from "@/lib/profile/place-order-prefs";
 
 import { ProfilePlaceCard } from "./profile-place-card";
@@ -68,6 +71,22 @@ export function ProfilePlacesSection({
 
   const [yearFilter, setYearFilter] = useState<PlaceYearFilter>("all");
 
+  const [query, setQuery] = useState("");
+  // True once the heading has scrolled up to its pinned spot (see the sentinel).
+  const [stuck, setStuck] = useState(false);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry) return;
+      setStuck(!entry.isIntersecting && entry.boundingClientRect.top < 0);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
   const editing = draft !== null;
   const items = draft ?? datedPlaces;
 
@@ -83,12 +102,18 @@ export function ProfilePlacesSection({
       : yearFilter;
   // Reordering always works on the whole list; the filter only applies when browsing.
   const effectiveFilter: PlaceYearFilter = editing ? "all" : validFilter;
+  // Same for the search: reordering needs the whole list.
+  const effectiveQuery = editing ? "" : query;
   const shown = useMemo(
-    () => filterPlacesByYear(items, effectiveFilter),
-    [items, effectiveFilter],
+    () =>
+      filterPlacesByQuery(
+        filterPlacesByYear(items, effectiveFilter),
+        effectiveQuery,
+      ),
+    [items, effectiveFilter, effectiveQuery],
   );
   const shownPhotos =
-    effectiveFilter === "all"
+    effectiveFilter === "all" && effectiveQuery.trim() === ""
       ? totalPhotos
       : shown.reduce((sum, place) => sum + place.photoCount, 0);
   // One year (or none) has nothing to filter between — keep the header quiet.
@@ -176,9 +201,24 @@ export function ProfilePlacesSection({
       data-reveal
       id="viagens"
     >
-      <div className={styles.sectionHeading}>
+      <div aria-hidden="true" className={styles.stickySentinel} ref={sentinelRef} />
+      <div className={styles.sectionHeading} data-stuck={stuck ? "true" : "false"}>
         <div className={styles.sectionHeadingMain}>
           <h2 className={styles.sectionTitle}>Viagens</h2>
+          {!editing && datedPlaces.length > 1 ? (
+            <div className={styles.placeSearch} role="search">
+              <input
+                aria-label="Buscar viagem"
+                autoComplete="off"
+                className={styles.placeSearchInput}
+                enterKeyHint="search"
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Buscar viagem"
+                type="search"
+                value={query}
+              />
+            </div>
+          ) : null}
           {isOwner ? (
             editing ? (
               <div className={styles.sectionHeadingActions}>
@@ -257,6 +297,12 @@ export function ProfilePlacesSection({
       {error ? (
         <p className={styles.dialogError} role="alert">
           {error}
+        </p>
+      ) : null}
+
+      {shown.length === 0 && effectiveQuery.trim() !== "" ? (
+        <p className={styles.sectionMeta} role="status">
+          Nenhuma viagem encontrada para “{effectiveQuery.trim()}”.
         </p>
       ) : null}
 

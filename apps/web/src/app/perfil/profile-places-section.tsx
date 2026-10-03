@@ -219,46 +219,47 @@ export function ProfilePlacesSection({
               />
             </div>
           ) : null}
-          {isOwner ? (
-            editing ? (
-              <div className={styles.sectionHeadingActions}>
-                <button
-                  className="button primary"
-                  disabled={busy}
-                  onClick={() => void onConfirm()}
-                  type="button"
-                >
-                  {busy ? "Salvando…" : "OK"}
-                </button>
-                <button
-                  className="button secondary"
-                  disabled={busy}
-                  onClick={onCancel}
-                  type="button"
-                >
-                  Cancelar
-                </button>
-              </div>
-            ) : (
+          {isOwner && editing ? (
+            <div className={styles.sectionHeadingActions}>
               <button
-                className={styles.sectionEditButton}
-                onClick={() => setDraft([...datedPlaces])}
+                className="button primary"
+                disabled={busy}
+                onClick={() => void onConfirm()}
                 type="button"
               >
-                Editar
+                {busy ? "Salvando…" : "OK"}
               </button>
-            )
+              <button
+                className="button secondary"
+                disabled={busy}
+                onClick={onCancel}
+                type="button"
+              >
+                Cancelar
+              </button>
+            </div>
           ) : null}
         </div>
-        <p className={styles.sectionMeta}>
-          {shown.length} {shown.length === 1 ? "viagem" : "viagens"}
-          {shownPhotos > 0
-            ? ` · ${shownPhotos} foto${shownPhotos === 1 ? "" : "s"}`
-            : ""}
-          {editing
-            ? " · Arraste para reordenar (no celular: toque origem e destino)"
-            : ""}
-        </p>
+        <div className={styles.sectionMetaRow}>
+          <p className={styles.sectionMeta}>
+            {shown.length} {shown.length === 1 ? "viagem" : "viagens"}
+            {shownPhotos > 0
+              ? ` · ${shownPhotos} foto${shownPhotos === 1 ? "" : "s"}`
+              : ""}
+            {editing
+              ? " · Arraste para reordenar (no celular: toque origem e destino)"
+              : ""}
+          </p>
+          {isOwner && !editing ? (
+            <button
+              className={styles.sectionEditButton}
+              onClick={() => setDraft([...datedPlaces])}
+              type="button"
+            >
+              Editar
+            </button>
+          ) : null}
+        </div>
         {showYearFilter ? (
           <div aria-label="Filtrar viagens por ano" className={styles.yearFilter} role="group">
             <button

@@ -353,7 +353,9 @@ html:not([data-nav-hidden="true"]) .sectionHeading[data-stuck="true"]:not(:focus
 }
 
 .sectionEditButton {
-  padding: 4px 6px;
+  flex: 0 0 auto;
+  margin-right: -6px;
+  padding: 2px 6px;
   border: 0;
   border-radius: 8px;
   background: transparent;
@@ -372,6 +374,15 @@ html:not([data-nav-hidden="true"]) .sectionHeading[data-stuck="true"]:not(:focus
   flex: 1 1 140px;
   min-width: 0;
   max-width: 280px;
+  margin-left: auto;
+}
+
+/* Count on the left, the quiet Editar link right under the search. */
+.sectionMetaRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .placeSearchInput {

@@ -1,3 +1,4 @@
+import { mapWithConcurrency } from "@/lib/async/map-with-concurrency";
 import { mapLocalDateSourceToDb } from "@moments-forever/shared";
 
 import { putLocalPhotoBlobs } from "@/lib/local-photos/photo-blob-store";
@@ -39,7 +40,7 @@ export async function uploadFilesToAlbum(input: {
   readonly onProgress?: (message: string) => void;
 }): Promise<{ readonly cloudWarning: string | null }> {
   const { experienceId, albumId, files, onProgress } = input;
-  const prepared: Array<{
+  type PreparedPhoto = {
     readonly id: string;
     readonly full: Blob;
     readonly thumbnail: Blob | null;
@@ -54,43 +55,50 @@ export async function uploadFilesToAlbum(input: {
       readonly bytes: number;
       readonly format: string | null;
     };
-  }> = [];
+  };
 
-  for (const [index, file] of files.entries()) {
-    onProgress?.(`Lendo foto ${index + 1} de ${files.length}…`);
-    const id = crypto.randomUUID();
-    const metadata = await extractBrowserPhotoMetadata(id, file);
-    const derivatives = await createBrowserPhotoDerivatives(file);
-    const thumbnail = derivatives?.thumbnail ?? null;
-    const preview = derivatives?.preview ?? null;
-    const full = preview?.blob ?? thumbnail?.blob ?? null;
-    if (!full) {
-      throw new Error(
-        `Não foi possível preparar a foto ${file.name || index + 1} neste navegador.`,
+  // CPU-bound (EXIF + resized preview/thumbnail): two at a time, in input order.
+  let read = 0;
+  const prepared: PreparedPhoto[] = await mapWithConcurrency(
+    files,
+    2,
+    async (file, index): Promise<PreparedPhoto> => {
+      const id = crypto.randomUUID();
+      const metadata = await extractBrowserPhotoMetadata(id, file);
+      const derivatives = await createBrowserPhotoDerivatives(file);
+      const thumbnail = derivatives?.thumbnail ?? null;
+      const preview = derivatives?.preview ?? null;
+      const full = preview?.blob ?? thumbnail?.blob ?? null;
+      if (!full) {
+        throw new Error(
+          `Não foi possível preparar a foto ${file.name || index + 1} neste navegador.`,
+        );
+      }
+      const mapped = mapLocalDateSourceToDb(
+        metadata.dateSource,
+        metadata.date,
+        metadata.exif.availableFields,
       );
-    }
-    const mapped = mapLocalDateSourceToDb(
-      metadata.dateSource,
-      metadata.date,
-      metadata.exif.availableFields,
-    );
-    prepared.push({
-      id,
-      full,
-      thumbnail: thumbnail?.blob ?? null,
-      payloadBase: {
+      read += 1;
+      onProgress?.(`Lendo foto ${read} de ${files.length}…`);
+      return {
         id,
-        captured_at: mapped.capturedAt,
-        date_source: mapped.dateSource,
-        exact_latitude: metadata.gps?.latitude ?? null,
-        exact_longitude: metadata.gps?.longitude ?? null,
-        width: metadata.dimensions?.width ?? thumbnail?.width ?? null,
-        height: metadata.dimensions?.height ?? thumbnail?.height ?? null,
-        bytes: full.size,
-        format: full.type || "image/jpeg",
-      },
-    });
-  }
+        full,
+        thumbnail: thumbnail?.blob ?? null,
+        payloadBase: {
+          id,
+          captured_at: mapped.capturedAt,
+          date_source: mapped.dateSource,
+          exact_latitude: metadata.gps?.latitude ?? null,
+          exact_longitude: metadata.gps?.longitude ?? null,
+          width: metadata.dimensions?.width ?? thumbnail?.width ?? null,
+          height: metadata.dimensions?.height ?? thumbnail?.height ?? null,
+          bytes: full.size,
+          format: full.type || "image/jpeg",
+        },
+      };
+    },
+  );
 
   onProgress?.("Salvando fotos neste aparelho…");
   await putLocalPhotoBlobs(

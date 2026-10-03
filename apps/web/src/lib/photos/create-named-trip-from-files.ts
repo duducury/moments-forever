@@ -4,6 +4,7 @@ import {
 } from "@moments-forever/shared";
 import type { LocalPhotoMetadata, PhotoImportGroup } from "@moments-forever/types";
 
+import { mapWithConcurrency } from "@/lib/async/map-with-concurrency";
 import { putLocalPhotoBlobs } from "@/lib/local-photos/photo-blob-store";
 import {
   createBrowserPhotoDerivatives,
@@ -24,12 +25,16 @@ export class TripLicenseError extends Error {
   }
 }
 
+const PREPARE_CONCURRENCY = 2;
+
 /**
  * Creates one trip + one named album and uploads the chosen photos.
  * Skips the GPS group / “juntar lugares” review — destination choice is final.
  */
 export async function createNamedTripFromFiles(input: {
   readonly files: readonly File[];
+  /** The photo the person starred as the cover; defaults to the first file. */
+  readonly coverFile?: File | null;
   readonly name: string;
   readonly story?: string;
   readonly ownerId: string;
@@ -48,35 +53,44 @@ export async function createNamedTripFromFiles(input: {
     throw new Error("Selecione ao menos uma foto.");
   }
 
-  const photos: LocalPhotoMetadata[] = [];
-  const blobs: Array<{
-    readonly id: string;
-    readonly full: Blob;
-    readonly thumbnail: Blob | null;
-  }> = [];
-
-  for (const [index, file] of input.files.entries()) {
-    input.onProgress?.(
-      `Preparando foto ${index + 1} de ${input.files.length}…`,
-    );
-    const id = crypto.randomUUID();
-    const metadata = await extractBrowserPhotoMetadata(id, file);
-    const derivatives = await createBrowserPhotoDerivatives(file);
-    const thumbnail = derivatives?.thumbnail ?? null;
-    const preview = derivatives?.preview ?? null;
-    const full = preview?.blob ?? thumbnail?.blob ?? null;
-    if (!full) {
-      throw new Error(
-        `Não foi possível preparar a foto ${file.name || index + 1} neste navegador.`,
+  // Preparing a photo (EXIF + resized preview/thumbnail) is CPU-bound; two at a
+  // time is a good trade between speed and a phone's memory.
+  let prepared = 0;
+  const preparedPhotos = await mapWithConcurrency(
+    input.files,
+    PREPARE_CONCURRENCY,
+    async (file, index) => {
+      const id = crypto.randomUUID();
+      const metadata = await extractBrowserPhotoMetadata(id, file);
+      const derivatives = await createBrowserPhotoDerivatives(file);
+      const thumbnail = derivatives?.thumbnail ?? null;
+      const preview = derivatives?.preview ?? null;
+      const full = preview?.blob ?? thumbnail?.blob ?? null;
+      if (!full) {
+        throw new Error(
+          `Não foi possível preparar a foto ${file.name || index + 1} neste navegador.`,
+        );
+      }
+      prepared += 1;
+      input.onProgress?.(
+        `Preparando foto ${prepared} de ${input.files.length}…`,
       );
-    }
-    photos.push(metadata);
-    blobs.push({
-      id,
-      full,
-      thumbnail: thumbnail?.blob ?? null,
-    });
-  }
+      return {
+        metadata,
+        blob: { id, full, thumbnail: thumbnail?.blob ?? null },
+      };
+    },
+  );
+  const photos: LocalPhotoMetadata[] = preparedPhotos.map((item) => item.metadata);
+  const blobs = preparedPhotos.map((item) => item.blob);
+
+  // The starred photo (or the first one) becomes the cover. The draft would
+  // otherwise pick "first by date", ignoring the star.
+  const coverIndex = Math.max(
+    0,
+    input.coverFile ? input.files.indexOf(input.coverFile) : 0,
+  );
+  const coverPhotoId = blobs[coverIndex]?.id ?? null;
 
   const groupId =
     typeof crypto.randomUUID === "function"
@@ -92,7 +106,7 @@ export async function createNamedTripFromFiles(input: {
   };
 
   const slug = suggestExperienceSlug(name);
-  const draft = buildExperienceDraftFromImport({
+  const builtDraft = buildExperienceDraftFromImport({
     ownerId: input.ownerId,
     title: name,
     slug,
@@ -101,6 +115,14 @@ export async function createNamedTripFromFiles(input: {
     selectedIds: photos.map((photo) => photo.id),
     description: input.story?.trim() || null,
   });
+
+  const draft =
+    coverPhotoId && builtDraft.photos.some((photo) => photo.id === coverPhotoId)
+      ? {
+          ...builtDraft,
+          experience: { ...builtDraft.experience, coverPhotoId },
+        }
+      : builtDraft;
 
   if (draft.photos.length === 0 || draft.moments.length === 0) {
     throw new Error("Nenhuma foto válida para criar o álbum.");
@@ -157,6 +179,19 @@ export async function createNamedTripFromFiles(input: {
   const albumId = roots[0]?.id;
   if (!albumId) {
     throw new Error("Álbum criado, mas a pasta principal não foi encontrada.");
+  }
+
+  // Make the starred photo the album's cover too (that is what the profile card shows).
+  if (coverPhotoId) {
+    try {
+      await fetch(`/api/albums/${albumId}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ cover_photo_id: coverPhotoId }),
+      });
+    } catch {
+      // Best effort: the album still exists, the cover can be changed in "Editar".
+    }
   }
 
   input.onProgress?.("Enviando ao armazenamento permanente…");

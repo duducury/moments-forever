@@ -9,6 +9,11 @@
  * are not uploaded. See docs/photo-storage.md.
  */
 
+import { mapWithConcurrency } from "@/lib/async/map-with-concurrency";
+
+/** How many photos upload at once: enough to hide round-trip latency without choking a phone's connection. */
+const UPLOAD_CONCURRENCY = 3;
+
 export async function uploadPhotoBlobsToR2(input: {
   readonly photoId: string;
   readonly experienceId: string;
@@ -16,27 +21,28 @@ export async function uploadPhotoBlobsToR2(input: {
   readonly full: Blob;
   readonly thumbnail: Blob | null;
 }): Promise<void> {
-  const originalType = input.full.type || "image/jpeg";
-  const original = await requestUploadUrl({
-    photoId: input.photoId,
-    experienceId: input.experienceId,
-    variant: "original",
-    contentType: originalType,
-  });
-  await putToSignedUrl(original.uploadUrl, input.full, originalType);
-
-  let thumbnailKey: string | null = null;
-  if (input.thumbnail && input.thumbnail.size > 0) {
-    const thumbType = input.thumbnail.type || "image/jpeg";
-    const thumb = await requestUploadUrl({
+  // The preview and the thumbnail are independent: send both at the same time.
+  const sendVariant = async (
+    variant: "original" | "thumbnail",
+    blob: Blob,
+  ): Promise<string> => {
+    const contentType = blob.type || "image/jpeg";
+    const target = await requestUploadUrl({
       photoId: input.photoId,
       experienceId: input.experienceId,
-      variant: "thumbnail",
-      contentType: thumbType,
+      variant,
+      contentType,
     });
-    await putToSignedUrl(thumb.uploadUrl, input.thumbnail, thumbType);
-    thumbnailKey = thumb.key;
-  }
+    await putToSignedUrl(target.uploadUrl, blob, contentType);
+    return target.key;
+  };
+
+  const [originalKey, thumbnailKey] = await Promise.all([
+    sendVariant("original", input.full),
+    input.thumbnail && input.thumbnail.size > 0
+      ? sendVariant("thumbnail", input.thumbnail)
+      : Promise.resolve<string | null>(null),
+  ]);
 
   const confirm = await fetch("/api/media/confirm", {
     method: "POST",
@@ -44,7 +50,7 @@ export async function uploadPhotoBlobsToR2(input: {
     body: JSON.stringify({
       photoId: input.photoId,
       experienceId: input.experienceId,
-      storageKey: original.key,
+      storageKey: originalKey,
       thumbnailStorageKey: thumbnailKey,
     }),
   });
@@ -90,7 +96,7 @@ async function putToSignedUrl(
     });
   } catch {
     throw new Error(
-      "Não foi possível enviar ao armazenamento (rede ou CORS do R2). No Cloudflare R2 → Settings → CORS, permita PUT do domínio da app (ex.: https://moments-forever-web.vercel.app).",
+      "Não foi possível enviar ao armazenamento (rede ou CORS do R2). No Cloudflare R2 → Settings → CORS, permita PUT do domínio da app (ex.: https://momentsforever.vercel.app).",
     );
   }
   if (!response.ok) {
@@ -110,7 +116,7 @@ export async function uploadManyPhotoBlobsToR2(
   onProgress?: (done: number, total: number) => void,
 ): Promise<void> {
   let done = 0;
-  for (const item of items) {
+  await mapWithConcurrency(items, UPLOAD_CONCURRENCY, async (item) => {
     await uploadPhotoBlobsToR2({
       photoId: item.id,
       experienceId,
@@ -119,7 +125,7 @@ export async function uploadManyPhotoBlobsToR2(
     });
     done += 1;
     onProgress?.(done, items.length);
-  }
+  });
 }
 
 export type SyncLocalPhotosToR2Result = {

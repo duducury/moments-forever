@@ -369,13 +369,12 @@ export function ImportDestination({
     setProgress("Preparando suas fotos…");
     let navigating = false;
     try {
+      // The star shows `coverFile`, or the first photo when none was picked.
       const chosenCover =
-        coverFile && files.includes(coverFile) ? coverFile : null;
-      const orderedFiles = chosenCover
-        ? [chosenCover, ...files.filter((file) => file !== chosenCover)]
-        : files;
+        coverFile && files.includes(coverFile) ? coverFile : (files[0] ?? null);
       const result = await createNamedTripFromFiles({
-        files: orderedFiles,
+        files,
+        coverFile: chosenCover,
         name,
         story: newStory,
         ownerId: user.id,

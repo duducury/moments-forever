@@ -26,6 +26,8 @@
 	<true/>
 	<key>NFCReaderUsageDescription</key>
 	<string>Usamos o NFC para gravar e abrir suas viagens ao encostar o celular numa tag.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Usamos a câmera para você tirar uma foto e adicioná-la à sua viagem.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

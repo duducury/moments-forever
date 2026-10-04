@@ -187,8 +187,12 @@ import CoreNFC
             print("NFC writing not supported on this device")
             return
         }
+        // No .iso18092 (FeliCa) on purpose: polling for it requires the Info.plist
+        // key com.apple.developer.nfc.readersession.felica.systemcodes, and
+        // without it iOS ends the session with "Missing required entitlement".
+        // NDEF tags (NTAG/MIFARE = .iso14443, Type 5 = .iso15693) need no extra keys.
         guard let session = NFCTagReaderSession(
-            pollingOption: [.iso14443, .iso15693, .iso18092],
+            pollingOption: [.iso14443, .iso15693],
             delegate: self,
             queue: nil
         ) else {
@@ -288,7 +292,10 @@ import CoreNFC
 
 if (existsSync(writerPath)) {
   const currentWriterSource = readFileSync(writerPath, "utf-8");
-  if (currentWriterSource.includes("NFCTagReaderSessionDelegate")) {
+  // Compare the whole file (not just "is it TAG-based"), so an install that was
+  // patched by an older version of this script — e.g. one that still polled
+  // FeliCa — gets updated too.
+  if (currentWriterSource === patchedWriterSource) {
     console.log(`[fix-capacitor-nfc-plugin] ${writerPath} already patched — nothing to do.`);
   } else {
     writeFileSync(writerPath, patchedWriterSource);

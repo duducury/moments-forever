@@ -25,3 +25,4 @@ alwaysApply: true
 - Use thumbnails no mapa; nunca carregue originais nele.
 - Faça cada NFC abrir diretamente uma única memória por URL permanente, nunca apenas a homepage.
 - Registre decisões novas no documento de responsabilidade correspondente, sem repetir contexto.
+- Antes de preparar qualquer build iOS, siga `docs/releasing.md`: confira `npm run ios:version`, nunca reutilize um Build Number e nunca mostre a versão dentro do app.

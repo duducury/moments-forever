@@ -183,12 +183,14 @@ export function AppBottomNav({
         ) : null}
 
         <li className={styles.item}>
+          {/* No `prefetch` prop: a full prefetch keeps this dynamic page in the
+              client router cache for 5 minutes, so a trip created in the
+              meantime would not show up in the passport. */}
           <Link
             aria-current={passportActive ? "page" : undefined}
             className={styles.tab}
             data-active={passportActive ? "true" : "false"}
             href={passaporteHref}
-            prefetch
           >
             <span className={styles.icon}>
               <PassportIcon />

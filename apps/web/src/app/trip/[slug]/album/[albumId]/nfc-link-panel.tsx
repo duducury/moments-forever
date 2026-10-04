@@ -22,7 +22,7 @@ type ViewState =
   | { readonly step: "checking" }
   | { readonly step: "linking" }
   | { readonly step: "writing" }
-  | { readonly step: "success" }
+  | { readonly step: "success"; readonly url: string }
   | { readonly step: "created"; readonly url: string }
   | { readonly step: "existing"; readonly url: string }
   | { readonly step: "error"; readonly message: string };
@@ -86,7 +86,7 @@ export function NfcLinkPanel({
     setState({ step: "writing" });
     try {
       await writeUrlToNfcTagAuto(url);
-      setState({ step: "success" });
+      setState({ step: "success", url });
     } catch (err) {
       setState({
         step: "error",
@@ -99,7 +99,7 @@ export function NfcLinkPanel({
     setState({ step: "writing" });
     try {
       await writeUrlToNfcTagAuto(url);
-      setState({ step: "success" });
+      setState({ step: "success", url });
     } catch (err) {
       setState({
         step: "error",
@@ -213,7 +213,18 @@ export function NfcLinkPanel({
 
         {state.step === "existing" ? (
           <p className={styles.sectionHint}>
-            Esta viagem já possui uma tag NFC.
+            Esta viagem já tem uma tag NFC. Você pode vincular quantas tags
+            quiser à mesma viagem: todas abrem <strong>{albumTitle}</strong>.
+          </p>
+        ) : null}
+
+        {(state.step === "existing" ||
+          state.step === "created" ||
+          state.step === "success") &&
+        !canWriteDirectly ? (
+          <p className={styles.sectionHint}>
+            Este aparelho não grava NFC por aqui. Abra o app Moments Forever no
+            iPhone, ou copie o link e grave em outras tags com um app de NFC.
           </p>
         ) : null}
 
@@ -224,15 +235,17 @@ export function NfcLinkPanel({
         ) : null}
 
         <div className={styles.panelActions}>
-          {state.step === "existing" || state.step === "created" ? (
+          {state.step === "existing" ||
+          state.step === "created" ||
+          state.step === "success" ? (
             <>
               {canWriteDirectly ? (
                 <button
-                  className="button secondary"
+                  className="button primary"
                   onClick={() => void writeAgain(state.url)}
                   type="button"
                 >
-                  Gravar em nova tag
+                  Vincular outra tag
                 </button>
               ) : null}
               <button

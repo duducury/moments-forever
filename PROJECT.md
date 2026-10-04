@@ -33,3 +33,4 @@ React Native com Expo Development Builds no mobile, Next.js no web, API TypeScri
 - Localização exata permanece privada; a visão pública usa lugar ou posição aproximada.
 - Acesso a mídia privada nunca depende de URL obscura.
 - IA, vídeo, pagamentos e recursos sociais ficam fora do MVP.
+- Versão e build do app iOS seguem `docs/releasing.md`: `MARKETING_VERSION` é a versão pública, `CURRENT_PROJECT_VERSION` sobe +1 a cada build enviado e nunca se repete; a versão não aparece no app.

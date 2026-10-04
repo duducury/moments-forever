@@ -5,7 +5,7 @@ import { useEffect, useState, type FormEvent } from "react";
 
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { OAuthButtons, type OAuthProvider } from "@/components/oauth-buttons";
-import { signInWithAppleNative } from "@/lib/auth/apple-sign-in";
+import { appleDebugLog, signInWithAppleNative } from "@/lib/auth/apple-sign-in";
 
 import { AppBootSplash } from "./app-boot-splash";
 import { useAuth } from "./auth-provider";
@@ -47,6 +47,10 @@ export function AuthForm() {
 
   useEffect(() => {
     if (!authLoading && session) {
+      // TEMP-APPLE-DEBUG
+      appleDebugLog("9/9 sessão presente em /login -> router.replace('/perfil')", {
+        provider: session.user?.app_metadata?.provider,
+      });
       router.replace("/perfil");
     }
   }, [authLoading, session, router]);
@@ -116,7 +120,13 @@ export function AuthForm() {
     if (provider === "apple") {
       // Native sheet, no redirect: on success the session shows up through
       // AuthProvider and the effect above sends the user to /perfil.
+      appleDebugLog("0/9 botão 'Continuar com a Apple' tocado");
       const result = await signInWithAppleNative(authClient);
+      // TEMP-APPLE-DEBUG
+      appleDebugLog("form: resultado do fluxo Apple", {
+        status: result.status,
+        shownToUser: result.status === "error" ? result.message : undefined,
+      });
       if (result.status === "error") setMessage(result.message);
       setBusy(false);
       return;

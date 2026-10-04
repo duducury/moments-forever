@@ -19,6 +19,63 @@ export const APPLE_NATIVE_CLIENT_ID = "com.momentsforever.app";
 /** Plugin API requires a redirectURI; the native sheet never uses it. */
 const APPLE_UNUSED_REDIRECT_URI = "https://momentsforever.vercel.app";
 
+// ---------------------------------------------------------------------------
+// TEMP-APPLE-DEBUG — temporary diagnostics for the on-device Sign in with Apple
+// failure. Observation only: it never changes what the flow does. It logs
+// booleans, lengths and error fields — never the identity token, the
+// authorization code, the raw nonce, or any credential. Remove with the
+// "[APPLE-DEBUG]" calls once the cause is found.
+// ---------------------------------------------------------------------------
+const DEBUG_PREFIX = "[APPLE-DEBUG]";
+
+/** Strip anything that looks like a JWT, in case an error message echoes one. */
+function redact(text: string): string {
+  return text.replace(/eyJ[\w-]+\.[\w-]+\.[\w-]*/g, "[jwt-redacted]").slice(0, 600);
+}
+
+export function appleDebugLog(step: string, details?: Record<string, unknown>): void {
+  try {
+    console.log(DEBUG_PREFIX, step, details ? redact(JSON.stringify(details)) : "");
+  } catch {
+    // Logging must never affect the flow.
+  }
+}
+
+function pick(source: unknown, key: string): unknown {
+  if (!source || typeof source !== "object") return undefined;
+  const value = (source as Record<string, unknown>)[key];
+  if (value === undefined || value === null) return undefined;
+  return typeof value === "object" ? safeJson(value) : value;
+}
+
+function safeJson(value: unknown): string {
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
+}
+
+/** Every field that helps tell a plugin error from a Supabase/Auth error. */
+export function describeError(error: unknown): Record<string, unknown> {
+  if (error === null || error === undefined) return { error: String(error) };
+  const isObject = typeof error === "object";
+  return {
+    type: typeof error,
+    constructor: isObject ? (error as object).constructor?.name : undefined,
+    name: pick(error, "name"),
+    message: isObject ? pick(error, "message") : String(error),
+    code: pick(error, "code"),
+    status: pick(error, "status"),
+    details: pick(error, "details"),
+    hint: pick(error, "hint"),
+    localizedDescription: pick(error, "localizedDescription"),
+    errorMessage: pick(error, "errorMessage"),
+    keys: isObject ? Object.getOwnPropertyNames(error as object) : undefined,
+  };
+}
+// ---------------------------------------------------------------------------
+
 type CapacitorGlobal = {
   readonly isNativePlatform?: () => boolean;
   readonly getPlatform?: () => string;
@@ -193,7 +250,8 @@ async function saveAppleName(
       },
     });
     await supabase.from("users").update({ display_name: fullName }).eq("id", user.id);
-  } catch {
+  } catch (error) {
+    appleDebugLog("nome: falha ao salvar (ignorada, login segue)", describeError(error));
     // The account exists either way; the name can still be edited in the profile.
   }
 }
@@ -202,34 +260,94 @@ export async function signInWithAppleNative(
   supabase: AppleSupabaseClient,
   deps: AppleSignInDeps = {},
 ): Promise<AppleSignInResult> {
+  try {
+    return await runSignInWithAppleNative(supabase, deps);
+  } catch (error) {
+    // TEMP-APPLE-DEBUG: log, then rethrow so behaviour is unchanged.
+    appleDebugLog("8/9 EXCEÇÃO GERAL (relançada)", describeError(error));
+    throw error;
+  }
+}
+
+async function runSignInWithAppleNative(
+  supabase: AppleSupabaseClient,
+  deps: AppleSignInDeps,
+): Promise<AppleSignInResult> {
   const authorize = deps.authorize ?? authorizeWithPlugin;
   const createNonce = deps.createNonce ?? createNoncePair;
 
   let authorization: AppleAuthorizeResult;
   let nonce: NoncePair;
   try {
+    appleDebugLog("1/9 antes de gerar o nonce", {
+      isSecureContext: typeof window !== "undefined" ? window.isSecureContext : undefined,
+      hasCrypto: typeof crypto !== "undefined",
+      hasCryptoSubtle: typeof crypto !== "undefined" && Boolean(crypto.subtle),
+      hasCapacitor: Boolean(readCapacitor()),
+      platform: readCapacitor()?.getPlatform?.(),
+    });
     nonce = await createNonce();
+    appleDebugLog("2/9 nonce gerado", {
+      rawLength: nonce.raw.length,
+      hashedLength: nonce.hashed.length,
+      hashedIsHex64: /^[0-9a-f]{64}$/.test(nonce.hashed),
+    });
+    appleDebugLog("3/9 antes de chamar SignInWithApple.authorize()", {
+      clientId: APPLE_NATIVE_CLIENT_ID,
+      scopes: "email name",
+      nonceSentToAppleLength: nonce.hashed.length,
+    });
     authorization = await authorize({
       clientId: APPLE_NATIVE_CLIENT_ID,
       redirectURI: APPLE_UNUSED_REDIRECT_URI,
       scopes: "email name",
       nonce: nonce.hashed,
     });
+    const response = authorization?.response;
+    appleDebugLog("4/9 authorize() RETORNOU", {
+      hasResponse: Boolean(response),
+      identityTokenPresent: Boolean(response?.identityToken),
+      identityTokenLength: response?.identityToken?.length ?? 0,
+      authorizationCodePresent: Boolean(response?.authorizationCode),
+      emailPresent: Boolean(response?.email),
+      namePresent: Boolean(response?.givenName || response?.familyName),
+      responseKeys: response ? Object.keys(response) : [],
+    });
   } catch (error) {
+    appleDebugLog("5/9 authorize()/nonce LANÇOU ERRO", {
+      ...describeError(error),
+      treatedAsCancellation: isAppleCancellation(error),
+    });
     if (isAppleCancellation(error)) return { status: "cancelled" };
     return { status: "error", message: appleErrorMessage(error) };
   }
 
   const identityToken = authorization.response?.identityToken;
   if (!identityToken) {
+    appleDebugLog("5b/9 SEM identityToken na resposta do plugin -> erro genérico");
     return { status: "error", message: appleErrorMessage(null) };
   }
 
+  appleDebugLog("6/9 antes de supabase.auth.signInWithIdToken()", {
+    provider: "apple",
+    identityTokenLength: identityToken.length,
+    rawNonceSent: Boolean(nonce.raw),
+  });
   const { data, error } = await supabase.auth.signInWithIdToken({
     provider: "apple",
     token: identityToken,
     nonce: nonce.raw,
   });
+  appleDebugLog(
+    error || !data.user
+      ? "7/9 signInWithIdToken() FALHOU"
+      : "7/9 signInWithIdToken() OK",
+    {
+      hasError: Boolean(error),
+      ...(error ? describeError(error) : {}),
+      hasUser: Boolean(data?.user),
+    },
+  );
   if (error || !data.user) {
     return { status: "error", message: appleErrorMessage(error) };
   }
@@ -240,5 +358,6 @@ export async function signInWithAppleNative(
     authorization.response.givenName,
     authorization.response.familyName,
   );
+  appleDebugLog("8/9 login Apple concluído (aguardando sessão -> redirect /perfil)");
   return { status: "signed-in" };
 }

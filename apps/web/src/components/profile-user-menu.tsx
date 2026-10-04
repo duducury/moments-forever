@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { useAuth } from "./auth-provider";
@@ -13,9 +14,11 @@ import styles from "./profile-user-menu.module.css";
  * caller, see /api/blocks and /api/reports). Replaces a previous standalone
  * "Denunciar" button that sat directly over the album cover photo — this
  * consolidates every profile-level action behind one discreet trigger.
+ * "Sair" is shown to any signed-in user, last and set apart.
  */
 export function ProfileUserMenu({ ownerId }: { readonly ownerId: string }) {
-  const { user } = useAuth();
+  const router = useRouter();
+  const { user, signOut } = useAuth();
   const [open, setOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [blocked, setBlocked] = useState<boolean | null>(null);
@@ -76,6 +79,13 @@ export function ProfileUserMenu({ ownerId }: { readonly ownerId: string }) {
     } catch {
       // User cancelled the share sheet, or it failed — nothing to report.
     }
+  }
+
+  // Same behaviour as "Sair" in Geral: end the session, then back to the login.
+  async function onSignOut() {
+    setOpen(false);
+    await signOut();
+    router.replace("/login");
   }
 
   async function toggleBlock() {
@@ -159,6 +169,16 @@ export function ProfileUserMenu({ ownerId }: { readonly ownerId: string }) {
                 Denunciar usuário
               </button>
             </>
+          ) : null}
+          {user ? (
+            <button
+              className={`${styles.menuItem} ${styles.menuItemSignOut}`}
+              onClick={() => void onSignOut()}
+              role="menuitem"
+              type="button"
+            >
+              Sair
+            </button>
           ) : null}
         </div>
       ) : null}

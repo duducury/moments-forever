@@ -75,6 +75,9 @@ export async function proxy(request: NextRequest) {
 export const config = {
   // Everything except Next internals and plain static files.
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|mp4|ico|woff2?|txt|xml|json|map)$).*)",
+    // `n/<token>` is the NFC tag page: a static splash served straight from the
+    // CDN (see next.config.ts), so no function — not even this one — may sit in
+    // front of it. The tag is resolved through /api/nfc-link, which does pass here.
+    "/((?!_next/static|_next/image|favicon.ico|n/[^/]+$|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|mp4|ico|woff2?|txt|xml|json|map)$).*)",
   ],
 };

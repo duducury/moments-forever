@@ -22,6 +22,22 @@ const nextConfig: NextConfig = {
   experimental: {
     inlineCss: true,
   },
+  async rewrites() {
+    return {
+      // A browser opening an NFC tag link gets an instant static "Abrindo…" page
+      // (public/nfc-abrindo.html) that resolves the tag itself; anything else
+      // (link previews, curl) still reaches the 307 route handler.
+      beforeFiles: [
+        {
+          source: "/n/:token",
+          has: [{ type: "header", key: "accept", value: ".*text/html.*" }],
+          destination: "/nfc-abrindo.html",
+        },
+      ],
+      afterFiles: [],
+      fallback: [],
+    };
+  },
   async headers() {
     return [
       {

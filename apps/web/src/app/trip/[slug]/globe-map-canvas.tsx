@@ -13,8 +13,11 @@ import {
 } from "@/lib/map/cluster-photos";
 import {
   DEFAULT_GLOBE_CAMERA,
-  FALLBACK_MAX_ZOOM,
+  INTRO,
   hasPlaceNearDefaultView,
+  introEasing,
+  introStart,
+  zoomToFitGlobe,
 } from "@/lib/map/globe-camera";
 import { globeEffectOpacity, globeScreenRadius } from "@/lib/map/globe-geometry";
 import {
@@ -175,9 +178,22 @@ export function GlobeMapCanvas({
     // Intentionally no `sky` / atmosphere: MapLibre paints the unlit hemisphere
     // white when sky is enabled (known globe quirk). Colorful tiles stay readable.
     const origin = window.location.origin;
-    // Opens on the same wider view of the Americas for everyone; only a profile
-    // with nothing near it is framed around its pins instead (see globe-camera.ts).
-    const openOnDefault = hasPlaceNearDefaultView(geoPoints);
+    // Where the globe comes to rest: the whole Earth in view, turned to the
+    // Americas for everyone — or to the person's own pins when none is anywhere
+    // near them (see globe-camera.ts). It gets there with a short arrival animation.
+    const restCenter: [number, number] = hasPlaceNearDefaultView(geoPoints)
+      ? [...DEFAULT_GLOBE_CAMERA.center]
+      : [
+          geoPoints.reduce((sum, point) => sum + point.longitude, 0) / geoPoints.length,
+          geoPoints.reduce((sum, point) => sum + point.latitude, 0) / geoPoints.length,
+        ];
+    const stage = containerRef.current;
+    const rest = {
+      center: restCenter,
+      zoom: zoomToFitGlobe(stage.clientWidth, stage.clientHeight, restCenter[1]),
+    };
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const start = reducedMotion ? rest : introStart(rest);
     const map = new maplibregl.Map({
       container: containerRef.current,
       style: {
@@ -210,8 +226,8 @@ export function GlobeMapCanvas({
           ...buildGlobeLabelLayers(),
         ],
       },
-      center: openOnDefault ? [...DEFAULT_GLOBE_CAMERA.center] : [12, 18],
-      zoom: openOnDefault ? DEFAULT_GLOBE_CAMERA.zoom : 1.35,
+      center: start.center,
+      zoom: start.zoom,
       minZoom: 0.6,
       maxZoom: GLOBE_MAX_ZOOM,
       pitch: 0,
@@ -270,27 +286,15 @@ export function GlobeMapCanvas({
     map.on("resize", syncGlobe);
     syncGlobe();
 
-    // Nothing near the default view: frame the pins instead, a little wider than before.
-    if (!openOnDefault) {
-      const bounds = new maplibregl.LngLatBounds();
-      for (const point of geoPoints) {
-        bounds.extend([point.longitude, point.latitude]);
-      }
+    // The arrival: turn in and settle (a drag or pinch during it takes over at once).
+    if (!reducedMotion) {
       map.once("load", () => {
-        if (geoPoints.length === 1) {
-          const only = geoPoints[0]!;
-          map.flyTo({
-            center: [only.longitude, only.latitude],
-            zoom: FALLBACK_MAX_ZOOM,
-            duration: 1200,
-          });
-        } else {
-          map.fitBounds(bounds, {
-            padding: 56,
-            maxZoom: FALLBACK_MAX_ZOOM,
-            duration: 1200,
-          });
-        }
+        map.easeTo({
+          center: rest.center,
+          zoom: rest.zoom,
+          duration: INTRO.durationMs,
+          easing: introEasing,
+        });
       });
     }
 

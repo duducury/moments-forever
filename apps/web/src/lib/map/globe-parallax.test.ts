@@ -13,10 +13,11 @@ import {
 const close = (actual: number, expected: number, tolerance = 1e-6) =>
   assert.ok(Math.abs(actual - expected) <= tolerance, `${actual} is not close to ${expected}`);
 
-test("depth: nearer layers follow more, and all stay a small share of the globe", () => {
-  assert.ok(PARALLAX_DEPTH.near >= 0.15 && PARALLAX_DEPTH.near <= 0.2);
-  assert.ok(PARALLAX_DEPTH.far >= 0.05 && PARALLAX_DEPTH.far <= 0.1);
-  assert.ok(PARALLAX_DEPTH.nebula >= 0.02 && PARALLAX_DEPTH.nebula <= 0.05);
+test("depth: the sky clearly follows the globe, nearer layers more, never as much as the Earth", () => {
+  assert.ok(PARALLAX_DEPTH.near >= 0.4 && PARALLAX_DEPTH.near < 0.8);
+  assert.ok(PARALLAX_DEPTH.mid >= 0.25 && PARALLAX_DEPTH.mid < PARALLAX_DEPTH.near);
+  assert.ok(PARALLAX_DEPTH.far >= 0.15 && PARALLAX_DEPTH.far < PARALLAX_DEPTH.mid);
+  assert.ok(PARALLAX_DEPTH.nebula >= 0.08 && PARALLAX_DEPTH.nebula < PARALLAX_DEPTH.far);
   assert.ok(PARALLAX_DEPTH.near > PARALLAX_DEPTH.mid);
   assert.ok(PARALLAX_DEPTH.mid > PARALLAX_DEPTH.far);
   assert.ok(PARALLAX_DEPTH.far > PARALLAX_DEPTH.nebula);

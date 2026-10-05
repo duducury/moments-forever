@@ -1,9 +1,9 @@
 import type { LayerSpecification } from "maplibre-gl";
 
 /**
- * The geography drawn over the NASA texture of the immersive globe: discreet
- * country borders and a handful of names in Portuguese (countries, cities,
- * regions). Data comes from public/geo/*.json (see scripts/build-globe-geo.mjs);
+ * The geography of the immersive globe: flat, colourful countries on a blue
+ * ocean (no photo texture, no streets), discreet country borders and a handful
+ * of names in Portuguese (countries, cities, regions). Data comes from public/geo/*.json (see scripts/build-globe-geo.mjs);
  * each place carries a tier — 1 is the most important — and the tier decides
  * from which zoom its layer exists. Within a tier MapLibre's collision
  * detection keeps the more important names (lower `s`) and drops overlaps, so
@@ -27,15 +27,80 @@ export const COUNTRY_NAMES_FADE: readonly [number, number] = [5.4, 6.4];
 
 export const CITY_DOT_IMAGE = "globe-city-dot";
 
+/**
+ * Natural land colours, by climate group (the `t` of each land polygon; same
+ * order as CLIMATE_GROUPS in scripts/build-globe-geo.mjs): greens for the wet
+ * climates, sand for the dry ones, dark taiga, grey tundra, white ice.
+ */
+export const LAND_PALETTE = [
+  "#3f8a4e", // 0 rainforest
+  "#9bb15a", // 1 savanna
+  "#e6d3a3", // 2 hot desert
+  "#d9cfae", // 3 cold desert
+  "#cfc58c", // 4 steppe
+  "#b4b86a", // 5 mediterranean
+  "#74ac5e", // 6 temperate
+  "#5f9a5c", // 7 continental
+  "#4c8561", // 8 boreal forest (taiga)
+  "#b7c0a9", // 9 tundra
+  "#f3f6f9", // 10 ice
+] as const;
+export const OCEAN_COLOR = "#3277c0";
+
+/**
+ * Soft relief: the main ranges as blurred ridge lines — a light edge on the
+ * side the light comes from (upper left) and a shadow on the other. Subtle on
+ * purpose, and gone once the camera is close enough for them to look like lines.
+ */
+export function buildGlobeReliefLayers(): LayerSpecification[] {
+  const widthByZoom = ["interpolate", ["linear"], ["zoom"], 1, 2.5, 3, 6, 5, 14, 7, 28];
+  const blurByZoom = ["interpolate", ["linear"], ["zoom"], 1, 2, 5, 9, 7, 16];
+  const opacityByZoom = ["interpolate", ["linear"], ["zoom"], 1, 0.12, 3, 0.2, 5, 0.22, 7, 0.14];
+  const ridge = (id: string, color: string, side: 1 | -1): LayerSpecification => ({
+    id,
+    type: "line",
+    source: "globe-ranges",
+    layout: { "line-cap": "round", "line-join": "round" },
+    paint: {
+      "line-color": color,
+      "line-opacity": opacityByZoom as never,
+      "line-width": widthByZoom as never,
+      "line-blur": blurByZoom as never,
+      "line-offset": ["interpolate", ["linear"], ["zoom"], 1, 0.8 * side, 5, 4 * side, 7, 8 * side] as never,
+    },
+  });
+  return [ridge("globe-relief-shadow", "#4a3a24", 1), ridge("globe-relief-light", "#ffffff", -1)];
+}
+
+/** Ocean and natural land cover (the base of the globe), under borders and labels. */
+export function buildGlobeLandLayers(): LayerSpecification[] {
+  const byIndex: unknown[] = [];
+  LAND_PALETTE.forEach((color, index) => byIndex.push(index, color));
+  return [
+    { id: "globe-ocean", type: "background", paint: { "background-color": OCEAN_COLOR } },
+    {
+      id: "globe-land",
+      type: "fill",
+      source: "globe-land",
+      paint: {
+        "fill-color": ["match", ["get", "t"], ...byIndex, LAND_PALETTE[6]] as never,
+        "fill-antialias": true,
+      },
+    },
+  ];
+}
+
 const FONT_COUNTRY = ["NotoSans-SemiBold"];
 const FONT_TEXT = ["NotoSans-Regular"];
-const HALO = "rgba(3, 10, 26, 0.7)";
+/** Dark text with a soft white halo reads on every land colour and on the ocean. */
+const TEXT_COLOR = "#14233a";
+const HALO = "rgba(255, 255, 255, 0.85)";
 
 const kindTier = (kind: string, tier: number) =>
   ["all", ["==", ["get", "k"], kind], ["==", ["get", "t"], tier]] as never;
 
 /**
- * Layers to add after the NASA texture: borders, then labels from the least to
+ * Layers to add above the land: borders, then labels from the least to
  * the most important (see the note on draw order above). `source` ids are the
  * ones the globe style defines.
  */
@@ -47,8 +112,8 @@ export function buildGlobeLabelLayers(): LayerSpecification[] {
       source: "globe-borders",
       layout: { "line-cap": "round", "line-join": "round" },
       paint: {
-        "line-color": "#fff1d6",
-        "line-opacity": ["interpolate", ["linear"], ["zoom"], 1, 0.2, 3, 0.28, 6, 0.36],
+        "line-color": "#5b5440",
+        "line-opacity": ["interpolate", ["linear"], ["zoom"], 1, 0.22, 3, 0.3, 6, 0.4],
         "line-width": ["interpolate", ["linear"], ["zoom"], 1, 0.35, 4, 0.7, 7, 1.1],
       },
     },
@@ -72,11 +137,11 @@ export function buildGlobeLabelLayers(): LayerSpecification[] {
         "symbol-sort-key": ["get", "s"],
       },
       paint: {
-        "text-color": "#fff4e0",
-        "text-opacity": ["interpolate", ["linear"], ["zoom"], REGION_TIER_MIN_ZOOM[tier], 0, REGION_TIER_MIN_ZOOM[tier] + 0.5, 0.7],
+        "text-color": TEXT_COLOR,
+        "text-opacity": ["interpolate", ["linear"], ["zoom"], REGION_TIER_MIN_ZOOM[tier], 0, REGION_TIER_MIN_ZOOM[tier] + 0.3, 0.72],
         "text-halo-color": HALO,
         "text-halo-width": 1.3,
-        "text-halo-blur": 0.4,
+        "text-halo-blur": 0.3,
       },
     });
   }
@@ -92,7 +157,7 @@ export function buildGlobeLabelLayers(): LayerSpecification[] {
       layout: {
         "text-field": ["get", "n"],
         "text-font": FONT_COUNTRY,
-        "text-size": ["interpolate", ["linear"], ["zoom"], 1, 9, 3, 10.5, 5, 12.5],
+        "text-size": ["interpolate", ["linear"], ["zoom"], 1, 10, 3, 11, 5, 12.5],
         "text-letter-spacing": 0.14,
         "text-transform": "uppercase",
         "text-max-width": 7,
@@ -100,23 +165,23 @@ export function buildGlobeLabelLayers(): LayerSpecification[] {
         "symbol-sort-key": ["get", "s"],
       },
       paint: {
-        "text-color": "#fff4e0",
+        "text-color": TEXT_COLOR,
         "text-opacity": [
           "interpolate",
           ["linear"],
           ["zoom"],
           COUNTRY_TIER_MIN_ZOOM[tier],
           0,
-          COUNTRY_TIER_MIN_ZOOM[tier] + 0.4,
-          0.9,
+          COUNTRY_TIER_MIN_ZOOM[tier] + 0.25,
+          0.92,
           COUNTRY_NAMES_FADE[0],
-          0.9,
+          0.92,
           COUNTRY_NAMES_FADE[1],
           0,
         ],
-        "text-halo-color": "rgba(3, 10, 26, 0.7)",
+        "text-halo-color": HALO,
         "text-halo-width": 1.5,
-        "text-halo-blur": 0.5,
+        "text-halo-blur": 0.3,
       },
     });
   }
@@ -144,26 +209,26 @@ export function buildGlobeLabelLayers(): LayerSpecification[] {
         "symbol-sort-key": ["get", "s"],
       },
       paint: {
-        "text-color": "#ffffff",
+        "text-color": TEXT_COLOR,
         "text-opacity": [
           "interpolate",
           ["linear"],
           ["zoom"],
           CITY_TIER_MIN_ZOOM[tier],
           0,
-          CITY_TIER_MIN_ZOOM[tier] + 0.4,
+          CITY_TIER_MIN_ZOOM[tier] + 0.25,
           0.92,
         ],
         "text-halo-color": HALO,
         "text-halo-width": 1.5,
-        "text-halo-blur": 0.4,
+        "text-halo-blur": 0.3,
         "icon-opacity": [
           "interpolate",
           ["linear"],
           ["zoom"],
           CITY_TIER_MIN_ZOOM[tier],
           0,
-          CITY_TIER_MIN_ZOOM[tier] + 0.4,
+          CITY_TIER_MIN_ZOOM[tier] + 0.25,
           0.95,
         ],
       },
@@ -173,7 +238,7 @@ export function buildGlobeLabelLayers(): LayerSpecification[] {
   return layers;
 }
 
-/** A small white dot with a soft dark rim, so it reads on both sea and light land. */
+/** A small dark dot with a white rim, so it reads on every land colour and on the sea. */
 export function createCityDotImage(size = 24): {
   width: number;
   height: number;
@@ -188,12 +253,13 @@ export function createCityDotImage(size = 24): {
       const distance = Math.hypot(x - centre, y - centre);
       const i = (y * size + x) * 4;
       const dot = Math.min(1, Math.max(0, dotRadius + 0.5 - distance));
-      const rim = Math.min(1, Math.max(0, rimRadius + 0.5 - distance)) * 0.55;
+      const rim = Math.min(1, Math.max(0, rimRadius + 0.5 - distance)) * 0.9;
       const alpha = dot + rim * (1 - dot);
       const lightness = dot / Math.max(alpha, 0.001);
-      data[i] = Math.round(255 * lightness + 3 * (1 - lightness));
-      data[i + 1] = Math.round(255 * lightness + 10 * (1 - lightness));
-      data[i + 2] = Math.round(255 * lightness + 26 * (1 - lightness));
+      // lightness 1 = the dark core (#14233a), 0 = the white rim.
+      data[i] = Math.round(0x14 * lightness + 255 * (1 - lightness));
+      data[i + 1] = Math.round(0x23 * lightness + 255 * (1 - lightness));
+      data[i + 2] = Math.round(0x3a * lightness + 255 * (1 - lightness));
       data[i + 3] = Math.round(255 * alpha);
     }
   }

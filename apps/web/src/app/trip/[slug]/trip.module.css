@@ -1402,7 +1402,7 @@
   border-radius: 0;
   /* Deep space is painted by GlobeSpaceBackdrop; this is only the colour
      shown for the instant before it mounts. */
-  background: #02040a;
+  background: #010206;
   box-shadow: none;
 }
 

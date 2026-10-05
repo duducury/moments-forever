@@ -16,6 +16,8 @@ import {
   CITY_DOT_IMAGE,
   GEO_DATA_VERSION,
   buildGlobeLabelLayers,
+  buildGlobeLandLayers,
+  buildGlobeReliefLayers,
   createCityDotImage,
 } from "@/lib/map/globe-labels";
 import { globeSurfaceShift } from "@/lib/map/globe-parallax";
@@ -27,17 +29,10 @@ import spaceStyles from "./globe-space.module.css";
 import styles from "./trip.module.css";
 
 /**
- * NASA Blue Marble (shaded relief + bathymetry): the Earth as seen from space —
- * blue oceans, green/brown/beige land. Public domain, no API key. It goes down
- * to zoom 8 and carries no names, borders or streets: the discreet borders and
- * the few names on top come from our own static data (globe-labels.ts), and the
- * globe is capped at zoom 7 (region/city level), where this imagery still holds.
- * The ocean-blue background below is what shows while its tiles load, or if
- * they can't be reached.
+ * The land is drawn from our own static country shapes (see globe-labels.ts),
+ * so there is no photo texture and nothing to fetch from a map service. The
+ * globe is capped at zoom 7 (region/city level), where flat shapes still look right.
  */
-const BLUE_MARBLE_TILES =
-  "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg";
-
 const GLOBE_MAX_ZOOM = 7;
 
 function clusterLocationLabel(photos: readonly TripPhoto[]): string | null {
@@ -182,13 +177,13 @@ export function GlobeMapCanvas({
         projection: { type: "globe" },
         glyphs: `${origin}/fonts/{fontstack}/{range}.pbf`,
         sources: {
-          bluemarble: {
-            type: "raster",
-            tiles: [BLUE_MARBLE_TILES],
-            tileSize: 256,
-            maxzoom: 8,
-            attribution:
-              '<a href="https://earthobservatory.nasa.gov/features/BlueMarble">NASA</a>',
+          "globe-land": {
+            type: "geojson",
+            data: `${origin}/geo/land-${GEO_DATA_VERSION}.json`,
+          },
+          "globe-ranges": {
+            type: "geojson",
+            data: `${origin}/geo/ranges-${GEO_DATA_VERSION}.json`,
           },
           "globe-borders": {
             type: "geojson",
@@ -202,17 +197,8 @@ export function GlobeMapCanvas({
           },
         },
         layers: [
-          {
-            id: "ocean",
-            type: "background",
-            paint: { "background-color": "#0f3558" },
-          },
-          {
-            id: "bluemarble",
-            type: "raster",
-            source: "bluemarble",
-            paint: { "raster-saturation": 0.06 },
-          },
+          ...buildGlobeLandLayers(),
+          ...buildGlobeReliefLayers(),
           ...buildGlobeLabelLayers(),
         ],
       },
@@ -376,7 +362,6 @@ export function GlobeMapCanvas({
     <div className={styles.mapLayoutImmersive}>
       <div className={styles.mapFrameImmersive} ref={frameRef}>
         <GlobeSpaceBackdrop ref={parallaxRef} />
-        <div aria-hidden="true" className={spaceStyles.halo} />
         <div className={styles.mapCanvasImmersive} ref={containerRef} />
         <div aria-hidden="true" className={spaceStyles.shade} />
 

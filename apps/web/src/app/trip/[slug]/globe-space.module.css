@@ -11,20 +11,34 @@
   z-index: 0;
   overflow: hidden;
   pointer-events: none;
+  background: linear-gradient(#02040a, #040815 55%, #02030a);
+}
+
+/* Faint nebula: bigger than the stage and bounded, so its slow parallax never
+   shows an edge (see GlobeSpaceBackdrop). */
+.nebula {
+  position: absolute;
+  inset: -12%;
+  will-change: transform;
   background:
     radial-gradient(ellipse 70% 50% at 18% 12%, rgb(38 62 150 / 24%), transparent 62%),
     radial-gradient(ellipse 60% 45% at 86% 82%, rgb(88 48 128 / 15%), transparent 60%),
-    radial-gradient(ellipse 90% 70% at 50% 50%, rgb(10 22 56 / 55%), transparent 75%),
-    linear-gradient(#02040a, #040815 55%, #02030a);
+    radial-gradient(ellipse 90% 70% at 50% 50%, rgb(10 22 56 / 55%), transparent 75%);
 }
 
-/* Star layers are painted once on a canvas slightly bigger than the stage, so
-   a slow drift never reveals an edge. */
-.layer {
+/* A star layer is a tile painted once on canvas and repeated; JavaScript only
+   slides it (transform, wrapped to one tile) as the camera moves, so it never
+   runs out of sky. The CSS animations live on the inner .tile, so the two
+   movements never fight over one transform. */
+.starLayer {
   position: absolute;
-  inset: -6%;
-  width: 112%;
-  height: 112%;
+  will-change: transform;
+}
+
+.tile {
+  position: absolute;
+  inset: 0;
+  background-repeat: repeat;
   will-change: transform, opacity;
 }
 
@@ -46,19 +60,19 @@
 
 @keyframes drift-far {
   to {
-    transform: translate3d(-1.2%, 0.6%, 0);
+    transform: translate3d(-0.5%, 0.3%, 0);
   }
 }
 
 @keyframes drift-mid {
   to {
-    transform: translate3d(1.8%, -0.9%, 0);
+    transform: translate3d(0.8%, -0.4%, 0);
   }
 }
 
 @keyframes drift-near {
   to {
-    transform: translate3d(-2.8%, 1.4%, 0);
+    transform: translate3d(-1.2%, 0.6%, 0);
   }
 }
 

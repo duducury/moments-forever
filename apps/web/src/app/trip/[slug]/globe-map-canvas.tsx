@@ -12,33 +12,33 @@ import {
   type GeoPoint,
 } from "@/lib/map/cluster-photos";
 import { globeEffectOpacity, globeScreenRadius } from "@/lib/map/globe-geometry";
+import {
+  CITY_DOT_IMAGE,
+  GEO_DATA_VERSION,
+  buildGlobeLabelLayers,
+  createCityDotImage,
+} from "@/lib/map/globe-labels";
+import { globeSurfaceShift } from "@/lib/map/globe-parallax";
 import { profileTripAlbumPath } from "@/lib/routes/app-routes";
 
 import { photosWithGps, type TripPhoto } from "./album-types";
-import { GlobeSpaceBackdrop } from "./globe-space-backdrop";
+import { GlobeSpaceBackdrop, type GlobeParallaxHandle } from "./globe-space-backdrop";
 import spaceStyles from "./globe-space.module.css";
 import styles from "./trip.module.css";
 
-const GLOBE_TILES =
-  // OpenStreetMap standard raster tiles — free, no API key. Carto's
-  // basemaps.cartocdn.com now requires a key for anonymous access, so this
-  // no longer uses their Voyager style. Keep MapLibre `sky` off — atmosphere
-  // turns the night hemisphere into opaque white.
-  "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
-
-function globeTileUrls(): string[] {
-  return ["a", "b", "c"].map((sub) => GLOBE_TILES.replace("{s}", sub));
-}
-
 /**
  * NASA Blue Marble (shaded relief + bathymetry): the Earth as seen from space —
- * blue oceans, green/brown/beige land. Public domain, no API key. It only goes
- * down to zoom 8 and carries no place names, so it fades out toward the
- * street map as the camera moves in (the OSM layer stays underneath the whole
- * time, which is also what shows if these tiles can't be reached).
+ * blue oceans, green/brown/beige land. Public domain, no API key. It goes down
+ * to zoom 8 and carries no names, borders or streets: the discreet borders and
+ * the few names on top come from our own static data (globe-labels.ts), and the
+ * globe is capped at zoom 7 (region/city level), where this imagery still holds.
+ * The ocean-blue background below is what shows while its tiles load, or if
+ * they can't be reached.
  */
 const BLUE_MARBLE_TILES =
   "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg";
+
+const GLOBE_MAX_ZOOM = 7;
 
 function clusterLocationLabel(photos: readonly TripPhoto[]): string | null {
   const unique: string[] = [];
@@ -100,6 +100,7 @@ export function GlobeMapCanvas({
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const frameRef = useRef<HTMLDivElement | null>(null);
+  const parallaxRef = useRef<GlobeParallaxHandle | null>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const markersRef = useRef<Marker[]>([]);
   const [zoom, setZoom] = useState(1.35);
@@ -173,64 +174,52 @@ export function GlobeMapCanvas({
 
     // Intentionally no `sky` / atmosphere: MapLibre paints the unlit hemisphere
     // white when sky is enabled (known globe quirk). Colorful tiles stay readable.
+    const origin = window.location.origin;
     const map = new maplibregl.Map({
       container: containerRef.current,
       style: {
         version: 8,
         projection: { type: "globe" },
+        glyphs: `${origin}/fonts/{fontstack}/{range}.pbf`,
         sources: {
-          basemap: {
-            type: "raster",
-            tiles: globeTileUrls(),
-            tileSize: 256,
-            attribution:
-              '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-          },
           bluemarble: {
             type: "raster",
             tiles: [BLUE_MARBLE_TILES],
             tileSize: 256,
             maxzoom: 8,
             attribution:
-              'Earth imagery &copy; <a href="https://earthobservatory.nasa.gov/features/BlueMarble">NASA</a>',
+              '<a href="https://earthobservatory.nasa.gov/features/BlueMarble">NASA</a>',
+          },
+          "globe-borders": {
+            type: "geojson",
+            data: `${origin}/geo/borders-${GEO_DATA_VERSION}.json`,
+          },
+          "globe-places": {
+            type: "geojson",
+            data: `${origin}/geo/places-${GEO_DATA_VERSION}.json`,
+            attribution:
+              '<a href="https://www.naturalearthdata.com">Natural Earth</a> · <a href="https://www.geonames.org">GeoNames</a>',
           },
         },
         layers: [
           {
-            id: "basemap",
-            type: "raster",
-            source: "basemap",
-            paint: {
-              // Slightly mute on the dark stage without bleaching geography.
-              "raster-saturation": -0.05,
-              "raster-contrast": 0.06,
-            },
+            id: "ocean",
+            type: "background",
+            paint: { "background-color": "#0f3558" },
           },
           {
             id: "bluemarble",
             type: "raster",
             source: "bluemarble",
-            // Gone before the street map takes over; not even requested past this.
-            maxzoom: 6.6,
-            paint: {
-              "raster-opacity": [
-                "interpolate",
-                ["linear"],
-                ["zoom"],
-                4.4,
-                1,
-                6.4,
-                0,
-              ],
-              "raster-saturation": 0.06,
-            },
+            paint: { "raster-saturation": 0.06 },
           },
+          ...buildGlobeLabelLayers(),
         ],
       },
       center: [12, 18],
       zoom: 1.35,
       minZoom: 0.6,
-      maxZoom: 17,
+      maxZoom: GLOBE_MAX_ZOOM,
       pitch: 0,
       bearing: 0,
       attributionControl: { compact: true },
@@ -244,6 +233,13 @@ export function GlobeMapCanvas({
       "top-right",
     );
 
+    // The city dot is drawn in code (no image file to fetch).
+    map.on("styleimagemissing", (event) => {
+      if (event.id === CITY_DOT_IMAGE && !map.hasImage(CITY_DOT_IMAGE)) {
+        map.addImage(CITY_DOT_IMAGE, createCityDotImage(), { pixelRatio: 2 });
+      }
+    });
+
     map.on("load", () => {
       map.setProjection({ type: "globe" });
       map.resize();
@@ -253,26 +249,32 @@ export function GlobeMapCanvas({
       setZoom(map.getZoom());
     });
 
-    // Keep the atmosphere/lighting circles locked to the real globe silhouette
-    // (CSS variables only: no React re-render while zooming).
-    const syncGlobeEffects = () => {
-      const frame = frameRef.current;
-      if (!frame) return;
+    // On every camera move (drag, inertia, fly, zoom — whatever moves the real
+    // globe): keep the atmosphere/lighting circles locked to its silhouette
+    // (CSS variables only, no React re-render), and tell the space behind it how
+    // far the surface slid so the stars can follow a fraction of that.
+    let lastCenter = { lng: map.getCenter().lng, lat: map.getCenter().lat };
+    const syncGlobe = () => {
       const current = map.getZoom();
-      frame.style.setProperty(
-        "--globe-r",
-        `${globeScreenRadius(current, map.getContainer().clientHeight, map.getCenter().lat).toFixed(1)}px`,
-      );
-      const effects = globeEffectOpacity(current);
-      frame.style.setProperty("--globe-fx", effects.toFixed(3));
-      // Zoomed in, the circles are huge and invisible: don't paint them at all.
-      frame.dataset.globeFx = effects > 0 ? "on" : "off";
+      const center = map.getCenter();
+      const radius = globeScreenRadius(current, map.getContainer().clientHeight, center.lat);
+
+      const frame = frameRef.current;
+      if (frame) {
+        frame.style.setProperty("--globe-r", `${radius.toFixed(1)}px`);
+        const effects = globeEffectOpacity(current);
+        frame.style.setProperty("--globe-fx", effects.toFixed(3));
+        // Zoomed in, the circles are huge and invisible: don't paint them at all.
+        frame.dataset.globeFx = effects > 0 ? "on" : "off";
+      }
+
+      const shift = globeSurfaceShift(lastCenter, center, current);
+      lastCenter = { lng: center.lng, lat: center.lat };
+      parallaxRef.current?.nudge(shift.dx, shift.dy);
     };
-    // "move" also fires for zooms; dragging changes the centre latitude, which
-    // changes the sphere's size slightly.
-    map.on("move", syncGlobeEffects);
-    map.on("resize", syncGlobeEffects);
-    syncGlobeEffects();
+    map.on("move", syncGlobe);
+    map.on("resize", syncGlobe);
+    syncGlobe();
 
     // Fit roughly around all points after first paint.
     if (geoPoints.length > 0) {
@@ -373,7 +375,7 @@ export function GlobeMapCanvas({
   return (
     <div className={styles.mapLayoutImmersive}>
       <div className={styles.mapFrameImmersive} ref={frameRef}>
-        <GlobeSpaceBackdrop />
+        <GlobeSpaceBackdrop ref={parallaxRef} />
         <div aria-hidden="true" className={spaceStyles.halo} />
         <div className={styles.mapCanvasImmersive} ref={containerRef} />
         <div aria-hidden="true" className={spaceStyles.shade} />

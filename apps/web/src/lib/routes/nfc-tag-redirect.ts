@@ -56,11 +56,11 @@ export function notLinkedPath(rawToken: string): string {
  * the root loading.tsx a page redirect is streamed as a 200 document plus a
  * client-side refresh, i.e. a second full document load on every tag tap.
  */
-export async function nfcTagRedirectResponse(
+export async function resolveNfcTagPath(
   supabase: NfcTagLookupClient | null,
   rawToken: string,
-): Promise<Response> {
-  const notLinked = () => temporaryRedirect(notLinkedPath(rawToken));
+): Promise<string> {
+  const notLinked = () => notLinkedPath(rawToken);
 
   const token = decodeURIComponent(rawToken).trim();
   if (!token) return notLinked();
@@ -84,7 +84,13 @@ export async function nfcTagRedirectResponse(
     .maybeSingle();
   if (experience.error || !experience.data?.slug) return notLinked();
 
-  return temporaryRedirect(
-    profileTripAlbumPath(experience.data.slug as string, row.album_id),
-  );
+  return profileTripAlbumPath(experience.data.slug as string, row.album_id);
+}
+
+/** The same lookup as a plain HTTP 307 (for anything that isn't a browser page load). */
+export async function nfcTagRedirectResponse(
+  supabase: NfcTagLookupClient | null,
+  rawToken: string,
+): Promise<Response> {
+  return temporaryRedirect(await resolveNfcTagPath(supabase, rawToken));
 }

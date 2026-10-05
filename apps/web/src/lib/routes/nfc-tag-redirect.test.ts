@@ -3,7 +3,12 @@ import test from "node:test";
 
 import { profileTripAlbumPath } from "./app-routes";
 
-import { type NfcTagLookupClient, nfcTagRedirectResponse } from "./nfc-tag-redirect";
+import {
+  type NfcTagLookupClient,
+  nfcTagRedirectResponse,
+  notLinkedPath,
+  resolveNfcTagPath,
+} from "./nfc-tag-redirect";
 
 const TRIP_ID = "11111111-1111-4111-8111-111111111111";
 const ALBUM_ID = "22222222-2222-4222-8222-222222222222";
@@ -118,4 +123,32 @@ test("empty token and missing Supabase config → not-linked page, no lookup", a
   await assertNotLinked(await nfcTagRedirectResponse(client, "%20"), "%20");
   assert.equal(calls.rpc.length, 0);
   await assertNotLinked(await nfcTagRedirectResponse(null, "abc"), "abc");
+});
+
+test("resolveNfcTagPath gives the album path of the linked trip", async () => {
+  const { client } = fakeClient({
+    rpcData: [{ trip_id: TRIP_ID, album_id: ALBUM_ID }],
+    slug: "dubai-2026",
+  });
+  assert.equal(
+    await resolveNfcTagPath(client, "abc"),
+    profileTripAlbumPath("dubai-2026", ALBUM_ID),
+  );
+});
+
+test("resolveNfcTagPath falls back to the not-linked page for anything unresolvable", async () => {
+  assert.equal(await resolveNfcTagPath(null, "abc"), notLinkedPath("abc"));
+  assert.equal(await resolveNfcTagPath(fakeClient({ rpcData: [] }).client, "abc"), notLinkedPath("abc"));
+  assert.equal(await resolveNfcTagPath(fakeClient({ rpcError: new Error("boom") }).client, "abc"), notLinkedPath("abc"));
+  assert.equal(
+    await resolveNfcTagPath(fakeClient({ rpcData: [{ trip_id: TRIP_ID, album_id: ALBUM_ID }], slug: null }).client, "abc"),
+    notLinkedPath("abc"),
+  );
+  assert.equal(await resolveNfcTagPath(fakeClient({}).client, "   "), notLinkedPath("   "));
+});
+
+test("the token reaches the lookup decoded, and the not-linked page keeps it encoded", async () => {
+  const { client } = fakeClient({ rpcData: [] });
+  const raw = encodeURIComponent("a b/ç");
+  assert.equal(await resolveNfcTagPath(client, raw), `/n/${raw}/nao-vinculada`);
 });

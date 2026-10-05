@@ -36,7 +36,7 @@ test("globe radius grows with zoom and is safe on bad input", () => {
   assert.equal(globeScreenRadius(1, 0), 0);
 });
 
-test("the halo fades out before the globe flattens into the map", () => {
+test("the lighting fades out before the globe flattens into the map", () => {
   assert.equal(globeEffectOpacity(1.35), 1);
   assert.equal(globeEffectOpacity(3.6), 1);
   assert.ok(globeEffectOpacity(4.2) > 0 && globeEffectOpacity(4.2) < 1);

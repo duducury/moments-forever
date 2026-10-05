@@ -38,7 +38,7 @@ const FADE_END_ZOOM = 4.8;
 
 /**
  * 1 while the whole planet is in view, fading to 0 as the map zooms toward a
- * region (MapLibre flattens the globe there and the halo would float in space).
+ * region (MapLibre flattens the globe there and the lighting circle would float in space).
  */
 export function globeEffectOpacity(zoom: number): number {
   if (!Number.isFinite(zoom) || zoom <= FADE_START_ZOOM) return 1;

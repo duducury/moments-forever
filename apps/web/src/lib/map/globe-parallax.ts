@@ -6,10 +6,10 @@
 
 /** Share of the globe's own on-screen movement that each layer gets. */
 export const PARALLAX_DEPTH = {
-  far: 0.07,
-  mid: 0.12,
-  near: 0.18,
-  nebula: 0.03,
+  far: 0.22,
+  mid: 0.38,
+  near: 0.55,
+  nebula: 0.12,
 } as const;
 
 export type ParallaxLayer = keyof typeof PARALLAX_DEPTH;

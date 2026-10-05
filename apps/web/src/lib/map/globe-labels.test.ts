@@ -8,8 +8,10 @@ import {
   COUNTRY_NAMES_FADE,
   COUNTRY_TIER_MIN_ZOOM,
   GEO_DATA_VERSION,
+  LAND_PALETTE,
   REGION_TIER_MIN_ZOOM,
   buildGlobeLabelLayers,
+  buildGlobeLandLayers,
   createCityDotImage,
 } from "./globe-labels";
 
@@ -172,4 +174,76 @@ test("borders data: land borders only, as one multi-line", () => {
   // Sanity: a border crossing the US/Mexico line exists near (−110, 31.3).
   const nearMexico = lines.some((line) => line.some(([lng, lat]) => Math.abs(lng! + 110) < 2 && Math.abs(lat! - 31.3) < 1.2));
   assert.ok(nearMexico);
+});
+
+test("land layers: a blue ocean and flat country fills, nothing photographic", () => {
+  const layers = buildGlobeLandLayers();
+  assert.deepEqual(
+    layers.map((layer) => layer.type),
+    ["background", "fill"],
+  );
+  assert.equal(LAND_PALETTE.length, 7, "6 land colours + ice");
+  const fill = layers[1] as { paint: { "fill-color": unknown[] } };
+  const expression = fill.paint["fill-color"];
+  assert.equal(expression[0], "match");
+  // Every colour index the data can use resolves to a palette colour.
+  for (let index = 0; index < LAND_PALETTE.length; index += 1) {
+    assert.ok(expression.includes(index), `colour ${index} is not mapped`);
+    assert.ok(expression.includes(LAND_PALETTE[index]));
+  }
+});
+
+type Ring = number[][];
+type Geometry = { type: "Polygon"; coordinates: Ring[] } | { type: "MultiPolygon"; coordinates: Ring[][] };
+
+function inRing(ring: Ring, lng: number, lat: number): boolean {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i, i += 1) {
+    const [xi, yi] = ring[i]!;
+    const [xj, yj] = ring[j]!;
+    if (yi! > lat !== yj! > lat && lng < ((xj! - xi!) * (lat - yi!)) / (yj! - yi!) + xi!) inside = !inside;
+  }
+  return inside;
+}
+
+function inGeometry(geometry: Geometry, lng: number, lat: number): boolean {
+  const polygons = geometry.type === "Polygon" ? [geometry.coordinates] : geometry.coordinates;
+  return polygons.some(([outer, ...holes]) => inRing(outer!, lng, lat) && !holes.some((hole) => inRing(hole, lng, lat)));
+}
+
+test("land data: neighbouring countries never share a colour", () => {
+  const file = path.join(PUBLIC, "geo", `countries-${GEO_DATA_VERSION}.json`);
+  const json = JSON.parse(readFileSync(file, "utf8")) as {
+    features: { properties: { c: number }; geometry: Geometry }[];
+  };
+  assert.ok(json.features.length >= 200);
+  for (const feature of json.features) {
+    assert.ok(Number.isInteger(feature.properties.c) && feature.properties.c >= 0 && feature.properties.c < LAND_PALETTE.length);
+  }
+  const colourAt = (lng: number, lat: number): number => {
+    const found = json.features.find((feature) => inGeometry(feature.geometry, lng, lat));
+    assert.ok(found, `no country at ${lng},${lat}`);
+    return found.properties.c;
+  };
+  const brasil = colourAt(-52, -10);
+  const argentina = colourAt(-64, -34);
+  const peru = colourAt(-75, -10);
+  const bolivia = colourAt(-64, -17);
+  assert.notEqual(brasil, argentina);
+  assert.notEqual(brasil, peru);
+  assert.notEqual(brasil, bolivia);
+  assert.notEqual(peru, bolivia);
+  const [alemanha, franca, polonia, austria, suica] = [
+    colourAt(10.5, 51), colourAt(2.5, 46.5), colourAt(19, 52), colourAt(14.5, 47.5), colourAt(8.2, 46.8),
+  ];
+  for (const other of [franca, polonia, austria, suica]) assert.notEqual(alemanha, other);
+  assert.notEqual(colourAt(-98, 39), colourAt(-100, 60)); // Estados Unidos / Canadá
+  assert.notEqual(colourAt(-98, 39), colourAt(-102, 23)); // Estados Unidos / México
+  assert.notEqual(colourAt(78, 22), colourAt(103, 35)); // Índia / China
+  assert.notEqual(colourAt(78, 22), colourAt(70, 30)); // Índia / Paquistão
+  // Antarctica is ice, and the six land colours are all in use.
+  const ice = json.features.filter((f) => f.properties.c === LAND_PALETTE.length - 1);
+  assert.equal(ice.length, 1);
+  assert.ok(JSON.stringify(ice[0]!.geometry.coordinates).includes(",-90"), "the ice is Antarctica");
+  assert.ok(new Set(json.features.map((f) => f.properties.c)).size >= 6);
 });

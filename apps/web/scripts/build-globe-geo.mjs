@@ -1,9 +1,11 @@
 /**
- * Builds the static geography the immersive globe draws on top of the NASA
- * texture: country borders, plus country / city / region name labels in
- * Portuguese. Output (committed, served from our own domain — no map service,
+ * Builds the static geography the immersive globe is drawn from: the land
+ * (flat, colourful countries), country borders, plus country / city / region
+ * name labels in Portuguese. Output (committed, served from our own domain — no map service,
  * no API, nothing fetched in production):
  *
+ *   public/geo/countries-v1.json Country polygons, each with a colour index (c) for the
+ *                                flat, colourful land of the globe (neighbours never share one)
  *   public/geo/borders-v1.json   MultiLineString of land borders between countries
  *   public/geo/places-v1.json    Point features: countries, cities, regions
  *
@@ -34,7 +36,7 @@ const depsDir = process.env.GEO_DEPS_DIR ?? process.cwd();
 const require = createRequire(path.join(depsDir, "package.json"));
 
 const topojson = require("topojson-client");
-const { geoArea } = require("d3-geo");
+const { geoArea, geoEquirectangular, geoPath } = require("d3-geo");
 const polylabelModule = require("polylabel");
 const polylabel = polylabelModule.default ?? polylabelModule;
 const countriesNames = require("i18n-iso-countries");
@@ -68,7 +70,7 @@ function clean(text) {
   return fits(folded) ? folded : null;
 }
 
-// --- Borders: land borders only (no coastline, which would outline the NASA coast) ----------
+// --- Borders: land borders only (no coastline: the land fills already have one) ----------
 
 const borders = topojson.mesh(atlas, atlas.objects.countries, (a, b) => a !== b);
 const bordersJson = {
@@ -93,6 +95,79 @@ const bordersJson = {
       },
     },
   ],
+};
+
+// --- Land: country polygons with a colour index (no two neighbours alike) ----------------------
+
+const LAND_COLORS = 6; // palette size in src/lib/map/globe-labels.ts
+const ICE_COLOR = 6; // Antarctica
+const geometries = atlas.objects.countries.geometries;
+const adjacent = topojson.neighbors(geometries);
+const colourOf = new Array(geometries.length).fill(-1);
+// Most-connected countries first, so the greedy colouring never needs a seventh colour.
+const order = geometries.map((_, i) => i).sort((a, b) => adjacent[b].length - adjacent[a].length || a - b);
+for (const index of order) {
+  if (geometries[index].id === "010") {
+    colourOf[index] = ICE_COLOR;
+    continue;
+  }
+  const taken = new Set(adjacent[index].map((n) => colourOf[n]));
+  // Start from a different colour per country, so islands and loners vary too.
+  const start = Number(geometries[index].id ?? index) % LAND_COLORS;
+  for (let step = 0; step < LAND_COLORS; step += 1) {
+    const candidate = (start + step) % LAND_COLORS;
+    if (!taken.has(candidate)) {
+      colourOf[index] = candidate;
+      break;
+    }
+  }
+  if (colourOf[index] === -1) throw new Error(`Needs more than ${LAND_COLORS} colours`);
+}
+const roundCoordinates = (value) =>
+  Array.isArray(value) ? value.map(roundCoordinates) : round(value, 2);
+
+/**
+ * Natural Earth's polygons are spherical: Russia (Chukotka), Fiji and
+ * Antarctica cross the antimeridian with a ring edge that jumps from +180° to
+ * −180°. Drawn on a flat lng/lat plane (as MapLibre does) that edge becomes a
+ * band across the whole world. d3's equirectangular projection cuts such
+ * polygons properly along ±180°; its path comes back as x = lng, y = −lat.
+ */
+const equirectangular = geoEquirectangular().scale(180 / Math.PI).translate([0, 0]).precision(0);
+const toPath = geoPath(equirectangular).digits(2);
+function hasAntimeridianJump(geometry) {
+  const polygons = geometry.type === "Polygon" ? [geometry.coordinates] : geometry.coordinates;
+  return polygons.some((polygon) =>
+    polygon.some((ring) => ring.some((point, i) => i > 0 && Math.abs(point[0] - ring[i - 1][0]) > 180)),
+  );
+}
+function cutAtAntimeridian(feature) {
+  const rings = toPath(feature)
+    .split("M")
+    .filter(Boolean)
+    .map((subpath) => {
+      const numbers = subpath.replace(/Z/g, "").split(/[ ,L]+/).filter(Boolean).map(Number);
+      const ring = [];
+      for (let i = 0; i < numbers.length; i += 2) ring.push([round(numbers[i], 2), round(-numbers[i + 1], 2)]);
+      const first = ring[0];
+      const last = ring[ring.length - 1];
+      if (first[0] !== last[0] || first[1] !== last[1]) ring.push([...first]);
+      return ring;
+    });
+  return { type: "MultiPolygon", coordinates: rings.map((ring) => [ring]) };
+}
+const landJson = {
+  type: "FeatureCollection",
+  features: topojson.feature(atlas, atlas.objects.countries).features.map((feature, index) => ({
+    type: "Feature",
+    properties: { c: colourOf[index] },
+    geometry: hasAntimeridianJump(feature.geometry)
+      ? cutAtAntimeridian(feature)
+      : {
+          type: feature.geometry.type,
+          coordinates: roundCoordinates(feature.geometry.coordinates),
+        },
+  })),
 };
 
 // --- Countries ------------------------------------------------------------------------------
@@ -652,6 +727,7 @@ const placesJson = {
 
 mkdirSync(OUT_DIR, { recursive: true });
 writeFileSync(path.join(OUT_DIR, "borders-v1.json"), JSON.stringify(bordersJson));
+writeFileSync(path.join(OUT_DIR, "countries-v1.json"), JSON.stringify(landJson));
 writeFileSync(path.join(OUT_DIR, "places-v1.json"), JSON.stringify(placesJson));
 
 const count = (k, t) => places.filter((p) => p.k === k && (t === undefined || p.t === t)).length;

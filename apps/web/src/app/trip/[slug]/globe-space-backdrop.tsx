@@ -33,9 +33,9 @@ interface StarLayer {
 }
 
 const STAR_LAYERS: Readonly<Record<StarLayerName, StarLayer>> = {
-  far: { tile: 480, count: 100, radius: [0.35, 0.8], alpha: [0.22, 0.55], glow: false, dust: false, seed: 11 },
-  mid: { tile: 560, count: 55, radius: [0.55, 1.1], alpha: [0.35, 0.8], glow: false, dust: true, seed: 29 },
-  near: { tile: 640, count: 26, radius: [0.85, 1.5], alpha: [0.55, 1], glow: true, dust: false, seed: 47 },
+  far: { tile: 480, count: 100, radius: [0.35, 0.8], alpha: [0.2, 0.45], glow: false, dust: false, seed: 11 },
+  mid: { tile: 560, count: 55, radius: [0.55, 1.1], alpha: [0.3, 0.7], glow: false, dust: true, seed: 29 },
+  near: { tile: 640, count: 26, radius: [0.8, 1.4], alpha: [0.5, 0.9], glow: true, dust: false, seed: 47 },
 };
 const STAR_ORDER: readonly StarLayerName[] = ["far", "mid", "near"];
 
@@ -44,7 +44,7 @@ const TINTS = ["255,255,255", "200,220,255", "255,238,214", "180,205,255"];
 /** The sky settles about this fast once the camera stops (half the gap every ...). */
 const EASE_HALF_LIFE_MS = 110;
 /** Nebula can't tile, so it is bounded to this share of the stage's short side. */
-const NEBULA_RANGE = 0.1;
+const NEBULA_RANGE = 0.2;
 
 /** Small deterministic PRNG so the sky looks the same on every visit. */
 function mulberry32(seed: number): () => number {

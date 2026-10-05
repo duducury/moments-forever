@@ -1,0 +1,147 @@
+/*
+ * Deep-space backdrop and the Earth's atmosphere/lighting for the immersive
+ * globe. Everything here is decorative: pointer-events none, behind the pins
+ * and the map controls, and animated with compositor-only transforms/opacity
+ * (no per-frame JavaScript).
+ */
+
+.space {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 70% 50% at 18% 12%, rgb(38 62 150 / 24%), transparent 62%),
+    radial-gradient(ellipse 60% 45% at 86% 82%, rgb(88 48 128 / 15%), transparent 60%),
+    radial-gradient(ellipse 90% 70% at 50% 50%, rgb(10 22 56 / 55%), transparent 75%),
+    linear-gradient(#02040a, #040815 55%, #02030a);
+}
+
+/* Star layers are painted once on a canvas slightly bigger than the stage, so
+   a slow drift never reveals an edge. */
+.layer {
+  position: absolute;
+  inset: -6%;
+  width: 112%;
+  height: 112%;
+  will-change: transform, opacity;
+}
+
+.far {
+  animation: drift-far 420s ease-in-out infinite alternate;
+}
+
+.mid {
+  animation:
+    drift-mid 300s ease-in-out infinite alternate,
+    twinkle-mid 9s ease-in-out infinite alternate;
+}
+
+.near {
+  animation:
+    drift-near 210s ease-in-out infinite alternate,
+    twinkle-near 6s ease-in-out infinite alternate;
+}
+
+@keyframes drift-far {
+  to {
+    transform: translate3d(-1.2%, 0.6%, 0);
+  }
+}
+
+@keyframes drift-mid {
+  to {
+    transform: translate3d(1.8%, -0.9%, 0);
+  }
+}
+
+@keyframes drift-near {
+  to {
+    transform: translate3d(-2.8%, 1.4%, 0);
+  }
+}
+
+@keyframes twinkle-mid {
+  from {
+    opacity: 0.82;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes twinkle-near {
+  from {
+    opacity: 0.68;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .far,
+  .mid,
+  .near {
+    animation: none;
+  }
+}
+
+/* --- Earth: atmosphere behind the sphere, lighting over it --------------- */
+
+/* Sized from --globe-r / --globe-fx, which GlobeMapCanvas keeps in sync with
+   the real on-screen radius of the globe. */
+.halo,
+.shade {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: var(--globe-fx, 1);
+  transform: translate(-50%, -50%);
+}
+
+:global([data-globe-fx="off"]) .halo,
+:global([data-globe-fx="off"]) .shade {
+  display: none;
+}
+
+/* Behind the map canvas: only the ring outside the sphere is visible. The
+   gradient is in % of the closest side (1.35 × radius), so the globe's rim is
+   at 74%. */
+.halo {
+  z-index: 0;
+  width: calc(var(--globe-r, 0px) * 2.7);
+  height: calc(var(--globe-r, 0px) * 2.7);
+  background: radial-gradient(
+    circle closest-side,
+    rgb(120 175 255 / 0%) 0%,
+    rgb(120 175 255 / 0%) 68%,
+    rgb(120 175 255 / 34%) 73.5%,
+    rgb(70 125 255 / 16%) 80%,
+    rgb(40 80 200 / 5%) 90%,
+    rgb(40 80 200 / 0%) 100%
+  );
+}
+
+/* Above the map canvas, below the pins (see .mapCanvasImmersive marker rule):
+   soft light from the upper left, a gently darker far limb, and a thin blue
+   rim where the atmosphere meets the surface. */
+.shade {
+  z-index: 1;
+  width: calc(var(--globe-r, 0px) * 2 - 1px);
+  height: calc(var(--globe-r, 0px) * 2 - 1px);
+  background:
+    radial-gradient(circle at 30% 26%, rgb(255 255 255 / 13%) 0%, rgb(255 255 255 / 0%) 42%),
+    radial-gradient(
+      circle at 34% 30%,
+      rgb(2 8 30 / 0%) 46%,
+      rgb(2 8 30 / 30%) 78%,
+      rgb(1 5 22 / 52%) 100%
+    );
+  box-shadow: inset 0 0 calc(var(--globe-r, 0px) * 0.1) rgb(130 185 255 / 38%);
+}

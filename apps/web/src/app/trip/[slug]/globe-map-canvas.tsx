@@ -17,6 +17,7 @@ import {
   GEO_DATA_VERSION,
   buildGlobeLabelLayers,
   buildGlobeLandLayers,
+  buildGlobeReliefLayers,
   createCityDotImage,
 } from "@/lib/map/globe-labels";
 import { globeSurfaceShift } from "@/lib/map/globe-parallax";
@@ -178,7 +179,11 @@ export function GlobeMapCanvas({
         sources: {
           "globe-land": {
             type: "geojson",
-            data: `${origin}/geo/countries-${GEO_DATA_VERSION}.json`,
+            data: `${origin}/geo/land-${GEO_DATA_VERSION}.json`,
+          },
+          "globe-ranges": {
+            type: "geojson",
+            data: `${origin}/geo/ranges-${GEO_DATA_VERSION}.json`,
           },
           "globe-borders": {
             type: "geojson",
@@ -193,6 +198,7 @@ export function GlobeMapCanvas({
         },
         layers: [
           ...buildGlobeLandLayers(),
+          ...buildGlobeReliefLayers(),
           ...buildGlobeLabelLayers(),
         ],
       },

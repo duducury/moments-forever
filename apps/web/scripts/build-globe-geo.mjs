@@ -4,13 +4,17 @@
  * name labels in Portuguese. Output (committed, served from our own domain — no map service,
  * no API, nothing fetched in production):
  *
- *   public/geo/countries-v1.json Country polygons, each with a colour index (c) for the
- *                                flat, colourful land of the globe (neighbours never share one)
+ *   public/geo/land-v1.json      The land as natural cover: climate regions (rainforest,
+ *                                savanna, desert, steppe, forest, taiga, tundra, ice)
+ *                                clipped to the real coastline; property t = climate group
+ *   public/geo/ranges-v1.json    Ridge lines of the main mountain ranges (soft relief)
  *   public/geo/borders-v1.json   MultiLineString of land borders between countries
  *   public/geo/places-v1.json    Point features: countries, cities, regions
  *
  * Sources (all local npm packages, only needed when regenerating):
  *   - world-atlas            Natural Earth 1:50m countries (public domain)
+ *   - koppen-climate-lookup  Köppen–Geiger climate classes, 0.5° (Kottek et al. 2006; Rubel et al. 2017)
+ *   - d3-contour, clipper-lib  trace climate regions and clip them to the coastline
  *   - i18n-iso-countries     Portuguese country names (MIT)
  *   - all-the-cities         GeoNames cities (CC BY 4.0 — credited in the map attribution)
  *   - country-state-city     state / region centroids
@@ -18,7 +22,8 @@
  *
  * Regenerate (none of these are app dependencies, so nothing touches package.json):
  *   mkdir /tmp/geo && cd /tmp/geo && npm init -y && npm i world-atlas topojson-client \
- *     i18n-iso-countries all-the-cities country-state-city d3-geo polylabel
+ *     i18n-iso-countries all-the-cities country-state-city d3-geo polylabel \
+ *     koppen-climate-lookup d3-contour clipper-lib
  *   GEO_DEPS_DIR=/tmp/geo node apps/web/scripts/build-globe-geo.mjs
  *
  * Every place has:  k kind · n name · t tier (1 = most important, shown first)
@@ -28,7 +33,7 @@
 import { createRequire } from "node:module";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const OUT_DIR = path.resolve(here, "../public/geo");
@@ -37,6 +42,9 @@ const require = createRequire(path.join(depsDir, "package.json"));
 
 const topojson = require("topojson-client");
 const { geoArea, geoEquirectangular, geoPath } = require("d3-geo");
+const ClipperLib = require("clipper-lib");
+const { KoppenLookup } = require("koppen-climate-lookup");
+const { contours } = await import(pathToFileURL(require.resolve("d3-contour")).href);
 const polylabelModule = require("polylabel");
 const polylabel = polylabelModule.default ?? polylabelModule;
 const countriesNames = require("i18n-iso-countries");
@@ -97,34 +105,29 @@ const bordersJson = {
   ],
 };
 
-// --- Land: country polygons with a colour index (no two neighbours alike) ----------------------
+// --- Land: natural cover (Köppen–Geiger climate) clipped to the real coastline ------------------
 
-const LAND_COLORS = 6; // palette size in src/lib/map/globe-labels.ts
-const ICE_COLOR = 6; // Antarctica
-const geometries = atlas.objects.countries.geometries;
-const adjacent = topojson.neighbors(geometries);
-const colourOf = new Array(geometries.length).fill(-1);
-// Most-connected countries first, so the greedy colouring never needs a seventh colour.
-const order = geometries.map((_, i) => i).sort((a, b) => adjacent[b].length - adjacent[a].length || a - b);
-for (const index of order) {
-  if (geometries[index].id === "010") {
-    colourOf[index] = ICE_COLOR;
-    continue;
-  }
-  const taken = new Set(adjacent[index].map((n) => colourOf[n]));
-  // Start from a different colour per country, so islands and loners vary too.
-  const start = Number(geometries[index].id ?? index) % LAND_COLORS;
-  for (let step = 0; step < LAND_COLORS; step += 1) {
-    const candidate = (start + step) % LAND_COLORS;
-    if (!taken.has(candidate)) {
-      colourOf[index] = candidate;
-      break;
-    }
-  }
-  if (colourOf[index] === -1) throw new Error(`Needs more than ${LAND_COLORS} colours`);
-}
-const roundCoordinates = (value) =>
-  Array.isArray(value) ? value.map(roundCoordinates) : round(value, 2);
+/**
+ * Climate groups, in the order of LAND_PALETTE in src/lib/map/globe-labels.ts.
+ * Köppen–Geiger (Kottek et al. 2006; Rubel et al. 2017) at 0.5°, from the
+ * koppen-climate-lookup package: rainforest and savanna read as greens, the dry
+ * classes as sand, the cold ones as dark taiga, tundra and ice.
+ */
+const CLIMATE_GROUPS = [
+  ["Af"], // 0 rainforest
+  ["Am", "As", "Aw"], // 1 savanna
+  ["BWh"], // 2 hot desert
+  ["BWk"], // 3 cold desert
+  ["BSh", "BSk"], // 4 steppe
+  ["Csa", "Csb", "Csc"], // 5 mediterranean
+  ["Cfa", "Cfb", "Cfc", "Cwa", "Cwb", "Cwc"], // 6 temperate
+  ["Dfa", "Dfb", "Dsa", "Dsb", "Dwa", "Dwb"], // 7 continental
+  ["Dfc", "Dfd", "Dsc", "Dsd", "Dwc", "Dwd"], // 8 boreal forest (taiga)
+  ["ET"], // 9 tundra
+  ["EF"], // 10 ice
+];
+const groupOfClass = new Map();
+CLIMATE_GROUPS.forEach((classes, group) => classes.forEach((c) => groupOfClass.set(c, group)));
 
 /**
  * Natural Earth's polygons are spherical: Russia (Chukotka), Fiji and
@@ -156,17 +159,217 @@ function cutAtAntimeridian(feature) {
     });
   return { type: "MultiPolygon", coordinates: rings.map((ring) => [ring]) };
 }
-const landJson = {
-  type: "FeatureCollection",
-  features: topojson.feature(atlas, atlas.objects.countries).features.map((feature, index) => ({
+
+/** Every land polygon (countries), cut at the antimeridian, as lists of rings [outer, ...holes]. */
+const landPolygons = [];
+for (const feature of topojson.feature(atlas, atlas.objects.countries).features) {
+  const geometry = hasAntimeridianJump(feature.geometry) ? cutAtAntimeridian(feature) : feature.geometry;
+  if (geometry.type === "Polygon") landPolygons.push(geometry.coordinates);
+  else for (const polygon of geometry.coordinates) landPolygons.push(polygon);
+}
+
+// 1. The climate raster, 0.5°: group index per land cell, −1 for sea.
+const GRID_W = 720;
+const GRID_H = 360;
+const labels = new Int8Array(GRID_W * GRID_H).fill(-1);
+for (const [, value] of KoppenLookup.getInstance().grid) {
+  const group = groupOfClass.get(value.koppenClass);
+  if (group === undefined) throw new Error(`Unknown Köppen class ${value.koppenClass}`);
+  const x = Math.floor((value.longitude + 180) / 0.5);
+  const y = Math.floor((90 - value.latitude) / 0.5);
+  if (x >= 0 && x < GRID_W && y >= 0 && y < GRID_H) labels[y * GRID_W + x] = group;
+}
+
+// 2. Spread the climate over the sea (nearest land cell wins), so every coast and
+//    island gets one once it is clipped to the real coastline.
+{
+  const queue = [];
+  for (let i = 0; i < labels.length; i += 1) if (labels[i] >= 0) queue.push(i);
+  for (let head = 0; head < queue.length; head += 1) {
+    const i = queue[head];
+    const x = i % GRID_W;
+    const y = (i - x) / GRID_W;
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const nx = (x + dx + GRID_W) % GRID_W;
+      const ny = y + dy;
+      if (ny < 0 || ny >= GRID_H) continue;
+      const j = ny * GRID_W + nx;
+      if (labels[j] === -1) {
+        labels[j] = labels[i];
+        queue.push(j);
+      }
+    }
+  }
+}
+
+// 3. Soften: blur each group's indicator, upsample 2×, keep the strongest group per
+//    pixel. This gives organic region edges instead of 0.5° blocks, and neighbouring
+//    groups share their boundary exactly (no gaps, no overlaps).
+const UP = 2;
+const OUT_W = GRID_W * UP;
+const OUT_H = GRID_H * UP;
+const KERNEL = [0.06, 0.24, 0.4, 0.24, 0.06]; // σ ≈ 1 cell
+function blurredIndicator(group) {
+  const base = new Float32Array(GRID_W * GRID_H);
+  for (let i = 0; i < base.length; i += 1) base[i] = labels[i] === group ? 1 : 0;
+  const horizontal = new Float32Array(base.length);
+  for (let y = 0; y < GRID_H; y += 1) {
+    for (let x = 0; x < GRID_W; x += 1) {
+      let sum = 0;
+      for (let k = -2; k <= 2; k += 1) sum += KERNEL[k + 2] * base[y * GRID_W + ((x + k + GRID_W) % GRID_W)];
+      horizontal[y * GRID_W + x] = sum;
+    }
+  }
+  const out = new Float32Array(base.length);
+  for (let y = 0; y < GRID_H; y += 1) {
+    for (let x = 0; x < GRID_W; x += 1) {
+      let sum = 0;
+      for (let k = -2; k <= 2; k += 1) {
+        const yy = Math.min(GRID_H - 1, Math.max(0, y + k));
+        sum += KERNEL[k + 2] * horizontal[yy * GRID_W + x];
+      }
+      out[y * GRID_W + x] = sum;
+    }
+  }
+  return out;
+}
+function sampleBilinear(field, fx, fy) {
+  const x0 = Math.floor(fx);
+  const y0 = Math.floor(fy);
+  const tx = fx - x0;
+  const ty = fy - y0;
+  const at = (x, y) => field[Math.min(GRID_H - 1, Math.max(0, y)) * GRID_W + ((x + GRID_W) % GRID_W)];
+  return (
+    at(x0, y0) * (1 - tx) * (1 - ty) + at(x0 + 1, y0) * tx * (1 - ty) +
+    at(x0, y0 + 1) * (1 - tx) * ty + at(x0 + 1, y0 + 1) * tx * ty
+  );
+}
+const fields = CLIMATE_GROUPS.map((_, group) => blurredIndicator(group));
+const strongest = new Int8Array(OUT_W * OUT_H);
+for (let y = 0; y < OUT_H; y += 1) {
+  for (let x = 0; x < OUT_W; x += 1) {
+    let best = 0;
+    let bestValue = -1;
+    for (let group = 0; group < fields.length; group += 1) {
+      const value = sampleBilinear(fields[group], (x + 0.5) / UP - 0.5, (y + 0.5) / UP - 0.5);
+      if (value > bestValue) {
+        bestValue = value;
+        best = group;
+      }
+    }
+    strongest[y * OUT_W + x] = best;
+  }
+}
+
+// 4. Trace each group as polygons, then clip them to the real land with Clipper.
+const CLIP_SCALE = 1000;
+/** Chaikin corner cutting: turns the pixel staircase of a traced region into a soft curve. */
+function smoothRing(ring, rounds) {
+  let points = ring.slice(0, -1);
+  for (let round = 0; round < rounds; round += 1) {
+    const next = [];
+    for (let i = 0; i < points.length; i += 1) {
+      const [x1, y1] = points[i];
+      const [x2, y2] = points[(i + 1) % points.length];
+      next.push([0.75 * x1 + 0.25 * x2, 0.75 * y1 + 0.25 * y2], [0.25 * x1 + 0.75 * x2, 0.25 * y1 + 0.75 * y2]);
+    }
+    points = next;
+  }
+  return points;
+}
+const toClipper = (ring) => ring.map(([lng, lat]) => ({ X: Math.round(lng * CLIP_SCALE), Y: Math.round(lat * CLIP_SCALE) }));
+const landPaths = landPolygons.flatMap((polygon) => polygon.map(toClipper));
+
+const landFeatures = [];
+for (let group = 0; group < CLIMATE_GROUPS.length; group += 1) {
+  const mask = new Float32Array(OUT_W * OUT_H);
+  for (let i = 0; i < mask.length; i += 1) mask[i] = strongest[i] === group ? 1 : 0;
+  const traced = contours().size([OUT_W, OUT_H]).thresholds([0.5])(mask)[0];
+  const regionPaths = [];
+  for (const polygon of traced.coordinates) {
+    for (const ring of polygon) {
+      const geo = ring.map(([x, y]) => [-180 + (x + 0.5) / (UP * 2), 90 - (y + 0.5) / (UP * 2)]);
+      regionPaths.push(toClipper(smoothRing(geo, 2)));
+    }
+  }
+  if (regionPaths.length === 0) continue;
+
+  const clipper = new ClipperLib.Clipper();
+  clipper.AddPaths(landPaths, ClipperLib.PolyType.ptSubject, true);
+  clipper.AddPaths(regionPaths, ClipperLib.PolyType.ptClip, true);
+  const tree = new ClipperLib.PolyTree();
+  clipper.Execute(
+    ClipperLib.ClipType.ctIntersection,
+    tree,
+    ClipperLib.PolyFillType.pftEvenOdd,
+    ClipperLib.PolyFillType.pftEvenOdd,
+  );
+  const toRing = (path) => {
+    const ring = path.map((p) => [round(p.X / CLIP_SCALE, 2), round(p.Y / CLIP_SCALE, 2)]);
+    const first = ring[0];
+    const last = ring[ring.length - 1];
+    if (first[0] !== last[0] || first[1] !== last[1]) ring.push([...first]);
+    return ring;
+  };
+  const polygons = [];
+  const walk = (node) => {
+    for (const child of node.Childs()) {
+      if (!child.IsHole()) {
+        const rings = [toRing(child.Contour())];
+        for (const hole of child.Childs()) {
+          rings.push(toRing(hole.Contour()));
+          for (const island of hole.Childs()) walk({ Childs: () => [island] });
+        }
+        polygons.push(rings);
+      }
+    }
+  };
+  walk(tree);
+  if (polygons.length === 0) continue;
+  landFeatures.push({
     type: "Feature",
-    properties: { c: colourOf[index] },
-    geometry: hasAntimeridianJump(feature.geometry)
-      ? cutAtAntimeridian(feature)
-      : {
-          type: feature.geometry.type,
-          coordinates: roundCoordinates(feature.geometry.coordinates),
-        },
+    properties: { t: group },
+    geometry: { type: "MultiPolygon", coordinates: polygons },
+  });
+}
+const landJson = { type: "FeatureCollection", features: landFeatures };
+
+// --- Relief: the main mountain ranges, as soft ridge lines ---------------------------------
+
+/** Ridge lines [lng, lat] of the great ranges, drawn blurred and embossed (see globe-labels.ts). */
+const RANGES = {
+  Andes: [[-77, 8], [-75.5, 3], [-78.5, -1.5], [-77.5, -9], [-73, -14], [-69, -18], [-68, -23], [-69.5, -30], [-70.5, -35], [-71.5, -40], [-72.5, -46], [-73.5, -51], [-71, -54]],
+  Rockies: [[-142, 62], [-128, 58], [-120, 52], [-114, 49], [-110, 44], [-106, 39], [-106, 34], [-107, 31]],
+  "Sierra Madre": [[-109, 31], [-106, 26], [-104, 22], [-103, 19]],
+  "Sierra Nevada": [[-122, 48], [-121, 44], [-120, 39], [-118, 36]],
+  Alaska: [[-152, 62], [-148, 63], [-142, 62]],
+  Appalachians: [[-84, 35], [-80, 38], [-77, 41], [-72, 44], [-70, 46]],
+  Alps: [[6, 44], [7, 46], [10, 46.5], [13, 47], [15, 47.5]],
+  Pyrenees: [[-2, 43], [0, 42.7], [3, 42.5]],
+  Carpathians: [[18, 49], [21, 49.5], [24, 48], [25.5, 46], [23, 45.5]],
+  Caucasus: [[38, 44], [42, 43.2], [46, 42], [48.5, 41]],
+  Urals: [[60, 68], [60, 60], [59, 55], [58, 51]],
+  Scandinavia: [[6, 60], [9, 62], [13, 65], [16, 67.5], [20, 69]],
+  Atlas: [[-9, 31], [-5, 32.5], [0, 34], [5, 35.5], [9, 36]],
+  Ethiopia: [[37, 14], [38.5, 10], [40, 7]],
+  Drakensberg: [[29, -26], [28.5, -29.5], [27.5, -31]],
+  Zagros: [[44, 37], [47, 34], [50, 31], [54, 28]],
+  Himalaya: [[70, 36], [74, 36], [77, 34.5], [80, 31], [84, 28.5], [88, 28], [92, 28], [96, 28.5]],
+  "Tian Shan": [[72, 38], [76, 41], [80, 42], [85, 43], [90, 43.5]],
+  Altai: [[86, 50], [90, 50.5], [97, 49.5]],
+  Kunlun: [[78, 36], [85, 36], [92, 35.5], [98, 35]],
+  "Western Ghats": [[73, 20], [74, 15], [76, 10], [77.5, 8.5]],
+  "Great Dividing Range": [[145, -15], [146, -20], [150, -25], [151, -30], [150, -35], [147, -37]],
+  Annamite: [[105, 19], [107, 15], [108, 12]],
+  "Southern Alps": [[169, -43.5], [171.5, -43], [168, -45.5]],
+  "Japan Alps": [[137, 35], [137.7, 36.5], [138.5, 37.5]],
+};
+const rangesJson = {
+  type: "FeatureCollection",
+  features: Object.entries(RANGES).map(([name, coordinates]) => ({
+    type: "Feature",
+    properties: { n: name },
+    geometry: { type: "LineString", coordinates },
   })),
 };
 
@@ -727,7 +930,8 @@ const placesJson = {
 
 mkdirSync(OUT_DIR, { recursive: true });
 writeFileSync(path.join(OUT_DIR, "borders-v1.json"), JSON.stringify(bordersJson));
-writeFileSync(path.join(OUT_DIR, "countries-v1.json"), JSON.stringify(landJson));
+writeFileSync(path.join(OUT_DIR, "land-v1.json"), JSON.stringify(landJson));
+writeFileSync(path.join(OUT_DIR, "ranges-v1.json"), JSON.stringify(rangesJson));
 writeFileSync(path.join(OUT_DIR, "places-v1.json"), JSON.stringify(placesJson));
 
 const count = (k, t) => places.filter((p) => p.k === k && (t === undefined || p.t === t)).length;

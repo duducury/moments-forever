@@ -28,22 +28,51 @@ export const COUNTRY_NAMES_FADE: readonly [number, number] = [5.4, 6.4];
 export const CITY_DOT_IMAGE = "globe-city-dot";
 
 /**
- * Simple, friendly land colours. The data gives every country an index into
- * this list such that neighbours never share one; the last entry is the ice of
- * Antarctica.
+ * Natural land colours, by climate group (the `t` of each land polygon; same
+ * order as CLIMATE_GROUPS in scripts/build-globe-geo.mjs): greens for the wet
+ * climates, sand for the dry ones, dark taiga, grey tundra, white ice.
  */
 export const LAND_PALETTE = [
-  "#7dbb6e", // green
-  "#e8c765", // sand
-  "#e49d68", // orange
-  "#dc8696", // rose
-  "#a094d6", // lavender
-  "#63b8b4", // teal
-  "#eef4fb", // ice
+  "#3f8a4e", // 0 rainforest
+  "#9bb15a", // 1 savanna
+  "#e6d3a3", // 2 hot desert
+  "#d9cfae", // 3 cold desert
+  "#cfc58c", // 4 steppe
+  "#b4b86a", // 5 mediterranean
+  "#74ac5e", // 6 temperate
+  "#5f9a5c", // 7 continental
+  "#4c8561", // 8 boreal forest (taiga)
+  "#b7c0a9", // 9 tundra
+  "#f3f6f9", // 10 ice
 ] as const;
-export const OCEAN_COLOR = "#2b69bb";
+export const OCEAN_COLOR = "#3277c0";
 
-/** Ocean and flat country colours (the base of the globe), under borders and labels. */
+/**
+ * Soft relief: the main ranges as blurred ridge lines — a light edge on the
+ * side the light comes from (upper left) and a shadow on the other. Subtle on
+ * purpose, and gone once the camera is close enough for them to look like lines.
+ */
+export function buildGlobeReliefLayers(): LayerSpecification[] {
+  const widthByZoom = ["interpolate", ["linear"], ["zoom"], 1, 2.5, 3, 6, 5, 14, 7, 28];
+  const blurByZoom = ["interpolate", ["linear"], ["zoom"], 1, 2, 5, 9, 7, 16];
+  const opacityByZoom = ["interpolate", ["linear"], ["zoom"], 1, 0.12, 3, 0.2, 5, 0.22, 7, 0.14];
+  const ridge = (id: string, color: string, side: 1 | -1): LayerSpecification => ({
+    id,
+    type: "line",
+    source: "globe-ranges",
+    layout: { "line-cap": "round", "line-join": "round" },
+    paint: {
+      "line-color": color,
+      "line-opacity": opacityByZoom as never,
+      "line-width": widthByZoom as never,
+      "line-blur": blurByZoom as never,
+      "line-offset": ["interpolate", ["linear"], ["zoom"], 1, 0.8 * side, 5, 4 * side, 7, 8 * side] as never,
+    },
+  });
+  return [ridge("globe-relief-shadow", "#4a3a24", 1), ridge("globe-relief-light", "#ffffff", -1)];
+}
+
+/** Ocean and natural land cover (the base of the globe), under borders and labels. */
 export function buildGlobeLandLayers(): LayerSpecification[] {
   const byIndex: unknown[] = [];
   LAND_PALETTE.forEach((color, index) => byIndex.push(index, color));
@@ -54,7 +83,7 @@ export function buildGlobeLandLayers(): LayerSpecification[] {
       type: "fill",
       source: "globe-land",
       paint: {
-        "fill-color": ["match", ["get", "c"], ...byIndex, LAND_PALETTE[0]] as never,
+        "fill-color": ["match", ["get", "t"], ...byIndex, LAND_PALETTE[6]] as never,
         "fill-antialias": true,
       },
     },
@@ -83,8 +112,8 @@ export function buildGlobeLabelLayers(): LayerSpecification[] {
       source: "globe-borders",
       layout: { "line-cap": "round", "line-join": "round" },
       paint: {
-        "line-color": "#ffffff",
-        "line-opacity": ["interpolate", ["linear"], ["zoom"], 1, 0.3, 3, 0.4, 6, 0.5],
+        "line-color": "#5b5440",
+        "line-opacity": ["interpolate", ["linear"], ["zoom"], 1, 0.22, 3, 0.3, 6, 0.4],
         "line-width": ["interpolate", ["linear"], ["zoom"], 1, 0.35, 4, 0.7, 7, 1.1],
       },
     },

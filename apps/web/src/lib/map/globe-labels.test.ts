@@ -12,6 +12,7 @@ import {
   REGION_TIER_MIN_ZOOM,
   buildGlobeLabelLayers,
   buildGlobeLandLayers,
+  buildGlobeReliefLayers,
   createCityDotImage,
 } from "./globe-labels";
 
@@ -176,20 +177,47 @@ test("borders data: land borders only, as one multi-line", () => {
   assert.ok(nearMexico);
 });
 
-test("land layers: a blue ocean and flat country fills, nothing photographic", () => {
+test("land layers: a blue ocean and flat natural land colours, nothing photographic", () => {
   const layers = buildGlobeLandLayers();
   assert.deepEqual(
     layers.map((layer) => layer.type),
     ["background", "fill"],
   );
-  assert.equal(LAND_PALETTE.length, 7, "6 land colours + ice");
+  assert.equal(LAND_PALETTE.length, 11, "one colour per climate group");
   const fill = layers[1] as { paint: { "fill-color": unknown[] } };
   const expression = fill.paint["fill-color"];
   assert.equal(expression[0], "match");
-  // Every colour index the data can use resolves to a palette colour.
+  assert.deepEqual(expression[1], ["get", "t"]);
+  // Every climate group the data can use resolves to a palette colour.
   for (let index = 0; index < LAND_PALETTE.length; index += 1) {
-    assert.ok(expression.includes(index), `colour ${index} is not mapped`);
+    assert.ok(expression.includes(index), `group ${index} is not mapped`);
     assert.ok(expression.includes(LAND_PALETTE[index]));
+  }
+});
+
+test("land colours are natural: greens, sands, greys — no rainbow of countries", () => {
+  const hue = (hex: string) => {
+    const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255) as [number, number, number];
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    if (max === min) return { hue: 0, saturation: 0 };
+    const d = max - min;
+    const h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    return { hue: (h * 60 + 360) % 360, saturation: d / max };
+  };
+  for (const color of LAND_PALETTE) {
+    const { hue: h, saturation } = hue(color);
+    // Yellows/oranges/greens only (30°–160°), or near-neutral (ice, tundra).
+    assert.ok(saturation < 0.2 || (h >= 30 && h <= 160), `${color} (hue ${h.toFixed(0)}) is not a natural land colour`);
+  }
+});
+
+test("relief layers: soft ridge lines from the ranges data, a light and a shadow side", () => {
+  const layers = buildGlobeReliefLayers();
+  assert.deepEqual(layers.map((layer) => layer.id), ["globe-relief-shadow", "globe-relief-light"]);
+  for (const layer of layers) {
+    assert.equal(layer.type, "line");
+    assert.equal((layer as { source: string }).source, "globe-ranges");
   }
 });
 
@@ -211,39 +239,46 @@ function inGeometry(geometry: Geometry, lng: number, lat: number): boolean {
   return polygons.some(([outer, ...holes]) => inRing(outer!, lng, lat) && !holes.some((hole) => inRing(hole, lng, lat)));
 }
 
-test("land data: neighbouring countries never share a colour", () => {
-  const file = path.join(PUBLIC, "geo", `countries-${GEO_DATA_VERSION}.json`);
+test("land data: climate groups follow real geography and stop at the coastline", () => {
+  const file = path.join(PUBLIC, "geo", `land-${GEO_DATA_VERSION}.json`);
   const json = JSON.parse(readFileSync(file, "utf8")) as {
-    features: { properties: { c: number }; geometry: Geometry }[];
+    features: { properties: { t: number }; geometry: Geometry }[];
   };
-  assert.ok(json.features.length >= 200);
-  for (const feature of json.features) {
-    assert.ok(Number.isInteger(feature.properties.c) && feature.properties.c >= 0 && feature.properties.c < LAND_PALETTE.length);
-  }
-  const colourAt = (lng: number, lat: number): number => {
+  const groups = json.features.map((feature) => feature.properties.t).sort((a, b) => a - b);
+  assert.deepEqual(groups, [...LAND_PALETTE.keys()], "every group appears exactly once");
+
+  const groupAt = (lng: number, lat: number): number | null => {
     const found = json.features.find((feature) => inGeometry(feature.geometry, lng, lat));
-    assert.ok(found, `no country at ${lng},${lat}`);
-    return found.properties.c;
+    return found ? found.properties.t : null;
   };
-  const brasil = colourAt(-52, -10);
-  const argentina = colourAt(-64, -34);
-  const peru = colourAt(-75, -10);
-  const bolivia = colourAt(-64, -17);
-  assert.notEqual(brasil, argentina);
-  assert.notEqual(brasil, peru);
-  assert.notEqual(brasil, bolivia);
-  assert.notEqual(peru, bolivia);
-  const [alemanha, franca, polonia, austria, suica] = [
-    colourAt(10.5, 51), colourAt(2.5, 46.5), colourAt(19, 52), colourAt(14.5, 47.5), colourAt(8.2, 46.8),
-  ];
-  for (const other of [franca, polonia, austria, suica]) assert.notEqual(alemanha, other);
-  assert.notEqual(colourAt(-98, 39), colourAt(-100, 60)); // Estados Unidos / Canadá
-  assert.notEqual(colourAt(-98, 39), colourAt(-102, 23)); // Estados Unidos / México
-  assert.notEqual(colourAt(78, 22), colourAt(103, 35)); // Índia / China
-  assert.notEqual(colourAt(78, 22), colourAt(70, 30)); // Índia / Paquistão
-  // Antarctica is ice, and the six land colours are all in use.
-  const ice = json.features.filter((f) => f.properties.c === LAND_PALETTE.length - 1);
-  assert.equal(ice.length, 1);
-  assert.ok(JSON.stringify(ice[0]!.geometry.coordinates).includes(",-90"), "the ice is Antarctica");
-  assert.ok(new Set(json.features.map((f) => f.properties.c)).size >= 6);
+  // Land: 0 rainforest · 1 savanna · 2 hot desert · 3 cold desert · 4 steppe · 6 temperate
+  // · 7 continental · 8 taiga · 9 tundra · 10 ice
+  assert.equal(groupAt(-62, -4), 0, "Amazon");
+  assert.equal(groupAt(23, 0), 0, "Congo");
+  assert.equal(groupAt(20, 25), 2, "Sahara");
+  assert.equal(groupAt(45, 24), 2, "Arabian desert");
+  assert.equal(groupAt(105, 42), 3, "Gobi");
+  assert.equal(groupAt(100, 62), 8, "Siberian taiga");
+  assert.equal(groupAt(-45, 75), 10, "Greenland ice");
+  assert.equal(groupAt(2.3, 48.8), 6, "Paris");
+  assert.equal(groupAt(-46.6, -23.5), 6, "São Paulo");
+  // Open sea has no land cover at all.
+  assert.equal(groupAt(-30, 0), null, "mid-Atlantic");
+  assert.equal(groupAt(80, -30), null, "Indian Ocean");
+});
+
+test("ranges data: ridge lines of the great mountain ranges", () => {
+  const file = path.join(PUBLIC, "geo", `ranges-${GEO_DATA_VERSION}.json`);
+  const json = JSON.parse(readFileSync(file, "utf8")) as {
+    features: { properties: { n: string }; geometry: { type: string; coordinates: number[][] } }[];
+  };
+  const names = json.features.map((feature) => feature.properties.n);
+  for (const name of ["Andes", "Rockies", "Alps", "Himalaya"]) assert.ok(names.includes(name), name);
+  for (const feature of json.features) {
+    assert.equal(feature.geometry.type, "LineString");
+    assert.ok(feature.geometry.coordinates.length >= 3);
+    for (const [lng, lat] of feature.geometry.coordinates) {
+      assert.ok(lng! >= -180 && lng! <= 180 && lat! >= -90 && lat! <= 90);
+    }
+  }
 });

@@ -17,9 +17,10 @@ export interface UserRow {
   readonly profileSlug: string | null;
   readonly isAdmin: boolean;
   readonly createdAt: string;
-  readonly tripsUsed: number;
+  /** null = unknown (the usage lookup failed), never a made-up zero. */
+  readonly tripsUsed: number | null;
   readonly tripsLimit: number;
-  readonly photoCount: number;
+  readonly photoCount: number | null;
   readonly plans: readonly { readonly name: string; readonly count: number }[];
   readonly redeemedCodes: readonly {
     readonly planName: string;
@@ -32,6 +33,8 @@ interface UsersTableProps {
   readonly plans: readonly PlanOption[];
   /** True when the email RPC failed outright (e.g. its migration hasn't been run yet) — every row's email is unknown for that reason, not because it's genuinely blank. */
   readonly emailLookupFailed?: boolean;
+  /** True when admin_user_usage() failed (e.g. its migration hasn't been run yet) — trips and photos show "—". */
+  readonly usageLookupFailed?: boolean;
 }
 
 interface PlanOption {
@@ -174,7 +177,12 @@ function RowActions({ row }: { readonly row: UserRow }) {
   );
 }
 
-export function UsersTable({ rows, plans, emailLookupFailed }: UsersTableProps) {
+export function UsersTable({
+  rows,
+  plans,
+  emailLookupFailed,
+  usageLookupFailed,
+}: UsersTableProps) {
   const [query, setQuery] = useState("");
   const [editingPlanFor, setEditingPlanFor] = useState<string | null>(null);
 
@@ -209,6 +217,14 @@ export function UsersTable({ rows, plans, emailLookupFailed }: UsersTableProps) 
         <p className={styles.emailWarning} role="alert">
           Não foi possível carregar os e-mails — provavelmente falta rodar a
           migration <code>admin_list_user_emails</code> no Supabase.
+        </p>
+      ) : null}
+
+      {usageLookupFailed ? (
+        <p className={styles.emailWarning} role="alert">
+          Não foi possível carregar as contagens de viagens e fotos —
+          provavelmente falta rodar a migration <code>admin_user_usage</code> no
+          Supabase.
         </p>
       ) : null}
 
@@ -262,9 +278,9 @@ export function UsersTable({ rows, plans, emailLookupFailed }: UsersTableProps) 
                     ) : null}
                   </td>
                   <td>
-                    {row.tripsUsed}/{row.tripsLimit}
+                    {row.tripsUsed ?? "—"}/{row.tripsLimit}
                   </td>
-                  <td>{row.photoCount}</td>
+                  <td>{row.photoCount ?? "—"}</td>
                   <td>{new Date(row.createdAt).toLocaleDateString("pt-BR")}</td>
                   <td>
                     <span
@@ -316,10 +332,10 @@ export function UsersTable({ rows, plans, emailLookupFailed }: UsersTableProps) 
 
               <div className={styles.userCardStats}>
                 <span>
-                  <strong>{row.tripsUsed}/{row.tripsLimit}</strong> viagens
+                  <strong>{row.tripsUsed ?? "—"}/{row.tripsLimit}</strong> viagens
                 </span>
                 <span>
-                  <strong>{row.photoCount}</strong> fotos
+                  <strong>{row.photoCount ?? "—"}</strong> fotos
                 </span>
                 <span
                   className={styles.badge}

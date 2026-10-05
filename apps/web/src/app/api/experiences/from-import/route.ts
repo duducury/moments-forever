@@ -12,6 +12,11 @@ import {
   buildSeedCacheFromPlaces,
   enrichImportDraftPlaces,
 } from "@/lib/location/resolve-place-labels";
+import { getUserLicense } from "@/lib/licensing/get-user-license";
+import {
+  NO_ACTIVE_LICENSE_MESSAGE,
+  tripLimitMessage,
+} from "@/lib/licensing/trip-limit";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 function parseOrganization(
@@ -136,20 +141,17 @@ export async function POST(request: Request) {
         : "Falha ao criar experiência.";
     if (message.includes("no_active_license")) {
       return NextResponse.json(
-        {
-          error: "Você precisa ativar uma key para criar uma viagem.",
-          code: "no_active_license",
-        },
+        { error: NO_ACTIVE_LICENSE_MESSAGE, code: "no_active_license" },
         { status: 403 },
       );
     }
     if (message.includes("trip_limit_reached")) {
+      // The database trigger already refused the insert; this only reads the
+      // account's current allowance (sum of its active keys) to say it.
+      const license = await getUserLicense(supabase, user.id).catch(() => null);
+      const limit = license?.maxNfcTags ?? null;
       return NextResponse.json(
-        {
-          error:
-            "Você atingiu o limite de viagens do seu plano. Ative outra key para continuar.",
-          code: "trip_limit_reached",
-        },
+        { error: tripLimitMessage(limit), code: "trip_limit_reached", limit },
         { status: 403 },
       );
     }

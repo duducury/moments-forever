@@ -448,6 +448,8 @@ export function PhotoImport() {
   const [total, setTotal] = useState(0);
   const [errors, setErrors] = useState<readonly string[]>([]);
   const [persistError, setPersistError] = useState<string | null>(null);
+  /** Set when the server refused the trip for licensing reasons, so the error can link to the key activation. */
+  const [persistNeedsKey, setPersistNeedsKey] = useState(false);
   const [createdSlug, setCreatedSlug] = useState<string | null>(null);
   const [newAlbumName, setNewAlbumName] = useState("");
   const [newAlbumStory, setNewAlbumStory] = useState("");
@@ -570,6 +572,7 @@ export function PhotoImport() {
 
   async function continueToExperience(): Promise<void> {
     setPersistError(null);
+    setPersistNeedsKey(false);
     if (!configured) {
       setPersistError(
         "Configure NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY para o Supabase local.",
@@ -659,8 +662,15 @@ export function PhotoImport() {
         readonly id?: string;
         readonly slug?: string;
         readonly error?: string;
+        readonly code?: string;
       };
       if (!response.ok || !body.slug || !body.id) {
+        if (
+          body.code === "trip_limit_reached" ||
+          body.code === "no_active_license"
+        ) {
+          setPersistNeedsKey(true);
+        }
         throw new Error(body.error ?? "Não foi possível criar a experiência.");
       }
 
@@ -1161,6 +1171,12 @@ export function PhotoImport() {
           {persistError ? (
             <p className={styles.error} role="alert">
               {persistError}
+              {persistNeedsKey ? (
+                <>
+                  {" "}
+                  <Link href="/ativar">Ativar nova key</Link>
+                </>
+              ) : null}
             </p>
           ) : null}
           {!user && configured && !authLoading ? (

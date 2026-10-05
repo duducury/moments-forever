@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
+import { parseUserUsageRows } from "@/lib/admin/user-usage";
 import { profilePath } from "@/lib/routes/app-routes";
 import { requireAdminUser } from "@/lib/licensing/require-admin";
 
@@ -25,13 +26,17 @@ export default async function AdminUsersPage() {
   const safeIds =
     userIds.length > 0 ? userIds : ["00000000-0000-0000-0000-000000000000"];
 
-  const [licenses, experiences, allPlans, emails] = await Promise.all([
+  const [licenses, usage, allPlans, emails] = await Promise.all([
     supabase
       .from("licenses")
       .select("user_id, plan_id, activation_code_id")
       .eq("status", "active")
       .in("user_id", safeIds),
-    supabase.from("experiences").select("id, owner_id").in("owner_id", safeIds),
+    // Trip/photo totals come from a SECURITY DEFINER RPC: `experiences` and
+    // `photos` have no admin SELECT policy (an admin can't browse private
+    // memories), so reading them with this session only ever returned the
+    // admin's own rows and other people's public ones — i.e. 0 for most.
+    supabase.rpc("admin_user_usage", { p_user_ids: userIds }),
     supabase
       .from("plans")
       .select("id, name, max_nfc_tags")
@@ -92,36 +97,14 @@ export default async function AdminUsersPage() {
     licensesByUser.set(userId, list);
   }
 
-  const experienceIdsByUser = new Map<string, string[]>();
-  for (const row of experiences.data ?? []) {
-    const ownerId = row.owner_id as string;
-    const list = experienceIdsByUser.get(ownerId) ?? [];
-    list.push(row.id as string);
-    experienceIdsByUser.set(ownerId, list);
-  }
-  const allExperienceIds = (experiences.data ?? []).map((row) => row.id as string);
-
-  const photos =
-    allExperienceIds.length > 0
-      ? await supabase.from("photos").select("experience_id").in("experience_id", allExperienceIds)
-      : { data: [] as { experience_id: string }[] };
-  const photoCountByExperience = new Map<string, number>();
-  for (const row of photos.data ?? []) {
-    const experienceId = row.experience_id as string;
-    photoCountByExperience.set(
-      experienceId,
-      (photoCountByExperience.get(experienceId) ?? 0) + 1,
-    );
-  }
+  // null (not 0) when the RPC failed — e.g. its migration isn't applied yet —
+  // so the page shows "—" instead of a wrong zero.
+  const usageByUser = usage.error ? null : parseUserUsageRows(usage.data);
 
   const rows: UserRow[] = (users.data ?? []).map((user) => {
     const id = user.id as string;
     const slug = user.profile_slug as string | null;
-    const experienceIds = experienceIdsByUser.get(id) ?? [];
-    const photoCount = experienceIds.reduce(
-      (sum, experienceId) => sum + (photoCountByExperience.get(experienceId) ?? 0),
-      0,
-    );
+    const userUsage = usageByUser?.get(id) ?? null;
     const userLicenses = licensesByUser.get(id) ?? [];
     const totalTrips = userLicenses.reduce(
       (sum, license) => sum + (planById.get(license.planId)?.maxNfcTags ?? 0),
@@ -146,9 +129,9 @@ export default async function AdminUsersPage() {
       profileSlug: slug,
       isAdmin: Boolean(user.is_admin),
       createdAt: user.created_at as string,
-      tripsUsed: experienceIds.length,
+      tripsUsed: userUsage?.trips ?? null,
       tripsLimit: totalTrips,
-      photoCount,
+      photoCount: userUsage?.photos ?? null,
       plans: [...planCounts.entries()].map(([name, count]) => ({ name, count })),
       redeemedCodes,
     };
@@ -166,6 +149,7 @@ export default async function AdminUsersPage() {
       </div>
       <UsersTable
         emailLookupFailed={Boolean(emails.error)}
+        usageLookupFailed={Boolean(usage.error)}
         plans={planOptions}
         rows={rows}
       />

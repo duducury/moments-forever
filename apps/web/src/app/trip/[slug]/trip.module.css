@@ -1400,8 +1400,9 @@
   min-height: 0;
   border: 0;
   border-radius: 0;
-  background:
-    radial-gradient(ellipse 70% 55% at 50% 48%, #1a2430 0%, #07090c 68%, #030405 100%);
+  /* Deep space is painted by GlobeSpaceBackdrop; this is only the colour
+     shown for the instant before it mounts. */
+  background: #02040a;
   box-shadow: none;
 }
 
@@ -1426,6 +1427,11 @@
   border: 0;
   background: rgb(255 255 255 / 90%);
   box-shadow: 0 8px 20px rgb(0 0 0 / 28%);
+}
+
+/* Pins sit above the globe's lighting overlay (globe-space.module.css .shade). */
+.mapCanvasImmersive :global(.maplibregl-marker) {
+  z-index: 2;
 }
 
 /* Pins on the far side of the globe — hide + ignore taps. */

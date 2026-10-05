@@ -11,9 +11,12 @@ import {
   clusterRadiusForZoom,
   type GeoPoint,
 } from "@/lib/map/cluster-photos";
+import { globeEffectOpacity, globeScreenRadius } from "@/lib/map/globe-geometry";
 import { profileTripAlbumPath } from "@/lib/routes/app-routes";
 
 import { photosWithGps, type TripPhoto } from "./album-types";
+import { GlobeSpaceBackdrop } from "./globe-space-backdrop";
+import spaceStyles from "./globe-space.module.css";
 import styles from "./trip.module.css";
 
 const GLOBE_TILES =
@@ -26,6 +29,16 @@ const GLOBE_TILES =
 function globeTileUrls(): string[] {
   return ["a", "b", "c"].map((sub) => GLOBE_TILES.replace("{s}", sub));
 }
+
+/**
+ * NASA Blue Marble (shaded relief + bathymetry): the Earth as seen from space —
+ * blue oceans, green/brown/beige land. Public domain, no API key. It only goes
+ * down to zoom 8 and carries no place names, so it fades out toward the
+ * street map as the camera moves in (the OSM layer stays underneath the whole
+ * time, which is also what shows if these tiles can't be reached).
+ */
+const BLUE_MARBLE_TILES =
+  "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg";
 
 function clusterLocationLabel(photos: readonly TripPhoto[]): string | null {
   const unique: string[] = [];
@@ -86,6 +99,7 @@ export function GlobeMapCanvas({
   readonly currentAlbumId?: string | null;
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const frameRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const markersRef = useRef<Marker[]>([]);
   const [zoom, setZoom] = useState(1.35);
@@ -172,6 +186,14 @@ export function GlobeMapCanvas({
             attribution:
               '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
           },
+          bluemarble: {
+            type: "raster",
+            tiles: [BLUE_MARBLE_TILES],
+            tileSize: 256,
+            maxzoom: 8,
+            attribution:
+              'Earth imagery &copy; <a href="https://earthobservatory.nasa.gov/features/BlueMarble">NASA</a>',
+          },
         },
         layers: [
           {
@@ -182,6 +204,25 @@ export function GlobeMapCanvas({
               // Slightly mute on the dark stage without bleaching geography.
               "raster-saturation": -0.05,
               "raster-contrast": 0.06,
+            },
+          },
+          {
+            id: "bluemarble",
+            type: "raster",
+            source: "bluemarble",
+            // Gone before the street map takes over; not even requested past this.
+            maxzoom: 6.6,
+            paint: {
+              "raster-opacity": [
+                "interpolate",
+                ["linear"],
+                ["zoom"],
+                4.4,
+                1,
+                6.4,
+                0,
+              ],
+              "raster-saturation": 0.06,
             },
           },
         ],
@@ -211,6 +252,27 @@ export function GlobeMapCanvas({
     map.on("zoomend", () => {
       setZoom(map.getZoom());
     });
+
+    // Keep the atmosphere/lighting circles locked to the real globe silhouette
+    // (CSS variables only: no React re-render while zooming).
+    const syncGlobeEffects = () => {
+      const frame = frameRef.current;
+      if (!frame) return;
+      const current = map.getZoom();
+      frame.style.setProperty(
+        "--globe-r",
+        `${globeScreenRadius(current, map.getContainer().clientHeight, map.getCenter().lat).toFixed(1)}px`,
+      );
+      const effects = globeEffectOpacity(current);
+      frame.style.setProperty("--globe-fx", effects.toFixed(3));
+      // Zoomed in, the circles are huge and invisible: don't paint them at all.
+      frame.dataset.globeFx = effects > 0 ? "on" : "off";
+    };
+    // "move" also fires for zooms; dragging changes the centre latitude, which
+    // changes the sphere's size slightly.
+    map.on("move", syncGlobeEffects);
+    map.on("resize", syncGlobeEffects);
+    syncGlobeEffects();
 
     // Fit roughly around all points after first paint.
     if (geoPoints.length > 0) {
@@ -310,8 +372,11 @@ export function GlobeMapCanvas({
 
   return (
     <div className={styles.mapLayoutImmersive}>
-      <div className={styles.mapFrameImmersive}>
+      <div className={styles.mapFrameImmersive} ref={frameRef}>
+        <GlobeSpaceBackdrop />
+        <div aria-hidden="true" className={spaceStyles.halo} />
         <div className={styles.mapCanvasImmersive} ref={containerRef} />
+        <div aria-hidden="true" className={spaceStyles.shade} />
 
         <p className={styles.globeHint} aria-hidden="true">
           Arraste para girar o globo

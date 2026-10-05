@@ -11,6 +11,11 @@ import {
   clusterRadiusForZoom,
   type GeoPoint,
 } from "@/lib/map/cluster-photos";
+import {
+  DEFAULT_GLOBE_CAMERA,
+  FALLBACK_MAX_ZOOM,
+  hasPlaceNearDefaultView,
+} from "@/lib/map/globe-camera";
 import { globeEffectOpacity, globeScreenRadius } from "@/lib/map/globe-geometry";
 import {
   CITY_DOT_IMAGE,
@@ -170,6 +175,9 @@ export function GlobeMapCanvas({
     // Intentionally no `sky` / atmosphere: MapLibre paints the unlit hemisphere
     // white when sky is enabled (known globe quirk). Colorful tiles stay readable.
     const origin = window.location.origin;
+    // Opens on the same wider view of the Americas for everyone; only a profile
+    // with nothing near it is framed around its pins instead (see globe-camera.ts).
+    const openOnDefault = hasPlaceNearDefaultView(geoPoints);
     const map = new maplibregl.Map({
       container: containerRef.current,
       style: {
@@ -202,8 +210,8 @@ export function GlobeMapCanvas({
           ...buildGlobeLabelLayers(),
         ],
       },
-      center: [12, 18],
-      zoom: 1.35,
+      center: openOnDefault ? [...DEFAULT_GLOBE_CAMERA.center] : [12, 18],
+      zoom: openOnDefault ? DEFAULT_GLOBE_CAMERA.zoom : 1.35,
       minZoom: 0.6,
       maxZoom: GLOBE_MAX_ZOOM,
       pitch: 0,
@@ -262,8 +270,8 @@ export function GlobeMapCanvas({
     map.on("resize", syncGlobe);
     syncGlobe();
 
-    // Fit roughly around all points after first paint.
-    if (geoPoints.length > 0) {
+    // Nothing near the default view: frame the pins instead, a little wider than before.
+    if (!openOnDefault) {
       const bounds = new maplibregl.LngLatBounds();
       for (const point of geoPoints) {
         bounds.extend([point.longitude, point.latitude]);
@@ -273,13 +281,13 @@ export function GlobeMapCanvas({
           const only = geoPoints[0]!;
           map.flyTo({
             center: [only.longitude, only.latitude],
-            zoom: 3.2,
+            zoom: FALLBACK_MAX_ZOOM,
             duration: 1200,
           });
         } else {
           map.fitBounds(bounds, {
             padding: 56,
-            maxZoom: 3.8,
+            maxZoom: FALLBACK_MAX_ZOOM,
             duration: 1200,
           });
         }

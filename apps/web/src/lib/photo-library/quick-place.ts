@@ -9,6 +9,7 @@
  * guessed from the nearest centroid would sometimes be the wrong region.
  */
 
+import { nearestKnownCity, type KnownCity } from "./place-fallback";
 import type { GeoPoint } from "./types";
 
 type Rings = readonly (readonly number[])[];
@@ -31,7 +32,16 @@ export interface QuickPlace {
   /** "CT, USA" · "Itália" · "Portugal" */
   readonly label: string;
   readonly countryCode: string;
+  /**
+   * A listed city that really is where the photos were taken ("Nova Iorque"), when one is close
+   * AND in the same state/country; null otherwise. A good first title that the slower
+   * reverse geocoder never has to replace.
+   */
+  readonly city?: string | null;
 }
+
+/** A listed city this close can fairly be said to be "where the photos were taken". */
+export const QUICK_CITY_MAX_KM = 25;
 
 /** A coast photo can fall just outside a simplified outline: still this close counts as inside. */
 const NEAR_DEGREES = 0.2;
@@ -95,8 +105,7 @@ function areaAt(areas: readonly Area[], x: number, y: number): Area | null {
   return best;
 }
 
-/** Country (and US state) of a coordinate, or null in the open sea. */
-export function quickPlace(point: GeoPoint, geo: AdminGeo): QuickPlace | null {
+function placeAt(point: GeoPoint, geo: AdminGeo): Omit<QuickPlace, "city"> | null {
   const x = Math.round(point.longitude * 100);
   const y = Math.round(point.latitude * 100);
   const country = areaAt(geo.countries, x, y);
@@ -108,6 +117,26 @@ export function quickPlace(point: GeoPoint, geo: AdminGeo): QuickPlace | null {
   }
 
   return { label: country.n ?? country.c, countryCode: country.c };
+}
+
+/**
+ * Country (and US state) of a coordinate, or null in the open sea. With the shipped city list,
+ * also the city — only when that city sits in the same state/country as the point (a spot in
+ * Hoboken, NJ is not "Nova Iorque").
+ */
+export function quickPlace(
+  point: GeoPoint,
+  geo: AdminGeo,
+  cities?: readonly KnownCity[],
+): QuickPlace | null {
+  const base = placeAt(point, geo);
+  if (!base) return null;
+  let city: string | null = null;
+  if (cities && cities.length > 0) {
+    const near = nearestKnownCity(point, cities, QUICK_CITY_MAX_KM);
+    if (near && placeAt(near, geo)?.label === base.label) city = near.name;
+  }
+  return { ...base, city };
 }
 
 let cached: Promise<AdminGeo | null> | null = null;

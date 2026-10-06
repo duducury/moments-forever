@@ -31,6 +31,18 @@ Formatos modernos podem ser negociados no web, mantendo fallback amplamente comp
 
 Processamento no servidor é fallback e verificação, não caminho padrão do MVP.
 
+## CORS do bucket (upload direto)
+
+O navegador (ou o WebView do app iOS) faz o `PUT` **direto no R2**, com a URL assinada por `/api/media/upload-url` (`apps/web/src/lib/storage/r2.ts`). Isso só funciona se o CORS do bucket permitir a origem da página que está enviando. Sem isso o upload falha, a foto fica só no aparelho (IndexedDB) e o registro em `photos` fica com `storage_key` nulo — na web aparece um quadrado com "?".
+
+**Configuração atual de referência:** `docs/r2-cors.json`. Cole em Cloudflare → R2 → o bucket → Settings → CORS Policy.
+
+- **Origem:** é a origem da página, não do R2. No app iOS (Capacitor) é a origem de `server.url` em `apps/web/capacitor.config.ts`: `https://momentsforever.vercel.app` por padrão, ou o valor de `CAPACITOR_SERVER_URL` quando um build de teste aponta para outro endereço. Produção web e app da App Store usam a mesma origem, então a regra acima basta para eles.
+- **Método:** só `PUT`. A leitura passa por `/api/media`, não pelo R2 direto.
+- **Header:** o navegador envia `Content-Type` (não é um header "simples" para `image/jpeg`, por isso há preflight). A URL assinada assina apenas o `host`, então nenhum outro header é exigido.
+- **Preview da Vercel (só para testar):** cada deploy tem uma origem diferente (`https://moments-forever-<hash>-<time>.vercel.app`). Para testar um build do iPhone apontado para um preview, adicione **a origem exata daquele deploy** em `AllowedOrigins` e remova depois. Não use curinga: isso liberaria o upload para qualquer site. A alternativa sem mexer no CORS é testar o app apontado para produção.
+- **Se o upload falhar**, a mensagem do app já mostra a origem usada ("Origem deste app: …"): é ela que precisa estar na regra. As fotos continuam no aparelho e o app oferece "Tentar enviar novamente" (e o `PendingR2Sync` tenta de novo ao abrir a viagem, na mesma origem em que foram adicionadas — o IndexedDB é por origem).
+
 ## Entrega
 
 Bucket não é público. Uma camada edge valida acesso:

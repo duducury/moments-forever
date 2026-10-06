@@ -82,6 +82,16 @@ async function requestUploadUrl(input: {
   return { uploadUrl: payload.uploadUrl, key: payload.key };
 }
 
+/**
+ * The browser PUTs straight to R2, so a network drop and a CORS refusal look the
+ * same from here. The app's own origin is named because it is what the bucket's
+ * CORS rule has to allow (production, or a Vercel preview used for testing).
+ */
+export function storageUnreachableMessage(origin: string | null): string {
+  const named = origin ? ` Origem deste app: ${origin}.` : "";
+  return `Não foi possível enviar ao armazenamento (rede ou CORS do R2).${named} No Cloudflare R2 → Settings → CORS, permita PUT dessa origem (docs/photo-storage.md).`;
+}
+
 async function putToSignedUrl(
   uploadUrl: string,
   body: Blob,
@@ -96,7 +106,9 @@ async function putToSignedUrl(
     });
   } catch {
     throw new Error(
-      "Não foi possível enviar ao armazenamento (rede ou CORS do R2). No Cloudflare R2 → Settings → CORS, permita PUT do domínio da app (ex.: https://momentsforever.vercel.app).",
+      storageUnreachableMessage(
+        typeof window !== "undefined" ? window.location.origin : null,
+      ),
     );
   }
   if (!response.ok) {

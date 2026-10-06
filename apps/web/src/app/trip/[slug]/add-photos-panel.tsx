@@ -14,6 +14,7 @@ import {
   createTripAlbum,
   uploadFilesToAlbum,
 } from "@/lib/photos/upload-files-to-album";
+import { syncLocalPhotosToR2 } from "@/lib/storage/upload-photo-to-r2";
 import { countryCodeFromPlaceLabel } from "@moments-forever/shared";
 
 import type { TripAlbum } from "./album-types";
@@ -59,6 +60,8 @@ export function AddPhotosPanel({
   const [newAlbumStory, setNewAlbumStory] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Photos that are in the trip (and on this device) but did not reach the cloud: retried from here.
+  const [cloudRetryIds, setCloudRetryIds] = useState<readonly string[] | null>(null);
   const [progress, setProgress] = useState<string | null>(null);
   const lockedAlbum =
     lockToAlbum && defaultAlbumId
@@ -77,6 +80,33 @@ export function AddPhotosPanel({
     onFiles: (files, origins) => void onFilesSelected(files, origins),
     onFind: () => setFinding(true),
   });
+
+  async function retryCloudUpload() {
+    if (!cloudRetryIds || busy) return;
+    setBusy(true);
+    setError(null);
+    setProgress("Enviando ao armazenamento permanente…");
+    try {
+      const outcome = await syncLocalPhotosToR2(experienceId, cloudRetryIds, (done, total) => {
+        setProgress(`Enviando foto ${done} de ${total}…`);
+      });
+      if (outcome.failed === 0 && outcome.uploaded > 0) {
+        setCloudRetryIds(null);
+        router.refresh();
+        onClose();
+        return;
+      }
+      setError(
+        outcome.uploaded === 0 && outcome.failed === 0
+          ? "Este aparelho não tem mais a cópia local destas fotos."
+          : `Fotos adicionadas só neste aparelho: o envio à nuvem falhou. ${outcome.lastError ?? ""}`,
+      );
+      if (outcome.uploaded === 0 && outcome.failed === 0) setCloudRetryIds(null);
+    } finally {
+      setBusy(false);
+      setProgress(null);
+    }
+  }
 
   async function onFilesSelected(
     fileList: FileList | readonly File[] | null,
@@ -121,8 +151,9 @@ export function AddPhotosPanel({
       onAdded?.();
       router.refresh();
       if (result.cloudWarning) {
+        setCloudRetryIds(result.photoIds);
         setError(
-          `Fotos guardadas neste aparelho, mas o envio à nuvem falhou: ${result.cloudWarning}`,
+          `Fotos adicionadas só neste aparelho: o envio à nuvem falhou. ${result.cloudWarning}`,
         );
       } else {
         onClose();
@@ -284,6 +315,16 @@ export function AddPhotosPanel({
           <p className={styles.error} role="alert">
             {error}
           </p>
+        ) : null}
+        {cloudRetryIds ? (
+          <button
+            className="button primary"
+            disabled={busy}
+            onClick={() => void retryCloudUpload()}
+            type="button"
+          >
+            Tentar enviar novamente
+          </button>
         ) : null}
 
         <div className={styles.panelActions}>

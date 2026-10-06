@@ -41,7 +41,11 @@ export async function uploadFilesToAlbum(input: {
   /** Set only by "Encontrar viagem/fotos": which library photo each file came from. */
   readonly origins?: NativeOrigins;
   readonly onProgress?: (message: string) => void;
-}): Promise<{ readonly cloudWarning: string | null }> {
+}): Promise<{
+  readonly cloudWarning: string | null;
+  /** The photos just added, so a failed cloud upload can be retried from this device. */
+  readonly photoIds: readonly string[];
+}> {
   const { experienceId, albumId, files, origins, onProgress } = input;
   type PreparedPhoto = {
     readonly id: string;
@@ -148,9 +152,10 @@ export async function uploadFilesToAlbum(input: {
         onProgress?.(`Enviando foto ${done} de ${total}…`);
       },
     );
-    return { cloudWarning: null };
+    return { cloudWarning: null, photoIds: prepared.map((item) => item.id) };
   } catch (cloudError) {
     return {
+      photoIds: prepared.map((item) => item.id),
       cloudWarning:
         cloudError instanceof Error
           ? cloudError.message

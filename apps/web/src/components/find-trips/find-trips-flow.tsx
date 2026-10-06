@@ -10,6 +10,7 @@ import { MomentsPhotoLibrary } from "@moments-forever/capacitor-photo-library";
 
 import { useAuth } from "@/components/auth-provider";
 import { PageScrollLock } from "@/components/use-lock-page-scroll";
+import { syncLocalPhotosToR2 } from "@/lib/storage/upload-photo-to-r2";
 import {
   buildDiscoverCandidates,
   buildRelatedCandidate,
@@ -96,7 +97,10 @@ interface ImportResult {
   readonly skipped: number;
   readonly href: string | null;
   readonly error: string | null;
+  /** Set when the photos were added but the upload to the cloud (R2) failed. */
   readonly warning: string | null;
+  /** What "Tentar enviar novamente" re-sends from this device; null when there is nothing to retry. */
+  readonly retry?: { readonly experienceId: string; readonly photoIds: readonly string[] } | null;
 }
 
 const PAGE = 60;
@@ -363,18 +367,18 @@ export function FindTripsFlow({
     }
   }
 
-  // ---- instant state/country, offline, before any city name is known ------------------
+  // ---- instant place, offline (state/country + a local city): shown before the geocoder answers ----
 
   useEffect(() => {
     if (related || discovered.length === 0) return;
     let cancelled = false;
     (async () => {
-      const geo = await loadAdminGeo();
+      const [geo, cities] = await Promise.all([loadAdminGeo(), loadKnownCities()]);
       if (!geo || cancelled) return;
       const early: Record<string, QuickPlace> = {};
       for (const trip of discovered) {
         for (const stop of trip.stops) {
-          const place = quickPlace(stop.center, geo);
+          const place = quickPlace(stop.center, geo, cities);
           if (place) early[stop.id] = place;
         }
       }
@@ -511,6 +515,9 @@ export function FindTripsFlow({
             href: profileTripAlbumPath(created.slug, created.albumId),
             error: null,
             warning: created.cloudWarning,
+            retry: created.cloudWarning
+              ? { experienceId: created.experienceId, photoIds: created.photoIds }
+              : null,
           });
         } else {
           const destination = candidate.target;
@@ -535,6 +542,9 @@ export function FindTripsFlow({
             href: profileTripAlbumPath(destination.experienceSlug, albumId),
             error: null,
             warning: uploaded.cloudWarning,
+            retry: uploaded.cloudWarning
+              ? { experienceId: destination.experienceId, photoIds: uploaded.photoIds }
+              : null,
           });
         }
       } catch (caught) {
@@ -568,6 +578,38 @@ export function FindTripsFlow({
   function finish() {
     router.refresh();
     onClose();
+  }
+
+  // The photos are in the trip (and on this device) but not in the cloud yet: send them
+  // again from the local copy. Same helper the trip page uses (PendingR2Sync).
+  const [retrying, setRetrying] = useState<number | null>(null);
+  async function retryUpload(index: number) {
+    const item = results[index];
+    if (!item?.retry || retrying !== null) return;
+    setRetrying(index);
+    try {
+      const outcome = await syncLocalPhotosToR2(item.retry.experienceId, item.retry.photoIds);
+      const complete = outcome.failed === 0 && outcome.uploaded > 0;
+      const nothingLocal = outcome.uploaded === 0 && outcome.failed === 0;
+      setResults((previous) =>
+        previous.map((result, position) =>
+          position !== index
+            ? result
+            : complete
+              ? { ...result, warning: null, retry: null }
+              : {
+                  ...result,
+                  warning: nothingLocal
+                    ? "Este aparelho não tem mais a cópia local destas fotos."
+                    : (outcome.lastError ?? "Não foi possível enviar. Verifique a conexão e tente de novo."),
+                  retry: nothingLocal ? null : result.retry,
+                },
+        ),
+      );
+      if (complete) router.refresh();
+    } finally {
+      setRetrying(null);
+    }
   }
 
   // ---- rendering --------------------------------------------------------------
@@ -950,9 +992,21 @@ export function FindTripsFlow({
     // done
     const ok = results.filter((item) => item.added > 0);
     const last = ok[ok.length - 1];
+    const pendingCloud = ok.some((item) => item.warning);
     return (
       <>
-        <h2>{ok.length > 0 ? "Pronto!" : "Não foi possível adicionar"}</h2>
+        <h2>
+          {ok.length === 0
+            ? "Não foi possível adicionar"
+            : pendingCloud
+              ? "Fotos adicionadas, mas ainda não enviadas à nuvem"
+              : "Pronto!"}
+        </h2>
+        {pendingCloud ? (
+          <p className={styles.hint}>
+            Enquanto o envio não termina, essas fotos só aparecem neste aparelho (não na web nem em outros aparelhos).
+          </p>
+        ) : null}
         <div className={styles.body}>
           {results.map((item, index) => (
             <div className={styles.summaryRow} key={`${item.title}-${index}`}>
@@ -965,10 +1019,30 @@ export function FindTripsFlow({
                     : `${photosLabel(item.added)} adicionada${item.added === 1 ? "" : "s"}${
                         item.skipped > 0 ? ` · ${photosLabel(item.skipped)} não puderam ser preparadas` : ""
                       }`}
-                  {item.warning ? ` · envio à nuvem: ${item.warning}` : ""}
                 </span>
+                {item.warning ? (
+                  <>
+                    <br />
+                    <span className={styles.error} role="alert">
+                      O envio à nuvem falhou: {item.warning}
+                    </span>
+                    {item.retry ? (
+                      <>
+                        <br />
+                        <button
+                          className={styles.linkButton}
+                          disabled={retrying !== null}
+                          onClick={() => void retryUpload(index)}
+                          type="button"
+                        >
+                          {retrying === index ? "Enviando…" : "Tentar enviar novamente"}
+                        </button>
+                      </>
+                    ) : null}
+                  </>
+                ) : null}
               </span>
-              <strong>{item.error ? "✕" : "✓"}</strong>
+              <strong>{item.error ? "✕" : item.warning ? "⚠" : "✓"}</strong>
             </div>
           ))}
           {licenseBlock ? (

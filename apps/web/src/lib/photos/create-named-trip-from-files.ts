@@ -47,6 +47,8 @@ export async function createNamedTripFromFiles(input: {
   readonly slug: string;
   readonly albumId: string;
   readonly cloudWarning: string | null;
+  /** The photos just added, so a failed cloud upload can be retried from this device. */
+  readonly photoIds: readonly string[];
 }> {
   const name = input.name.trim();
   if (!name) {
@@ -233,12 +235,14 @@ export async function createNamedTripFromFiles(input: {
       slug: body.slug,
       albumId,
       cloudWarning: null,
+      photoIds: blobs.map((blob) => blob.id),
     };
   } catch (cloudError) {
     return {
       experienceId: body.id,
       slug: body.slug,
       albumId,
+      photoIds: blobs.map((blob) => blob.id),
       cloudWarning:
         cloudError instanceof Error
           ? cloudError.message

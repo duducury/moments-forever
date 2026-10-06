@@ -69,7 +69,11 @@ export function describeTrip(input: {
   readonly labels: Readonly<Record<string, string | undefined>>;
   /** Stops whose lookup is finished, whether or not it found a name. */
   readonly settled: ReadonlySet<string>;
-  /** Instant offline "CT, USA" per stop id, shown only while the real place is still loading. */
+  /**
+   * Instant offline place per stop id ("CT, USA", plus the city when a listed one is right there).
+   * A label already shown is never replaced by a less specific one: the geocoder only fills in
+   * what is missing (see `localityOf`).
+   */
   readonly quick?: Readonly<Record<string, QuickPlace | undefined>>;
 }): TripDescription {
   const { stops, labels, settled, locationQuality, quick = {} } = input;
@@ -102,10 +106,20 @@ export function describeTrip(input: {
 
   const waiting = stops.some((stop) => labels[stop.id] === undefined && !settled.has(stop.id));
   if (waiting) {
+    // The title is the local city when EVERY stop has one (so it never has to change later);
+    // otherwise a placeholder while the "CT, USA" pill already shows where it was.
     // countryCode stays null while pending: matching against existing trips must not
     // change just because an early label showed up.
+    const earlyCities: string[] = [];
+    for (const stop of stops) {
+      const city = quick[stop.id]?.city;
+      if (city && !earlyCities.some((known) => known.toLowerCase() === city.toLowerCase())) {
+        earlyCities.push(city);
+      }
+    }
+    const allHaveCity = stops.every((stop) => Boolean(quick[stop.id]?.city));
     return {
-      title: earlyLabels.join(" → "),
+      title: allHaveCity ? earlyCities.join(" → ") : "",
       name: "",
       countryCode: null,
       state: "pending",
@@ -117,13 +131,21 @@ export function describeTrip(input: {
   const localities: string[] = [];
   let firstLabel: string | null = null;
   let firstCountry: string | null = null;
+  let usedEarly = false;
   for (const stop of stops) {
     const label = labels[stop.id];
-    if (!label) continue;
-    const parsed = parsePlaceLabel(label);
-    const locality = parsed.locality ?? parsed.country;
+    const place = quick[stop.id];
+    const parsed = label ? parsePlaceLabel(label) : { country: null, locality: null };
+    // Most specific first: the local city (already on screen) > the geocoder's city >
+    // the local state/country ("NY, USA") > a bare country. Never a step down.
+    let locality = place?.city ?? parsed.locality;
+    if (!locality && place?.label) {
+      locality = place.label;
+      usedEarly = true;
+    }
+    locality ??= parsed.country;
     if (!locality) continue;
-    if (firstLabel === null) {
+    if (firstLabel === null && label) {
       firstLabel = label;
       firstCountry = parsed.country;
     }
@@ -147,8 +169,8 @@ export function describeTrip(input: {
   const countryOnly = firstCountry !== null && localities[0] === firstCountry;
   return {
     title,
-    name: firstCountry && !countryOnly ? `${firstCountry}, ${title}` : title,
-    countryCode: countryCodeFromPlaceLabel(firstLabel),
+    name: firstCountry && !countryOnly && !usedEarly ? `${firstCountry}, ${title}` : title,
+    countryCode: countryCodeFromPlaceLabel(firstLabel) ?? early.quickCountryCode,
     state: "named",
     locationNote: null,
     ...early,

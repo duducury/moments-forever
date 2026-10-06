@@ -149,47 +149,67 @@ test("offline fallback names a spot only when a listed city is really close", ()
   assert.equal(nearestKnownCity({ latitude: 41.5, longitude: -72.5 }, cities), null, "far from both: no guess");
 });
 
-test("while the city is still loading, the offline state/country is shown right away", () => {
-  const pending = describeTrip({
-    stops: [stop("a"), stop("b")],
-    locationQuality: "located",
-    labels: {},
-    settled: new Set(),
-    quick: {
-      a: { label: "CT, USA", countryCode: "US" },
-      b: { label: "MA, USA", countryCode: "US" },
-    },
+const ny = { label: "NY, USA", countryCode: "US", city: "Nova Iorque" };
+const nyNoCity = { label: "NY, USA", countryCode: "US", city: null };
+
+test("while loading: the local city is the title right away; without one, a placeholder + the state pill", () => {
+  const withCity = describeTrip({
+    stops: [stop("a")], locationQuality: "located", labels: {}, settled: new Set(), quick: { a: ny },
   });
-  assert.equal(pending.state, "pending");
-  assert.equal(pending.title, "CT, USA → MA, USA");
+  assert.equal(withCity.state, "pending");
+  assert.equal(withCity.title, "Nova Iorque");
+  assert.equal(withCity.placeLabel, "NY, USA");
   // No flag / country yet: matching against existing trips is unchanged while loading.
-  assert.equal(pending.countryCode, null);
-  assert.equal(pending.name, "");
+  assert.equal(withCity.countryCode, null);
 
-  const sameState = describeTrip({
-    stops: [stop("a"), stop("b")],
-    locationQuality: "located",
-    labels: {},
-    settled: new Set(),
-    quick: { a: { label: "CT, USA", countryCode: "US" }, b: { label: "CT, USA", countryCode: "US" } },
+  const stateOnly = describeTrip({
+    stops: [stop("a")], locationQuality: "located", labels: {}, settled: new Set(), quick: { a: nyNoCity },
   });
-  assert.equal(sameState.title, "CT, USA");
+  assert.equal(stateOnly.title, ""); // card shows a placeholder, the pill already says "NY, USA"
+  assert.equal(stateOnly.placeLabel, "NY, USA");
+  assert.equal(stateOnly.quickCountryCode, "US");
 });
 
-test("once the real place arrives, the city takes over from the early label", () => {
-  const named = describeTrip({
-    stops: [stop("a")],
-    locationQuality: "located",
-    labels: { a: "Estados Unidos, Hartford" },
-    settled: new Set(["a"]),
-    quick: { a: { label: "CT, USA", countryCode: "US" } },
-  });
-  assert.equal(named.state, "named");
-  assert.equal(named.title, "Hartford");
+test("stability: the geocoder never replaces a local city that is already on screen", () => {
+  for (const geocoded of ["Estados Unidos, Manhattan", "Estados Unidos, Nova Iorque", "Estados Unidos"]) {
+    const result = describeTrip({
+      stops: [stop("a")], locationQuality: "located", labels: { a: geocoded }, settled: new Set(["a"]), quick: { a: ny },
+    });
+    assert.equal(result.state, "named", geocoded);
+    assert.equal(result.title, "Nova Iorque", geocoded);
+  }
 });
 
-test("no offline label: still the placeholder (empty title)", () => {
+test("improving: state-only becomes the geocoder's city once it arrives", () => {
+  const result = describeTrip({
+    stops: [stop("a")], locationQuality: "located", labels: { a: "Estados Unidos, Farmington" },
+    settled: new Set(["a"]), quick: { a: nyNoCity },
+  });
+  assert.equal(result.title, "Farmington");
+  assert.equal(result.name, "Estados Unidos, Farmington");
+  assert.equal(result.countryCode, "US");
+});
+
+test("never a step down: a bare country or 'not identified' never replaces the local state", () => {
+  const countryOnly = describeTrip({
+    stops: [stop("a")], locationQuality: "located", labels: { a: "Estados Unidos" },
+    settled: new Set(["a"]), quick: { a: nyNoCity },
+  });
+  assert.equal(countryOnly.title, "NY, USA");
+
+  const nothing = describeTrip({
+    stops: [stop("a")], locationQuality: "located", labels: {}, settled: new Set(["a"]), quick: { a: nyNoCity },
+  });
+  assert.equal(nothing.state, "named");
+  assert.equal(nothing.title, "NY, USA");
+  assert.equal(nothing.name, "NY, USA");
+  assert.equal(nothing.countryCode, "US");
+});
+
+test("no offline label: still the placeholder, and 'not identified' when nothing is found", () => {
   const pending = describeTrip({ stops: [stop("a")], locationQuality: "located", labels: {}, settled: new Set() });
   assert.equal(pending.state, "pending");
   assert.equal(pending.title, "");
+  const none = describeTrip({ stops: [stop("a")], locationQuality: "located", labels: {}, settled: new Set(["a"]) });
+  assert.equal(none.state, "unnamed");
 });

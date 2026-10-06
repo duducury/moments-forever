@@ -125,17 +125,15 @@ export function TripCard({
         <PreviewStrip ids={preview} thumbs={thumbs} total={total} />
       </button>
       <div className={styles.cardActions}>
-        <button className={styles.viewAll} onClick={onOpen} type="button">
-          Ver todas as fotos <span aria-hidden>›</span>
-        </button>
         <div className={styles.cardFoot}>
-          <span className={styles.cardCounts}>
-            <span className={styles.countFound}>{counts.found}</span>
-            <strong className={styles.countSelected} data-active={ticked > 0 ? "true" : "false"}>
-              {counts.selected}
-            </strong>
-          </span>
+          <span className={styles.countFound}>{counts.found}</span>
+          <button className={styles.viewAll} onClick={onOpen} type="button">
+            Ver todas as fotos <span aria-hidden>›</span>
+          </button>
         </div>
+        <strong className={styles.countSelected} data-active={ticked > 0 ? "true" : "false"}>
+          {counts.selected}
+        </strong>
       </div>
     </article>
   );

@@ -22,7 +22,11 @@ esse input com a folha do sistema "Photo Library / Take Photo / Choose Files" (o
 Por isso:
 
 - **Escolher fotos** chama o plugin (`pickPhotos`, `PHPickerViewController`): abre a biblioteca
-  direto, sem pedir permissão. As fotos voltam uma a uma (`readPickedPhoto`), reduzidas a JPEG com
+  direto, sem pedir permissão. `pickPhotos` responde assim que o seletor fecha: `cancelled` quando
+  nada foi escolhido (botão Cancelar **ou arrastar a folha para baixo**, que não chama o
+  `didFinishPicking` e por isso é tratado pelo `presentationControllerDidDismiss`) — nesse caso
+  nada é processado e nenhum "Preparando fotos…" aparece. Só com fotos escolhidas a web chama
+  `preparePickedPhotos` (a parte lenta) e lê cada foto (`readPickedPhoto`), reduzida a JPEG com
   EXIF/GPS, junto com o id da biblioteca (`source_asset_id`) quando o sistema o fornece.
 - **Tirar uma foto** é um `<input capture="environment">`: o iOS abre a câmera direto.
 - **Não existe "Escolher arquivos"** neste fluxo.
@@ -45,7 +49,7 @@ O site hospedado nunca acessa a biblioteca: só o plugin nativo, dentro do app.
 ### Plugin (`packages/capacitor-photo-library`)
 `checkPermission · requestPermission · presentLimitedLibraryPicker · getPhotoLibrarySummary ·
 scanPhotoMetadata · getThumbnails · exportPhoto · openSettings · pickPhotos · readPickedPhoto ·
-discardPickedPhotos` (os três últimos: só iOS)
+preparePickedPhotos · discardPickedPhotos` (os quatro últimos: só iOS)
 
 - **Descoberta = só metadata** (`scanPhotoMetadata`): `localIdentifier`, data, GPS, largura/altura.
   Nenhum pixel é lido. Só fotos (não vídeos), sem capturas de tela, sem álbuns compartilhados do iCloud.

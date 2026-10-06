@@ -462,34 +462,42 @@
 
 .cardActions {
   display: grid;
-  gap: 10px;
+  gap: 2px;
   border-top: 1px solid var(--border);
-  padding: 12px 14px 14px;
+  padding: 8px 12px 12px 14px;
 }
 
-/* "Ver todas as fotos" opens the full grid, where the photos are ticked — never on the card. */
-.viewAll {
-  display: flex;
-  min-height: 44px;
-  align-items: center;
-  justify-content: space-between;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 0 14px;
-  color: var(--ink);
-  background: var(--surface-secondary);
-  font: inherit;
-  font-weight: 700;
-  cursor: pointer;
-}
-
+/* "27 fotos encontradas" on the left, "Ver todas as fotos ›" on the right, on one line.
+   The photos are ticked in the grid it opens — never on the card. */
 .cardFoot {
   display: flex;
   min-width: 0;
-  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 8px 12px;
+  gap: 0 6px;
+}
+
+.viewAll {
+  display: inline-flex;
+  flex: none;
+  min-height: 44px;
+  align-items: center;
+  gap: 4px;
+  margin-right: -2px;
+  border: 0;
+  border-radius: 12px;
+  padding: 0 2px 0 6px;
+  color: var(--ink);
+  background: transparent;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.viewAll:active {
+  background: var(--surface-secondary);
 }
 
 .cardCounts,
@@ -500,6 +508,9 @@
 }
 
 .countFound {
+  min-width: 0;
+  flex: 1 1 0;
+  overflow-wrap: anywhere;
   color: var(--muted);
   font-size: 0.86rem;
 }

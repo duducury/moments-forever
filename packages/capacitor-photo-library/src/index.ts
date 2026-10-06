@@ -24,7 +24,7 @@ export function isPhotoLibraryAvailable(): boolean {
 
 /**
  * True when this build of the app can open the system photo picker directly
- * (iOS, and the native side already has `pickPhotos`). An app installed before
+ * (iOS, and the native side already has `pickPhotos` + `preparePickedPhotos`). An app installed before
  * the picker existed has the plugin but not this method, so the menu must fall
  * back to the file input there. Answered synchronously on purpose: the tap that
  * opens the picker has to stay a user gesture.
@@ -40,7 +40,8 @@ export function isNativePhotoPickerAvailable(): boolean {
     }
   ).PluginHeaders;
   const plugin = headers?.find((header) => header.name === "MomentsPhotoLibrary");
-  return Boolean(plugin?.methods?.some((method) => method.name === "pickPhotos"));
+  const has = (name: string) => Boolean(plugin?.methods?.some((method) => method.name === name));
+  return has("pickPhotos") && has("preparePickedPhotos");
 }
 
 export * from "./definitions";

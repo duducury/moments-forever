@@ -98,13 +98,19 @@ function fakePlugin(options: {
     },
     async pickPhotos() {
       calls.push("pick");
-      const photos = (options.picked ?? []).map((photo) => ({
-        ...photo,
-        width: 1600,
-        height: 1200,
-        bytes: 6,
-      }));
-      return { cancelled: photos.length === 0, photos };
+      const count = options.picked?.length ?? 0;
+      return { cancelled: count === 0, count };
+    },
+    async preparePickedPhotos() {
+      calls.push("prepare");
+      return {
+        photos: (options.picked ?? []).map((photo) => ({
+          ...photo,
+          width: 1600,
+          height: 1200,
+          bytes: 6,
+        })),
+      };
     },
     async readPickedPhoto({ token }) {
       calls.push(`read:${token}`);
@@ -231,9 +237,16 @@ test("thumbnails come back as data URLs; unreadable ones are simply missing", as
 
 test("Escolher fotos: closing the picker without choosing returns nothing", async () => {
   const calls: string[] = [];
-  const outcome = await client(fakePlugin({ picked: [], calls })).pickPhotos();
+  let selected = 0;
+  const outcome = await client(fakePlugin({ picked: [], calls })).pickPhotos({
+    onSelected: (count) => {
+      selected = count;
+    },
+  });
   assert.equal(outcome.cancelled, true);
   assert.equal(outcome.files.length, 0);
+  // Nothing chosen: no "preparing", no heavy work, no temp files to clean.
+  assert.equal(selected, 0);
   assert.deepEqual(calls, ["pick"]);
 });
 
@@ -259,8 +272,8 @@ test("Escolher fotos: chosen photos become JPEG files that remember their librar
   // The photo's own EXIF (date, GPS) is kept: the origin carries identity only.
   assert.equal(outcome.origins.get(first!)?.takenAt, null);
   assert.equal(outcome.origins.has(second!), false);
-  // Read one by one, then the leftovers are discarded.
-  assert.deepEqual(calls, ["pick", "read:t1", "read:t2", "discard"]);
+  // Chosen → prepared → read one by one, then the leftovers are discarded.
+  assert.deepEqual(calls, ["pick", "prepare", "read:t1", "read:t2", "discard"]);
 });
 
 test("Escolher fotos: a photo that cannot be read is skipped and counted, the rest still arrive", async () => {
@@ -276,4 +289,12 @@ test("Escolher fotos: a photo that cannot be read is skipped and counted, the re
   assert.equal(outcome.files.length, 1);
   assert.equal(outcome.failedCount, 1);
   assert.equal(outcome.files[0]?.name, "b.jpg");
+});
+
+test("Escolher fotos: 'preparing' starts only once photos were really chosen", async () => {
+  const events: string[] = [];
+  await client(
+    fakePlugin({ picked: [{ token: "t1", assetIdentifier: "a", name: "a.jpg" }] }),
+  ).pickPhotos({ onSelected: (count) => events.push(`selected:${count}`) });
+  assert.deepEqual(events, ["selected:1"]);
 });

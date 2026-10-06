@@ -1,21 +1,36 @@
 import Foundation
 import Photos
 import PhotosUI
+import UIKit
 import ImageIO
 import UniformTypeIdentifiers
 
 /// Receives the result of the system photo picker (PHPickerViewController).
 /// The picker runs out-of-process: choosing photos needs NO photo-library permission.
-final class PhotoPickerSession: NSObject, PHPickerViewControllerDelegate {
-    private let completion: ([PHPickerResult]) -> Void
+///
+/// Closing the picker by swiping the sheet down does NOT call `didFinishPicking`, so the
+/// presentation-controller callback reports that case too — otherwise the web side would
+/// wait forever. `finish` runs at most once, whichever callback arrives first.
+final class PhotoPickerSession: NSObject, PHPickerViewControllerDelegate, UIAdaptivePresentationControllerDelegate {
+    private var completion: (([PHPickerResult]) -> Void)?
 
     init(completion: @escaping ([PHPickerResult]) -> Void) {
         self.completion = completion
     }
 
+    private func finish(_ results: [PHPickerResult]) {
+        guard let completion = completion else { return }
+        self.completion = nil
+        completion(results)
+    }
+
     func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
         picker.dismiss(animated: true)
-        completion(results) // empty when the person cancelled or swiped the sheet away
+        finish(results) // empty when the person pressed Cancel
+    }
+
+    func presentationControllerDidDismiss(_ presentationController: UIPresentationController) {
+        finish([]) // swiped down: nothing was chosen
     }
 }
 
@@ -25,6 +40,22 @@ final class PhotoPickerSession: NSObject, PHPickerViewControllerDelegate {
 enum PhotoPickerStore {
     private static let lock = NSLock()
     private static var files: [String: URL] = [:]
+    /// What the person chose, waiting for `prepare` (heavy) to be asked for.
+    private static var pending: [PHPickerResult] = []
+
+    static func setPending(_ results: [PHPickerResult]) {
+        lock.lock()
+        pending = results
+        lock.unlock()
+    }
+
+    static func takePending() -> [PHPickerResult] {
+        lock.lock()
+        defer { lock.unlock() }
+        let results = pending
+        pending = []
+        return results
+    }
 
     private static var directory: URL {
         return FileManager.default.temporaryDirectory
@@ -90,6 +121,7 @@ enum PhotoPickerStore {
         lock.lock()
         let leftovers = Array(files.values)
         files.removeAll()
+        pending = []
         lock.unlock()
         for url in leftovers { try? FileManager.default.removeItem(at: url) }
     }

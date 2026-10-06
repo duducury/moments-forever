@@ -20,6 +20,7 @@ public class MomentsPhotoLibraryPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "exportPhoto", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "openSettings", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "pickPhotos", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "preparePickedPhotos", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "readPickedPhoto", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "discardPickedPhotos", returnType: CAPPluginReturnPromise)
     ]
@@ -232,8 +233,11 @@ public class MomentsPhotoLibraryPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
     /// "Escolher fotos": opens the system photo picker DIRECTLY (no Photo Library /
-    /// Take Photo / Choose Files sheet in between). Needs no permission; the chosen
-    /// photos are reduced to JPEG files and read one at a time with `readPickedPhoto`.
+    /// Take Photo / Choose Files sheet in between). Needs no permission.
+    /// It answers as soon as the picker closes: `cancelled` when nothing was chosen
+    /// (Cancel button or swiping the sheet down), otherwise how many photos were. The
+    /// heavy work happens later, in `preparePickedPhotos`, so "preparing" is never
+    /// shown for a picker that was merely closed.
     @objc func pickPhotos(_ call: CAPPluginCall) {
         let selectionLimit = max(call.getInt("selectionLimit") ?? 0, 0) // 0 = no limit
         DispatchQueue.main.async {
@@ -241,6 +245,8 @@ public class MomentsPhotoLibraryPlugin: CAPPlugin, CAPBridgedPlugin {
                 call.reject("No view controller available to present the picker.")
                 return
             }
+            PhotoPickerStore.discardAll()
+
             // `photoLibrary:` makes the results carry the photo's identifier (no permission needed).
             var configuration = PHPickerConfiguration(photoLibrary: PHPhotoLibrary.shared())
             configuration.filter = .images
@@ -251,17 +257,25 @@ public class MomentsPhotoLibraryPlugin: CAPPlugin, CAPBridgedPlugin {
             let session = PhotoPickerSession { results in
                 self.pickerSession = nil
                 guard !results.isEmpty else {
-                    call.resolve(["cancelled": true, "photos": [[String: Any]]()])
+                    call.resolve(["cancelled": true, "count": 0])
                     return
                 }
-                DispatchQueue.global(qos: .userInitiated).async {
-                    let photos = PhotoPickerStore.prepare(results)
-                    call.resolve(["cancelled": false, "photos": photos])
-                }
+                PhotoPickerStore.setPending(results)
+                call.resolve(["cancelled": false, "count": results.count])
             }
             self.pickerSession = session
             picker.delegate = session
+            picker.presentationController?.delegate = session
             viewController.present(picker, animated: true)
+        }
+    }
+
+    /// Reduces what was chosen to JPEG files (the slow part: iCloud downloads, decoding).
+    @objc func preparePickedPhotos(_ call: CAPPluginCall) {
+        let results = PhotoPickerStore.takePending()
+        DispatchQueue.global(qos: .userInitiated).async {
+            let photos = PhotoPickerStore.prepare(results)
+            call.resolve(["photos": photos])
         }
     }
 

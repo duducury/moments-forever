@@ -213,22 +213,29 @@ export function createLibraryClient(input: {
 
   /**
    * "Escolher fotos": the system picker opens straight away (no permission needed).
-   * Photos come back one at a time so a hundred of them never cross the bridge at once.
+   * `onSelected` runs only when photos were really chosen — closing the picker (Cancel or
+   * swiping it down) returns `cancelled` without it, so no "preparing" state is ever shown.
+   * Photos then come back one at a time so a hundred of them never cross the bridge at once.
    */
   async function pickPhotos(
-    options: { readonly onProgress?: (done: number, total: number) => void } = {},
+    options: {
+      readonly onSelected?: (count: number) => void;
+      readonly onProgress?: (done: number, total: number) => void;
+    } = {},
   ): Promise<PickOutcome> {
     const picked = await plugin.pickPhotos({});
-    if (picked.cancelled || picked.photos.length === 0) {
+    if (picked.cancelled || picked.count === 0) {
       return { cancelled: true, files: [], origins: new Map(), failedCount: 0 };
     }
+    options.onSelected?.(picked.count);
 
     const files: File[] = [];
     const origins = new Map<File, NativeOrigin>();
     let failedCount = 0;
     try {
-      for (const [index, photo] of picked.photos.entries()) {
-        options.onProgress?.(index, picked.photos.length);
+      const prepared = await plugin.preparePickedPhotos();
+      for (const [index, photo] of prepared.photos.entries()) {
+        options.onProgress?.(index, prepared.photos.length);
         try {
           const read = await plugin.readPickedPhoto({ token: photo.token });
           const file = new File([base64ToBytes(read.data)], pickedFileName(photo.name, index), {
@@ -248,11 +255,13 @@ export function createLibraryClient(input: {
           failedCount += 1;
         }
       }
+      // Chosen, but nothing could be prepared (iCloud offline…): counted as failures.
+      failedCount += Math.max(picked.count - prepared.photos.length, 0);
     } finally {
       // Whatever was not read (error half-way) must not stay in the phone's temp folder.
       await plugin.discardPickedPhotos().catch(() => undefined);
     }
-    options.onProgress?.(picked.photos.length, picked.photos.length);
+    options.onProgress?.(files.length, files.length);
     return { cancelled: false, files, origins, failedCount };
   }
 

@@ -95,9 +95,9 @@ export function useAddPhotosMenu({
       libraryRef.current?.click();
       return;
     }
-    setPickState("preparing");
     try {
-      const outcome = await client.pickPhotos();
+      // Nothing is shown while the picker is open; "preparing" starts only once photos were chosen.
+      const outcome = await client.pickPhotos({ onSelected: () => setPickState("preparing") });
       if (outcome.cancelled) {
         setPickState("idle");
         return;
@@ -172,30 +172,27 @@ export function useAddPhotosMenu({
                       <span className={styles.copyHint}>Use a câmera</span>
                     </span>
                   </button>
+                  <button
+                    className={styles.action}
+                    onClick={() => {
+                      setOpen(false);
+                      onFind();
+                    }}
+                    type="button"
+                  >
+                    <span aria-hidden className={styles.icon}><SparkleIcon /></span>
+                    <span className={styles.copy}>
+                      <span className={styles.copyTitle}>
+                        {findLabel === "Encontrar viagem" ? "Encontrar uma viagem" : "Encontrar fotos"}
+                      </span>
+                      <span className={styles.copyHint}>
+                        {findLabel === "Encontrar viagem"
+                          ? "Deixe o Moments Forever procurar viagens nas suas fotos"
+                          : "Procure, nas suas fotos, o que ainda não está nesta viagem"}
+                      </span>
+                    </span>
+                  </button>
                 </div>
-
-                <hr className={styles.divider} />
-
-                <button
-                  className={styles.find}
-                  onClick={() => {
-                    setOpen(false);
-                    onFind();
-                  }}
-                  type="button"
-                >
-                  <span aria-hidden className={styles.findIcon}><SparkleIcon /></span>
-                  <span>
-                    <span className={styles.findTitle}>
-                      {findLabel === "Encontrar viagem" ? "Encontrar uma viagem" : "Encontrar fotos"}
-                    </span>
-                    <span className={styles.findHint}>
-                      {findLabel === "Encontrar viagem"
-                        ? "Deixe o Moments Forever procurar viagens nas suas fotos"
-                        : "Deixe o Moments Forever procurar, nas suas fotos, o que ainda não está nesta viagem"}
-                    </span>
-                  </span>
-                </button>
 
                 <button className={styles.cancel} onClick={() => setOpen(false)} type="button">
                   Cancelar

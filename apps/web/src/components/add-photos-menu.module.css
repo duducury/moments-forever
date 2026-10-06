@@ -34,8 +34,8 @@
   text-transform: uppercase;
 }
 
-/* "Escolher fotos" and "Tirar uma foto": two identical tiles — same size, border, radius,
-   icon box, type and pressed state. Neither is more important than the other. */
+/* "Escolher fotos", "Tirar uma foto" and "Encontrar uma viagem": three identical tiles — same size, border, radius,
+   icon box, type and pressed state. None is more important than the others. */
 .actions {
   display: grid;
   gap: 10px;
@@ -43,7 +43,7 @@
 
 .action {
   display: flex;
-  min-height: 68px;
+  min-height: 78px;
   align-items: center;
   gap: 14px;
   border: 1px solid var(--border);
@@ -98,66 +98,6 @@
   line-height: 1.3;
 }
 
-/* The Moments Forever feature: set apart, warmer, and clearly not just another file picker. */
-.find {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border));
-  border-radius: 22px;
-  padding: 16px;
-  color: var(--ink);
-  background:
-    radial-gradient(
-      120% 160% at 100% 0%,
-      color-mix(in srgb, var(--accent) 26%, transparent),
-      transparent 60%
-    ),
-    color-mix(in srgb, var(--accent) 9%, var(--sheet));
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.find:active {
-  transform: scale(0.99);
-}
-
-.findIcon {
-  display: grid;
-  flex: none;
-  width: 44px;
-  height: 44px;
-  place-items: center;
-  border-radius: 14px;
-  color: var(--sheet);
-  background: var(--accent);
-  box-shadow: 0 6px 16px color-mix(in srgb, var(--accent) 40%, transparent);
-}
-
-.findIcon svg {
-  width: 24px;
-  height: 24px;
-}
-
-.findTitle {
-  display: block;
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: 1.2rem;
-  font-weight: 600;
-  line-height: 1.15;
-}
-
-.findHint {
-  display: block;
-  margin-top: 4px;
-  color: var(--muted);
-  font-size: 0.86rem;
-  line-height: 1.35;
-}
-
 .cancel {
   min-height: 50px;
   border: 0;
@@ -167,14 +107,6 @@
   font: inherit;
   font-weight: 700;
   cursor: pointer;
-}
-
-.divider {
-  width: 100%;
-  height: 1px;
-  margin: 2px 0;
-  border: 0;
-  background: var(--border);
 }
 
 .busy {

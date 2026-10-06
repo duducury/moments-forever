@@ -4,6 +4,7 @@ import type {
   ExportedPhoto,
   LimitedPickerResult,
   MomentsPhotoLibraryPlugin,
+  PickedPhotoInfo,
   PickPhotosResult,
   PermissionResult,
   PhotoLibrarySummary,
@@ -53,6 +54,10 @@ export class MomentsPhotoLibraryWeb
   }
 
   async pickPhotos(): Promise<PickPhotosResult> {
+    throw this.unavailable("Photo library is only available in the native app.");
+  }
+
+  async preparePickedPhotos(): Promise<{ photos: readonly PickedPhotoInfo[] }> {
     throw this.unavailable("Photo library is only available in the native app.");
   }
 

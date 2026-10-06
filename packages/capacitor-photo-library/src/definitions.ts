@@ -154,9 +154,10 @@ export interface PickedPhotoInfo {
 }
 
 export interface PickPhotosResult {
-  /** True when the person closed the picker without choosing anything. */
+  /** True when the person closed the picker without choosing anything (Cancel or swipe down). */
   readonly cancelled: boolean;
-  readonly photos: readonly PickedPhotoInfo[];
+  /** How many photos were chosen (0 when cancelled). */
+  readonly count: number;
 }
 
 export interface MomentsPhotoLibraryPlugin {
@@ -182,10 +183,16 @@ export interface MomentsPhotoLibraryPlugin {
   openSettings(): Promise<void>;
   /**
    * iOS: opens the system photo picker DIRECTLY (no "Photo Library / Take Photo /
-   * Choose Files" sheet). Needs no permission. Each chosen photo comes back as a
-   * token; read them one at a time with `readPickedPhoto`.
+   * Choose Files" sheet). Needs no permission. Resolves as soon as the picker closes —
+   * `cancelled` when nothing was chosen. When photos were chosen, call
+   * `preparePickedPhotos` for them.
    */
   pickPhotos(options?: { readonly selectionLimit?: number }): Promise<PickPhotosResult>;
+  /**
+   * The slow part, after `pickPhotos` reported a selection: reduces each chosen photo to a
+   * JPEG. Each comes back as a token; read them one at a time with `readPickedPhoto`.
+   */
+  preparePickedPhotos(): Promise<{ readonly photos: readonly PickedPhotoInfo[] }>;
   /** One reduced JPEG (EXIF/GPS kept) of a picked photo; the temp file is deleted after reading. */
   readPickedPhoto(options: { readonly token: string }): Promise<{
     readonly data: string;

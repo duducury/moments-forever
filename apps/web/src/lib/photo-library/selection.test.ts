@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   clearAll,
+  describeCounts,
   emptySelection,
   reviewSelection,
   selectAll,
@@ -97,4 +98,23 @@ test("only ticked photos are exported, in the order they were found", () => {
     selectedAssets(paris, selection).map((asset) => asset.nativeId),
     [paris.assets[1]!.nativeId, paris.assets[4]!.nativeId],
   );
+});
+
+test("found and selected are two different numbers, worded so they cannot be confused", () => {
+  assert.deepEqual(describeCounts(25, 0), { found: "25 fotos encontradas", selected: "0 selecionadas" });
+  assert.deepEqual(describeCounts(25, 25), { found: "25 fotos encontradas", selected: "25 selecionadas" });
+  assert.deepEqual(describeCounts(25, 12), { found: "25 fotos encontradas", selected: "12 selecionadas" });
+  assert.deepEqual(describeCounts(1, 1), { found: "1 foto encontrada", selected: "1 selecionada" });
+  assert.deepEqual(describeCounts(92, 37, "existing"), { found: "92 fotos novas", selected: "37 selecionadas" });
+});
+
+test("the counts follow the selection immediately", () => {
+  const paris = candidate("paris", 8);
+  let selection = emptySelection();
+  assert.equal(describeCounts(paris.assets.length, selectedCount(paris, selection)).selected, "0 selecionadas");
+  selection = toggleAsset(selection, "paris", paris.assets[0]!.nativeId);
+  selection = toggleAsset(selection, "paris", paris.assets[1]!.nativeId);
+  assert.equal(describeCounts(paris.assets.length, selectedCount(paris, selection)).selected, "2 selecionadas");
+  assert.equal(describeCounts(paris.assets.length, selectedCount(paris, selectAll(selection, paris))).selected, "8 selecionadas");
+  assert.equal(describeCounts(paris.assets.length, selectedCount(paris, clearAll(selection, "paris"))).selected, "0 selecionadas");
 });

@@ -4,6 +4,11 @@ import type { LibraryAsset } from "@/lib/photo-library/types";
 
 import styles from "./find-trips.module.css";
 
+/**
+ * EVERY photo of the trip as a grid. All cells exist from the start (so the
+ * scroll has its real length); the pictures are requested from the phone in
+ * batches by the parent, following the scroll position.
+ */
 export function PhotoGrid({
   assets,
   ticked,

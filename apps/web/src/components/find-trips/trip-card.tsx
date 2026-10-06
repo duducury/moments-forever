@@ -1,6 +1,12 @@
 "use client";
 
-import { pickPreview, selectedCount, type Candidate, type Selection } from "@/lib/photo-library/selection";
+import {
+  describeCounts,
+  pickPreview,
+  selectedCount,
+  type Candidate,
+  type Selection,
+} from "@/lib/photo-library/selection";
 
 import styles from "./find-trips.module.css";
 import { useVisibleOnce } from "./use-visible";
@@ -96,6 +102,7 @@ export function TripCard({
   const ticked = selectedCount(candidate, selection);
   const allTicked = total > 0 && ticked === total;
   const preview = pickPreview(candidate.assets, PREVIEW_COUNT).map((asset) => asset.nativeId);
+  const counts = describeCounts(total, ticked, candidate.kind);
 
   return (
     <article
@@ -113,25 +120,28 @@ export function TripCard({
           )}
         </span>
         <span className={styles.cardMeta}>
-          {formatPeriod(candidate.period)} · {photosLabel(total)}
-          {candidate.kind === "existing" ? " novas" : ""}
+          {formatPeriod(candidate.period)}
         </span>
         {candidate.locationNote ? (
           <span className={styles.cardNote}>{candidate.locationNote}</span>
         ) : null}
         <PreviewStrip ids={preview} thumbs={thumbs} total={total} />
       </button>
-      <div className={styles.cardFoot}>
-        <span className={styles.cardCount}>
-          {ticked > 0
-            ? `${ticked} de ${total} fotos selecionadas`
-            : candidate.kind === "existing"
-              ? "Já está no Moments Forever"
-              : `${photosLabel(total)} encontradas`}
-        </span>
-        <button className={styles.linkButton} onClick={onToggleAll} type="button">
-          {allTicked ? "Desmarcar todas" : "Selecionar todas"}
+      <div className={styles.cardActions}>
+        <button className={styles.viewAll} onClick={onOpen} type="button">
+          Ver todas as fotos <span aria-hidden>›</span>
         </button>
+        <div className={styles.cardFoot}>
+          <span className={styles.cardCounts}>
+            <span className={styles.countFound}>{counts.found}</span>
+            <strong className={styles.countSelected} data-active={ticked > 0 ? "true" : "false"}>
+              {counts.selected}
+            </strong>
+          </span>
+          <button className={styles.selectAll} onClick={onToggleAll} type="button">
+            {allTicked ? "Desmarcar todas" : "Selecionar todas"}
+          </button>
+        </div>
       </div>
     </article>
   );

@@ -96,6 +96,25 @@ export function selectedCount(candidate: Candidate, selection: Selection): numbe
 }
 
 /**
+ * The two numbers the person must never confuse: how many photos were FOUND
+ * (what discovery offers) and how many are SELECTED (what would be imported).
+ */
+export function describeCounts(
+  found: number,
+  selected: number,
+  kind: "new" | "existing" = "new",
+): { readonly found: string; readonly selected: string } {
+  const foundText =
+    kind === "existing"
+      ? `${found} foto${found === 1 ? "" : "s"} nova${found === 1 ? "" : "s"}`
+      : `${found} foto${found === 1 ? "" : "s"} encontrada${found === 1 ? "" : "s"}`;
+  return {
+    found: foundText,
+    selected: `${selected} selecionada${selected === 1 ? "" : "s"}`,
+  };
+}
+
+/**
  * The review: a trip takes part in the import only if the person ticked at
  * least one of its photos. Nothing is ever implied by default.
  */

@@ -27,6 +27,7 @@ import {
 } from "@/lib/photo-library/place-fallback";
 import {
   clearAll,
+  describeCounts,
   emptySelection,
   pickPreview,
   reviewSelection,
@@ -148,6 +149,7 @@ export function FindTripsFlow({
   const [results, setResults] = useState<readonly ImportResult[]>([]);
   const [licenseBlock, setLicenseBlock] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const bodyRef = useRef<HTMLDivElement | null>(null);
   const requestedThumbs = useRef(new Set<string>());
   const thumbQueue = useRef<Promise<void>>(Promise.resolve());
   const mounted = useRef(true);
@@ -213,6 +215,21 @@ export function FindTripsFlow({
     if (step !== "detail" || !detail) return;
     ensureThumbs(detail.assets.slice(0, visible).map((asset) => asset.nativeId));
   }, [step, detail, visible, ensureThumbs]);
+
+  // The grid has every photo; its pictures are asked for in batches of PAGE as
+  // the person scrolls (works for a fast flick too, since it reads the position).
+  const loadMoreThumbnails = useCallback(() => {
+    const element = bodyRef.current;
+    const total = candidates.find((item) => item.key === detailKey)?.assets.length ?? 0;
+    if (!element || visible >= total) return;
+    const loadedEnd = element.scrollHeight * (visible / total);
+    if (element.scrollTop + element.clientHeight >= loadedEnd - 400) {
+      setVisible((value) => value + PAGE);
+    }
+  }, [candidates, detailKey, visible]);
+  useEffect(() => {
+    if (step === "detail") loadMoreThumbnails();
+  }, [step, visible, loadMoreThumbnails]);
 
   useEffect(() => {
     if (step !== "review") return;
@@ -663,7 +680,7 @@ export function FindTripsFlow({
     if (step === "detail" && detail) {
       const ticked = selection.get(detail.key) ?? new Set<string>();
       const count = selectedCount(detail, selection);
-      const shown = detail.assets.slice(0, visible);
+      const counts = describeCounts(detail.assets.length, count, detail.kind);
       return (
         <>
           <div className={styles.detailHead}>
@@ -684,15 +701,18 @@ export function FindTripsFlow({
               </h2>
               <p className={styles.hint}>
                 {related ? `${detail.title} · ` : ""}
-                {formatPeriod(detail.period)} · {photosLabel(detail.assets.length)} encontradas
+                {formatPeriod(detail.period)}
                 {detail.locationNote ? ` · ${detail.locationNote}` : ""}
               </p>
             </div>
           </div>
           <div className={styles.toolbar}>
-            <strong className={styles.selectedCount}>
-              {count} de {detail.assets.length} fotos selecionadas
-            </strong>
+            <span className={styles.toolbarCounts}>
+              <span className={styles.countFound}>{counts.found}</span>
+              <strong className={styles.countSelected} data-active={count > 0 ? "true" : "false"}>
+                {counts.selected}
+              </strong>
+            </span>
             <span className={styles.toolbarActions}>
               <button
                 className={styles.linkButton}
@@ -710,24 +730,13 @@ export function FindTripsFlow({
               </button>
             </span>
           </div>
-          <div className={styles.body}>
+          <div className={styles.body} onScroll={loadMoreThumbnails} ref={bodyRef}>
             <PhotoGrid
-              assets={shown}
+              assets={detail.assets}
               onToggle={(id) => setSelection((previous) => toggleAsset(previous, detail.key, id))}
               thumbs={thumbs}
               ticked={ticked}
             />
-            {visible < detail.assets.length ? (
-              <p>
-                <button
-                  className={styles.linkButton}
-                  onClick={() => setVisible((value) => value + PAGE)}
-                  type="button"
-                >
-                  Ver mais fotos
-                </button>
-              </p>
-            ) : null}
             {detail.withoutLocationCount > 0 ? (
               <p className={styles.stats}>
                 {photosLabel(detail.withoutLocationCount)} sem localização foram incluídas pela data.

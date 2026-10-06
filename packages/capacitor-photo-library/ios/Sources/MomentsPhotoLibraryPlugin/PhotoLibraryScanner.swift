@@ -252,6 +252,28 @@ enum PhotoLibraryScanner {
         guard let source = CGImageSourceCreateWithData(data as CFData, nil) else {
             throw ExportError.encodingFailed
         }
+        let reduced = try reduceToJPEG(source: source, maxDimension: maxDimension, quality: quality)
+        return ExportedPhoto(
+            base64: reduced.data.base64EncodedString(),
+            width: reduced.width,
+            height: reduced.height,
+            bytes: reduced.data.count
+        )
+    }
+
+    struct ReducedJPEG {
+        let data: Data
+        let width: Int
+        let height: Int
+    }
+
+    /// Re-encodes an image source as a JPEG of at most `maxDimension` px on the long side,
+    /// upright, keeping its EXIF and GPS. Shared by the library export and the direct picker.
+    static func reduceToJPEG(
+        source: CGImageSource,
+        maxDimension: Int,
+        quality: Double
+    ) throws -> ReducedJPEG {
         let thumbnailOptions: [CFString: Any] = [
             kCGImageSourceCreateThumbnailFromImageAlways: true,
             kCGImageSourceCreateThumbnailWithTransform: true, // bake the rotation into the pixels
@@ -294,13 +316,7 @@ enum PhotoLibraryScanner {
             throw ExportError.encodingFailed
         }
 
-        let bytes = output as Data
-        return ExportedPhoto(
-            base64: bytes.base64EncodedString(),
-            width: image.width,
-            height: image.height,
-            bytes: bytes.count
-        )
+        return ReducedJPEG(data: output as Data, width: image.width, height: image.height)
     }
 
     // MARK: - Helpers

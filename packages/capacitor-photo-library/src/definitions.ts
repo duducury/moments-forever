@@ -142,6 +142,23 @@ export interface ExportedPhoto {
   readonly bytes: number;
 }
 
+export interface PickedPhotoInfo {
+  /** Hand to `readPickedPhoto` to get the picture. */
+  readonly token: string;
+  /** PHAsset.localIdentifier when the system provides it (null otherwise). */
+  readonly assetIdentifier: string | null;
+  readonly name: string | null;
+  readonly width: number;
+  readonly height: number;
+  readonly bytes: number;
+}
+
+export interface PickPhotosResult {
+  /** True when the person closed the picker without choosing anything. */
+  readonly cancelled: boolean;
+  readonly photos: readonly PickedPhotoInfo[];
+}
+
 export interface MomentsPhotoLibraryPlugin {
   /** Current permission, without prompting. */
   checkPermission(): Promise<PermissionResult>;
@@ -163,4 +180,17 @@ export interface MomentsPhotoLibraryPlugin {
   exportPhoto(options: ExportPhotoOptions): Promise<ExportedPhoto>;
   /** Opens this app's page in the system Settings (for "access denied"). */
   openSettings(): Promise<void>;
+  /**
+   * iOS: opens the system photo picker DIRECTLY (no "Photo Library / Take Photo /
+   * Choose Files" sheet). Needs no permission. Each chosen photo comes back as a
+   * token; read them one at a time with `readPickedPhoto`.
+   */
+  pickPhotos(options?: { readonly selectionLimit?: number }): Promise<PickPhotosResult>;
+  /** One reduced JPEG (EXIF/GPS kept) of a picked photo; the temp file is deleted after reading. */
+  readPickedPhoto(options: { readonly token: string }): Promise<{
+    readonly data: string;
+    readonly mimeType: "image/jpeg";
+  }>;
+  /** Deletes any picked photo that was not read (cancelled or failed import). */
+  discardPickedPhotos(): Promise<void>;
 }

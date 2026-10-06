@@ -87,20 +87,17 @@ export function TripCard({
   selection,
   thumbs,
   onOpen,
-  onToggleAll,
   onVisible,
 }: {
   readonly candidate: Candidate;
   readonly selection: Selection;
   readonly thumbs: ReadonlyMap<string, string>;
   readonly onOpen: () => void;
-  readonly onToggleAll: () => void;
   readonly onVisible: () => void;
 }) {
   const ref = useVisibleOnce<HTMLElement>(onVisible);
   const total = candidate.assets.length;
   const ticked = selectedCount(candidate, selection);
-  const allTicked = total > 0 && ticked === total;
   const preview = pickPreview(candidate.assets, PREVIEW_COUNT).map((asset) => asset.nativeId);
   const counts = describeCounts(total, ticked, candidate.kind);
 
@@ -138,9 +135,6 @@ export function TripCard({
               {counts.selected}
             </strong>
           </span>
-          <button className={styles.selectAll} onClick={onToggleAll} type="button">
-            {allTicked ? "Desmarcar todas" : "Selecionar todas"}
-          </button>
         </div>
       </div>
     </article>

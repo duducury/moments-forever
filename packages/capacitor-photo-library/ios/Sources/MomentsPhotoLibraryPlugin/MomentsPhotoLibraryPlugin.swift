@@ -18,8 +18,14 @@ public class MomentsPhotoLibraryPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "scanPhotoMetadata", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "getThumbnails", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "exportPhoto", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "openSettings", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "openSettings", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "pickPhotos", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "readPickedPhoto", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "discardPickedPhotos", returnType: CAPPluginReturnPromise)
     ]
+
+    /// Keeps the picker's delegate alive while the system sheet is on screen.
+    private var pickerSession: PhotoPickerSession?
 
     private static let maxLimit = 50_000
     private static let maxThumbnailBatch = 60
@@ -223,5 +229,59 @@ public class MomentsPhotoLibraryPlugin: CAPPlugin, CAPBridgedPlugin {
             }
             UIApplication.shared.open(url) { _ in call.resolve() }
         }
+    }
+
+    /// "Escolher fotos": opens the system photo picker DIRECTLY (no Photo Library /
+    /// Take Photo / Choose Files sheet in between). Needs no permission; the chosen
+    /// photos are reduced to JPEG files and read one at a time with `readPickedPhoto`.
+    @objc func pickPhotos(_ call: CAPPluginCall) {
+        let selectionLimit = max(call.getInt("selectionLimit") ?? 0, 0) // 0 = no limit
+        DispatchQueue.main.async {
+            guard let viewController = self.bridge?.viewController else {
+                call.reject("No view controller available to present the picker.")
+                return
+            }
+            // `photoLibrary:` makes the results carry the photo's identifier (no permission needed).
+            var configuration = PHPickerConfiguration(photoLibrary: PHPhotoLibrary.shared())
+            configuration.filter = .images
+            configuration.selectionLimit = selectionLimit
+            configuration.preferredAssetRepresentationMode = .current
+
+            let picker = PHPickerViewController(configuration: configuration)
+            let session = PhotoPickerSession { results in
+                self.pickerSession = nil
+                guard !results.isEmpty else {
+                    call.resolve(["cancelled": true, "photos": [[String: Any]]()])
+                    return
+                }
+                DispatchQueue.global(qos: .userInitiated).async {
+                    let photos = PhotoPickerStore.prepare(results)
+                    call.resolve(["cancelled": false, "photos": photos])
+                }
+            }
+            self.pickerSession = session
+            picker.delegate = session
+            viewController.present(picker, animated: true)
+        }
+    }
+
+    @objc func readPickedPhoto(_ call: CAPPluginCall) {
+        guard let token = call.getString("token"), let url = PhotoPickerStore.take(token) else {
+            call.reject("Picked photo not found.", "PICKED_NOT_FOUND")
+            return
+        }
+        DispatchQueue.global(qos: .userInitiated).async {
+            defer { try? FileManager.default.removeItem(at: url) }
+            guard let data = try? Data(contentsOf: url) else {
+                call.reject("Could not read the picked photo.", "PICKED_UNREADABLE")
+                return
+            }
+            call.resolve(["data": data.base64EncodedString(), "mimeType": "image/jpeg"])
+        }
+    }
+
+    @objc func discardPickedPhotos(_ call: CAPPluginCall) {
+        PhotoPickerStore.discardAll()
+        call.resolve()
     }
 }

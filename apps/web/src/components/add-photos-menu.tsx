@@ -1,22 +1,33 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
-import { isPhotoLibraryAvailable } from "@moments-forever/capacitor-photo-library";
+import { Capacitor } from "@capacitor/core";
+import {
+  isNativePhotoPickerAvailable,
+  isPhotoLibraryAvailable,
+  MomentsPhotoLibrary,
+} from "@moments-forever/capacitor-photo-library";
 
-import { IMPORT_FILE_ACCEPT } from "@/lib/photo-import/pending-import-files";
+import { createLibraryClient } from "@/lib/photo-library/library-client";
+import type { NativeOrigins } from "@/lib/photo-library/native-origin";
 
 import styles from "./add-photos-menu.module.css";
 
 /**
- * The app's own "Adicionar fotos" menu: Fototeca, Tirar foto, Escolher arquivos
- * and — only in the native app, where the library plugin exists — ✨ Encontrar
- * viagem / Encontrar fotos. iOS's system sheet for <input type="file"> cannot
- * take a fourth entry, hence this menu.
+ * The app's own "Adicionar fotos" menu: Escolher fotos, Tirar uma foto and —
+ * only in the native app, where the library plugin exists — ✨ Encontrar viagem
+ * / Encontrar fotos.
+ *
+ * - "Escolher fotos" opens the iPhone photo picker DIRECTLY (plugin `pickPhotos`).
+ *   It must never go through <input type="file">: iOS answers that with its own
+ *   "Photo Library / Take Photo / Choose Files" sheet, which is the old menu.
+ * - "Tirar uma foto" opens the camera directly (<input capture>).
+ * - There is no "Escolher arquivos" here.
  *
  * Where the plugin is missing (browser, PWA, an older App Store build) the menu
- * is skipped and the trigger opens the file picker directly, as before.
+ * is skipped and the trigger opens the plain photo input, as before.
  */
 export function useNativeLibraryAvailable(): boolean {
   const [available, setAvailable] = useState(false);
@@ -28,6 +39,8 @@ export function useNativeLibraryAvailable(): boolean {
   return available;
 }
 
+type PickState = "idle" | "preparing" | "failed";
+
 export function useAddPhotosMenu({
   findLabel,
   libraryAccept = "image/*",
@@ -36,9 +49,10 @@ export function useAddPhotosMenu({
 }: {
   /** "Encontrar viagem" outside a trip, "Encontrar fotos" inside one. */
   readonly findLabel: "Encontrar viagem" | "Encontrar fotos";
-  /** What the plain "Fototeca" picker accepts (each caller keeps its current value). */
+  /** What the plain photo input accepts where there is no native picker (browser/PWA). */
   readonly libraryAccept?: string;
-  readonly onFiles: (files: File[]) => void;
+  /** `origins` is set only by the native picker: which library photo each file is. */
+  readonly onFiles: (files: File[], origins?: NativeOrigins) => void;
   readonly onFind: () => void;
 }): {
   /** Call from the trigger's onClick: opens the menu, or the picker where there is no plugin. */
@@ -50,8 +64,16 @@ export function useAddPhotosMenu({
   const [open, setOpen] = useState(false);
   const libraryRef = useRef<HTMLInputElement | null>(null);
   const cameraRef = useRef<HTMLInputElement | null>(null);
-  const filesRef = useRef<HTMLInputElement | null>(null);
+  const [pickState, setPickState] = useState<PickState>("idle");
   const titleId = useId();
+  const client = useMemo(
+    () =>
+      createLibraryClient({
+        plugin: MomentsPhotoLibrary,
+        platform: Capacitor.getPlatform() === "android" ? "android" : "ios",
+      }),
+    [],
+  );
 
   function handleInput(input: HTMLInputElement) {
     const files = [...(input.files ?? [])];
@@ -63,6 +85,31 @@ export function useAddPhotosMenu({
     // Same tap: iOS only opens a picker from a user gesture.
     ref.current?.click();
     setOpen(false);
+  }
+
+  async function pickFromLibrary() {
+    setOpen(false);
+    if (!isNativePhotoPickerAvailable()) {
+      // Older app build without the picker: the plain photo input, as before.
+      libraryRef.current?.click();
+      return;
+    }
+    setPickState("preparing");
+    try {
+      const outcome = await client.pickPhotos();
+      if (outcome.cancelled) {
+        setPickState("idle");
+        return;
+      }
+      if (outcome.files.length === 0) {
+        setPickState("failed");
+        return;
+      }
+      setPickState("idle");
+      onFiles([...outcome.files], outcome.origins);
+    } catch {
+      setPickState("failed");
+    }
   }
 
   const openMenu = () => {
@@ -88,14 +135,6 @@ export function useAddPhotosMenu({
         ref={cameraRef}
         type="file"
       />
-      <input
-        accept={IMPORT_FILE_ACCEPT}
-        className={styles.hidden}
-        multiple
-        onChange={(event) => handleInput(event.currentTarget)}
-        ref={filesRef}
-        type="file"
-      />
 
       {open && typeof document !== "undefined"
         ? createPortal(
@@ -117,28 +156,23 @@ export function useAddPhotosMenu({
                 </p>
 
                 <div className={styles.actions}>
-                  <button className={styles.action} onClick={() => pick(libraryRef)} type="button">
+                  <button className={styles.action} onClick={() => void pickFromLibrary()} type="button">
                     <span aria-hidden className={styles.icon}><GalleryIcon /></span>
                     <span className={styles.copy}>
-                      <span className={styles.copyTitle}>Fototeca</span>
+                      <span className={styles.copyTitle}>Escolher fotos</span>
                       <span className={styles.copyHint}>Selecione fotos da sua galeria</span>
                     </span>
                   </button>
                   <button className={styles.action} onClick={() => pick(cameraRef)} type="button">
                     <span aria-hidden className={styles.icon}><CameraIcon /></span>
                     <span className={styles.copy}>
-                      <span className={styles.copyTitle}>Tirar foto</span>
+                      <span className={styles.copyTitle}>Tirar uma foto</span>
                       <span className={styles.copyHint}>Use a câmera</span>
                     </span>
                   </button>
-                  <button className={styles.action} onClick={() => pick(filesRef)} type="button">
-                    <span aria-hidden className={styles.icon}><FolderIcon /></span>
-                    <span className={styles.copy}>
-                      <span className={styles.copyTitle}>Escolher arquivos</span>
-                      <span className={styles.copyHint}>Fotos e arquivos do dispositivo</span>
-                    </span>
-                  </button>
                 </div>
+
+                <hr className={styles.divider} />
 
                 <button
                   className={styles.find}
@@ -169,6 +203,33 @@ export function useAddPhotosMenu({
             document.body,
           )
         : null}
+
+      {pickState !== "idle" && typeof document !== "undefined"
+        ? createPortal(
+            <div className={styles.backdrop} role="presentation">
+              <div aria-live="polite" className={styles.busy} role="status">
+                {pickState === "preparing" ? (
+                  <>
+                    <span aria-hidden className={styles.spinner} />
+                    <span>Preparando fotos…</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Não foi possível preparar as fotos. Tente novamente.</span>
+                    <button
+                      className={styles.busyClose}
+                      onClick={() => setPickState("idle")}
+                      type="button"
+                    >
+                      Fechar
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
     </>
   );
 
@@ -190,14 +251,6 @@ function CameraIcon() {
     <svg fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" viewBox="0 0 24 24">
       <path d="M4 8h3l1.6-2.4h6.8L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z" />
       <circle cx="12" cy="13.2" r="3.3" />
-    </svg>
-  );
-}
-
-function FolderIcon() {
-  return (
-    <svg fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" viewBox="0 0 24 24">
-      <path d="M3 7a2 2 0 0 1 2-2h4l2 2.4h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" />
     </svg>
   );
 }

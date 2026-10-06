@@ -611,13 +611,6 @@ export function FindTripsFlow({
           <TripCard
             candidate={candidate}
             onOpen={() => openDetail(candidate.key)}
-            onToggleAll={() =>
-              setSelection((previous) =>
-                selectedCount(candidate, previous) === candidate.assets.length
-                  ? clearAll(previous, candidate.key)
-                  : selectAll(previous, candidate),
-              )
-            }
             onVisible={() =>
               ensureThumbs(
                 pickPreview(candidate.assets, PREVIEW_COUNT).map((asset) => asset.nativeId),

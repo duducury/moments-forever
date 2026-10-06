@@ -4,6 +4,7 @@ import type {
   ExportedPhoto,
   LimitedPickerResult,
   MomentsPhotoLibraryPlugin,
+  PickPhotosResult,
   PermissionResult,
   PhotoLibrarySummary,
   ScanResult,
@@ -48,6 +49,18 @@ export class MomentsPhotoLibraryWeb
   }
 
   async openSettings(): Promise<void> {
+    throw this.unavailable("Photo library is only available in the native app.");
+  }
+
+  async pickPhotos(): Promise<PickPhotosResult> {
+    throw this.unavailable("Photo library is only available in the native app.");
+  }
+
+  async readPickedPhoto(): Promise<{ data: string; mimeType: "image/jpeg" }> {
+    throw this.unavailable("Photo library is only available in the native app.");
+  }
+
+  async discardPickedPhotos(): Promise<void> {
     throw this.unavailable("Photo library is only available in the native app.");
   }
 }

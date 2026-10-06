@@ -427,7 +427,7 @@
   padding: 12px 14px 14px;
 }
 
-/* "Ver todas as fotos" opens the full grid; "Selecionar todas" only ticks. Two different things. */
+/* "Ver todas as fotos" opens the full grid, where the photos are ticked — never on the card. */
 .viewAll {
   display: flex;
   min-height: 44px;
@@ -472,19 +472,6 @@
 
 .countSelected[data-active="true"] {
   color: var(--accent);
-}
-
-.selectAll {
-  min-height: 40px;
-  border: 1px solid var(--accent);
-  border-radius: 999px;
-  padding: 0 14px;
-  color: var(--accent);
-  background: transparent;
-  font: inherit;
-  font-size: 0.9rem;
-  font-weight: 750;
-  cursor: pointer;
 }
 
 .detailHead {

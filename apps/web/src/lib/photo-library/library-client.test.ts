@@ -29,6 +29,8 @@ function fakePlugin(options: {
   requestResult?: PhotoPermissionStatus;
   library?: PhotoAssetMetadata[];
   exportFails?: Set<string>;
+  picked?: { token: string; assetIdentifier: string | null; name: string | null }[];
+  readFails?: Set<string>;
   calls?: string[];
 }): MomentsPhotoLibraryPlugin {
   const calls = options.calls ?? [];
@@ -93,6 +95,24 @@ function fakePlugin(options: {
     },
     async openSettings() {
       calls.push("settings");
+    },
+    async pickPhotos() {
+      calls.push("pick");
+      const photos = (options.picked ?? []).map((photo) => ({
+        ...photo,
+        width: 1600,
+        height: 1200,
+        bytes: 6,
+      }));
+      return { cancelled: photos.length === 0, photos };
+    },
+    async readPickedPhoto({ token }) {
+      calls.push(`read:${token}`);
+      if (options.readFails?.has(token)) throw new Error("gone");
+      return { data: "/9j/4AAQ", mimeType: "image/jpeg" as const };
+    },
+    async discardPickedPhotos() {
+      calls.push("discard");
     },
   };
 }
@@ -207,4 +227,53 @@ test("thumbnails come back as data URLs; unreadable ones are simply missing", as
   const map = await client(fakePlugin({})).thumbnails(["a", "broken"]);
   assert.equal(map.get("a"), "data:image/jpeg;base64,AAAA");
   assert.equal(map.has("broken"), false);
+});
+
+test("Escolher fotos: closing the picker without choosing returns nothing", async () => {
+  const calls: string[] = [];
+  const outcome = await client(fakePlugin({ picked: [], calls })).pickPhotos();
+  assert.equal(outcome.cancelled, true);
+  assert.equal(outcome.files.length, 0);
+  assert.deepEqual(calls, ["pick"]);
+});
+
+test("Escolher fotos: chosen photos become JPEG files that remember their library id", async () => {
+  const calls: string[] = [];
+  const outcome = await client(
+    fakePlugin({
+      calls,
+      picked: [
+        { token: "t1", assetIdentifier: "ABC/L0/001", name: "IMG_0001.HEIC" },
+        { token: "t2", assetIdentifier: null, name: null },
+      ],
+    }),
+  ).pickPhotos();
+
+  assert.equal(outcome.cancelled, false);
+  assert.deepEqual(outcome.files.map((file) => [file.name, file.type]), [
+    ["IMG_0001.jpg", "image/jpeg"],
+    ["IMG_0002.jpg", "image/jpeg"],
+  ]);
+  const [first, second] = outcome.files;
+  assert.equal(outcome.origins.get(first!)?.sourceAssetId, "ios:ABC/L0/001");
+  // The photo's own EXIF (date, GPS) is kept: the origin carries identity only.
+  assert.equal(outcome.origins.get(first!)?.takenAt, null);
+  assert.equal(outcome.origins.has(second!), false);
+  // Read one by one, then the leftovers are discarded.
+  assert.deepEqual(calls, ["pick", "read:t1", "read:t2", "discard"]);
+});
+
+test("Escolher fotos: a photo that cannot be read is skipped and counted, the rest still arrive", async () => {
+  const outcome = await client(
+    fakePlugin({
+      readFails: new Set(["t1"]),
+      picked: [
+        { token: "t1", assetIdentifier: "a", name: "a.jpg" },
+        { token: "t2", assetIdentifier: "b", name: "b.jpg" },
+      ],
+    }),
+  ).pickPhotos();
+  assert.equal(outcome.files.length, 1);
+  assert.equal(outcome.failedCount, 1);
+  assert.equal(outcome.files[0]?.name, "b.jpg");
 });

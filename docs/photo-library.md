@@ -4,14 +4,33 @@ Ajuda a pessoa a achar, nas fotos do próprio aparelho, viagens e fotos que aind
 Moments Forever. **Nada é importado nem criado sem a pessoa escolher e confirmar.**
 
 ## Onde fica
-Dentro do menu próprio **Adicionar fotos** (Fototeca · Tirar foto · Escolher arquivos · ✨):
+Dentro do menu próprio **Adicionar fotos** (`components/add-photos-menu.tsx`):
+
+```
+ADICIONAR FOTOS
+ Escolher fotos        Selecione fotos da sua galeria
+ Tirar uma foto        Use a câmera
+ ────────────
+ ✨ Encontrar uma viagem   Deixe o Moments Forever procurar viagens nas suas fotos
+```
 
 - fora de uma viagem (botão "Nova viagem" do perfil / barra inferior): **✨ Encontrar viagem**;
 - dentro de uma viagem (`AddPhotosPanel`): **✨ Encontrar fotos**.
 
-O menu nativo do iOS para `<input type="file">` não aceita uma quarta opção — por isso o menu próprio
-(`components/add-photos-menu.tsx`). Sem o plugin nativo (navegador, PWA, app antigo da App Store) o
-menu não aparece e o botão abre o seletor de arquivos direto, como sempre foi.
+**Regra: este menu nunca usa `<input type="file">` para escolher fotos no app.** O iOS responde a
+esse input com a folha do sistema "Photo Library / Take Photo / Choose Files" (o menu antigo).
+Por isso:
+
+- **Escolher fotos** chama o plugin (`pickPhotos`, `PHPickerViewController`): abre a biblioteca
+  direto, sem pedir permissão. As fotos voltam uma a uma (`readPickedPhoto`), reduzidas a JPEG com
+  EXIF/GPS, junto com o id da biblioteca (`source_asset_id`) quando o sistema o fornece.
+- **Tirar uma foto** é um `<input capture="environment">`: o iOS abre a câmera direto.
+- **Não existe "Escolher arquivos"** neste fluxo.
+- `isNativePhotoPickerAvailable()` confere, de forma síncrona, se o app instalado já tem
+  `pickPhotos` (um app compilado antes não tem). Se não tiver — ou no navegador/PWA — o menu cai no
+  input de fotos comum, como sempre foi, e sem o plugin o menu nem aparece.
+
+Outros `<input type="file">` do app (tela `/import`, avatar, capa da viagem) continuam como eram.
 
 ## Arquitetura
 ```
@@ -25,7 +44,8 @@ O site hospedado nunca acessa a biblioteca: só o plugin nativo, dentro do app.
 
 ### Plugin (`packages/capacitor-photo-library`)
 `checkPermission · requestPermission · presentLimitedLibraryPicker · getPhotoLibrarySummary ·
-scanPhotoMetadata · getThumbnails · exportPhoto · openSettings`
+scanPhotoMetadata · getThumbnails · exportPhoto · openSettings · pickPhotos · readPickedPhoto ·
+discardPickedPhotos` (os três últimos: só iOS)
 
 - **Descoberta = só metadata** (`scanPhotoMetadata`): `localIdentifier`, data, GPS, largura/altura.
   Nenhum pixel é lido. Só fotos (não vídeos), sem capturas de tela, sem álbuns compartilhados do iCloud.

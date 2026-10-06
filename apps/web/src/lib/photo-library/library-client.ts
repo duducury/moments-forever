@@ -56,6 +56,16 @@ export interface ExportOutcome {
   readonly failed: readonly LibraryAsset[];
 }
 
+export interface PickOutcome {
+  /** True when the person closed the picker without choosing anything. */
+  readonly cancelled: boolean;
+  readonly files: readonly File[];
+  /** Only the photo's identity: its date and GPS stay in the JPEG's own EXIF. */
+  readonly origins: ReadonlyMap<File, NativeOrigin>;
+  /** Chosen photos that could not be read (iCloud offline…). */
+  readonly failedCount: number;
+}
+
 const SCAN_PAGE = 4000;
 const THUMBNAIL_BATCH = 40;
 
@@ -73,6 +83,11 @@ function fileNameFor(asset: LibraryAsset, index: number): string {
     ? asset.takenAt.replace(/\D/gu, "").slice(0, 14)
     : String(index + 1).padStart(4, "0");
   return `IMG_${stamp}.jpg`;
+}
+
+function pickedFileName(suggested: string | null, index: number): string {
+  const base = (suggested ?? "").replace(/\.[^./\\]+$/u, "").replace(/[^\w.-]+/gu, "_");
+  return `${base || `IMG_${String(index + 1).padStart(4, "0")}`}.jpg`;
 }
 
 export function createLibraryClient(input: {
@@ -196,12 +211,58 @@ export function createLibraryClient(input: {
     return { files, origins, failed };
   }
 
+  /**
+   * "Escolher fotos": the system picker opens straight away (no permission needed).
+   * Photos come back one at a time so a hundred of them never cross the bridge at once.
+   */
+  async function pickPhotos(
+    options: { readonly onProgress?: (done: number, total: number) => void } = {},
+  ): Promise<PickOutcome> {
+    const picked = await plugin.pickPhotos({});
+    if (picked.cancelled || picked.photos.length === 0) {
+      return { cancelled: true, files: [], origins: new Map(), failedCount: 0 };
+    }
+
+    const files: File[] = [];
+    const origins = new Map<File, NativeOrigin>();
+    let failedCount = 0;
+    try {
+      for (const [index, photo] of picked.photos.entries()) {
+        options.onProgress?.(index, picked.photos.length);
+        try {
+          const read = await plugin.readPickedPhoto({ token: photo.token });
+          const file = new File([base64ToBytes(read.data)], pickedFileName(photo.name, index), {
+            type: read.mimeType,
+            lastModified: Date.now(),
+          });
+          files.push(file);
+          if (photo.assetIdentifier) {
+            origins.set(file, {
+              sourceAssetId: buildSourceAssetId(platform, photo.assetIdentifier),
+              takenAt: null,
+              latitude: null,
+              longitude: null,
+            });
+          }
+        } catch {
+          failedCount += 1;
+        }
+      }
+    } finally {
+      // Whatever was not read (error half-way) must not stay in the phone's temp folder.
+      await plugin.discardPickedPhotos().catch(() => undefined);
+    }
+    options.onProgress?.(picked.photos.length, picked.photos.length);
+    return { cancelled: false, files, origins, failedCount };
+  }
+
   return {
     checkAccess,
     ensureAccess,
     scan,
     thumbnails,
     exportAssets,
+    pickPhotos,
     presentLimitedPicker: () => plugin.presentLimitedLibraryPicker(),
     openSettings: () => plugin.openSettings(),
   };

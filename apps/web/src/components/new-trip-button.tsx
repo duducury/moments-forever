@@ -12,8 +12,8 @@ import { useAddPhotosMenu } from "./add-photos-menu";
 import { FindTripsFlow } from "./find-trips/find-trips-flow";
 
 /**
- * Opens the app's "Adicionar fotos" menu (Fototeca, Tirar foto, Escolher
- * arquivos, ✨ Encontrar viagem) and only then goes to /import with the chosen
+ * Opens the app's "Adicionar fotos" menu (Escolher fotos, Tirar uma foto,
+ * ✨ Encontrar viagem) and only then goes to /import with the chosen
  * files. Without the native photo plugin (browser, older app) it opens the
  * device photo picker directly, as it always did.
  */
@@ -29,6 +29,7 @@ export function NewTripButton({
   const { openMenu, menu } = useAddPhotosMenu({
     findLabel: "Encontrar viagem",
     libraryAccept: IMPORT_FILE_ACCEPT,
+    // /import has its own pipeline: the native picker's `origins` are not used here.
     onFiles: (files) => {
       setPendingImportFiles(files);
       router.push("/import");

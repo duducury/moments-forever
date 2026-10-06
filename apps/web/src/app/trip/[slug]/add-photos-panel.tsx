@@ -9,6 +9,7 @@ import {
 } from "@/components/add-photos-menu";
 import { FindTripsFlow } from "@/components/find-trips/find-trips-flow";
 import { ExperienceCoverThumb } from "@/components/experience-cover-thumb";
+import type { NativeOrigins } from "@/lib/photo-library/native-origin";
 import {
   createTripAlbum,
   uploadFilesToAlbum,
@@ -73,11 +74,14 @@ export function AddPhotosPanel({
   const foundPhotosAdded = useRef(false);
   const { openMenu, menu } = useAddPhotosMenu({
     findLabel: "Encontrar fotos",
-    onFiles: (files) => void onFilesSelected(files),
+    onFiles: (files, origins) => void onFilesSelected(files, origins),
     onFind: () => setFinding(true),
   });
 
-  async function onFilesSelected(fileList: FileList | readonly File[] | null) {
+  async function onFilesSelected(
+    fileList: FileList | readonly File[] | null,
+    origins?: NativeOrigins,
+  ) {
     if (!fileList || fileList.length === 0) return;
 
     setBusy(true);
@@ -110,6 +114,7 @@ export function AddPhotosPanel({
         experienceId,
         albumId: targetAlbumId,
         files,
+        origins,
         onProgress: setProgress,
       });
 

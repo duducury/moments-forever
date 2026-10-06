@@ -22,6 +22,27 @@ export function isPhotoLibraryAvailable(): boolean {
   );
 }
 
+/**
+ * True when this build of the app can open the system photo picker directly
+ * (iOS, and the native side already has `pickPhotos`). An app installed before
+ * the picker existed has the plugin but not this method, so the menu must fall
+ * back to the file input there. Answered synchronously on purpose: the tap that
+ * opens the picker has to stay a user gesture.
+ */
+export function isNativePhotoPickerAvailable(): boolean {
+  if (Capacitor.getPlatform() !== "ios" || !isPhotoLibraryAvailable()) return false;
+  const headers = (
+    Capacitor as unknown as {
+      PluginHeaders?: ReadonlyArray<{
+        name: string;
+        methods?: ReadonlyArray<{ name: string }>;
+      }>;
+    }
+  ).PluginHeaders;
+  const plugin = headers?.find((header) => header.name === "MomentsPhotoLibrary");
+  return Boolean(plugin?.methods?.some((method) => method.name === "pickPhotos"));
+}
+
 export * from "./definitions";
 
 /** Permission states in which the library can be read (fully or partially). */

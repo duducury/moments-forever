@@ -27,6 +27,12 @@ import {
   nearestKnownCity,
 } from "@/lib/photo-library/place-fallback";
 import {
+  applyFilter,
+  buildFilterChips,
+  mainCountryOf,
+  type TripFilterId,
+} from "@/lib/photo-library/trip-filters";
+import {
   loadAdminGeo,
   quickPlace,
   type QuickPlace,
@@ -196,6 +202,24 @@ export function FindTripsFlow({
     (candidate) => candidate.kind === "existing" && candidate.assets.length > 0,
   );
   const detail = candidates.find((candidate) => candidate.key === detailKey) ?? null;
+
+  // Filter chips only narrow what is shown; ticks, review and import still see every trip.
+  const [filter, setFilter] = useState<TripFilterId>("all");
+  const regionNames = useMemo(() => {
+    try {
+      return new Intl.DisplayNames(["pt-BR"], { type: "region" });
+    } catch {
+      return undefined;
+    }
+  }, []);
+  const chips = useMemo(
+    () => buildFilterChips([...fresh, ...existing], regionNames),
+    [fresh, existing, regionNames],
+  );
+  const activeFilter = chips.some((chip) => chip.id === filter) ? filter : "all";
+  const mainCountry = mainCountryOf(chips);
+  const shownFresh = applyFilter(fresh, activeFilter, mainCountry);
+  const shownExisting = applyFilter(existing, activeFilter, mainCountry);
   const review = reviewSelection(candidates, selection);
 
   // ---- thumbnails: only for what is on screen, one request at a time --------------
@@ -673,6 +697,29 @@ export function FindTripsFlow({
               Toque numa viagem para ver as fotos. Só o que você marcar será adicionado.
             </p>
           </div>
+          {chips.length > 0 ? (
+            <div aria-label="Filtrar viagens" className={styles.chips} role="group">
+              {chips.map((chip) => (
+                <button
+                  aria-pressed={chip.id === activeFilter}
+                  className={styles.chip}
+                  data-active={chip.id === activeFilter ? "true" : "false"}
+                  key={chip.id}
+                  onClick={() => setFilter(chip.id)}
+                  type="button"
+                >
+                  {chip.countryCode ? (
+                    <Flag code={chip.countryCode} />
+                  ) : chip.id === "other" ? (
+                    <span aria-hidden>🌍</span>
+                  ) : (
+                    <span aria-hidden>✨</span>
+                  )}
+                  {chip.label} ({chip.count})
+                </button>
+              ))}
+            </div>
+          ) : null}
           {limitedBanner}
           <div className={styles.body}>
             {nothing ? (
@@ -680,16 +727,16 @@ export function FindTripsFlow({
                 Não encontramos viagens novas nas fotos deste aparelho. O que achamos já está no Moments Forever.
               </p>
             ) : null}
-            {fresh.length > 0 ? (
+            {shownFresh.length > 0 ? (
               <>
                 <p className={styles.section}>Novas viagens</p>
-                <ul className={styles.list}>{fresh.map(renderCard)}</ul>
+                <ul className={styles.list}>{shownFresh.map(renderCard)}</ul>
               </>
             ) : null}
-            {existing.length > 0 ? (
+            {shownExisting.length > 0 ? (
               <>
                 <p className={styles.section}>Já no Moments Forever, com fotos novas</p>
-                <ul className={styles.list}>{existing.map(renderCard)}</ul>
+                <ul className={styles.list}>{shownExisting.map(renderCard)}</ul>
               </>
             ) : null}
             {stats ? <p className={styles.stats}>{stats}</p> : null}

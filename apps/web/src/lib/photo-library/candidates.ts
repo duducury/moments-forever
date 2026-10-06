@@ -100,6 +100,8 @@ export function buildDiscoverCandidates(input: {
         target: match.trip,
         assets: withoutPresent(trip.assets, presence),
         countryCode: description.countryCode ?? match.trip.countryCode,
+        placeLabel: description.placeLabel,
+        quickCountryCode: description.quickCountryCode,
       });
       continue;
     }
@@ -115,6 +117,8 @@ export function buildDiscoverCandidates(input: {
       // Already stored anywhere in the account (and not deleted since): not offered again.
       assets: withoutPresent(trip.assets, everywhere),
       countryCode: description.countryCode,
+      placeLabel: description.placeLabel,
+      quickCountryCode: description.quickCountryCode,
     });
   }
 

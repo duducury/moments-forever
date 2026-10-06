@@ -54,8 +54,44 @@
 }
 
 .card h2 {
-  margin: 0;
-  font-size: 1.35rem;
+  margin: 2px 0 4px;
+  font-size: 1.4rem;
+}
+
+/* Filter chips: compact pills; the selected one wears the terracotta. They wrap — never a sideways scroll. */
+.chips {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0 10px;
+  color: var(--ink);
+  background: transparent;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 650;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.chip[data-active="true"] {
+  border-color: var(--accent);
+  color: var(--sheet);
+  background: var(--accent);
+}
+
+.chip .flag {
+  width: 18px;
+  height: 13px;
 }
 
 .hint {
@@ -86,7 +122,7 @@
 .list {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 12px;
+  gap: 10px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -375,6 +411,15 @@
   display: flex;
   min-width: 0;
   min-height: 28px;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.cardHeadMain {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
   align-items: center;
   gap: 8px;
 }
@@ -390,11 +435,60 @@
   overflow-wrap: anywhere;
 }
 
-.cardMeta {
-  overflow-wrap: anywhere;
+/* "✨ Nova": discreet, terracotta — only on trips that are not in Moments Forever yet. */
+.badgeNew {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--border));
+  border-radius: 999px;
+  padding: 4px 10px;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.cardMetaRow {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
   margin-bottom: 8px;
+}
+
+.cardMeta {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+  overflow-wrap: anywhere;
   color: var(--muted);
   font-size: 0.9rem;
+}
+
+.metaIcon {
+  flex: none;
+  width: 16px;
+  height: 16px;
+}
+
+.placePill {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px 10px 3px 8px;
+  color: var(--muted);
+  background: color-mix(in srgb, var(--ink) 5%, transparent);
+  font-size: 0.82rem;
+  font-weight: 650;
+  overflow-wrap: anywhere;
 }
 
 .skeleton {
@@ -490,7 +584,7 @@
   color: var(--ink);
   background: transparent;
   font: inherit;
-  font-size: 0.86rem;
+  font-size: 0.84rem;
   font-weight: 700;
   white-space: nowrap;
   cursor: pointer;
@@ -508,17 +602,44 @@
 }
 
 .countFound {
+  display: inline-flex;
   min-width: 0;
   flex: 1 1 0;
+  align-items: center;
+  gap: 6px;
   overflow-wrap: anywhere;
   color: var(--muted);
-  font-size: 0.86rem;
+  font-size: 0.84rem;
 }
 
 .countSelected {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   color: var(--muted);
   font-size: 0.95rem;
   font-weight: 750;
+}
+
+/* The ring before "0 selecionadas": empty at zero, a terracotta check once something is ticked. */
+.selectedDot {
+  display: grid;
+  flex: none;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  color: inherit;
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.selectedDot[data-active="true"] {
+  border-color: var(--accent);
+  color: var(--sheet);
+  background: var(--accent);
 }
 
 .countSelected[data-active="true"] {

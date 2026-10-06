@@ -31,6 +31,10 @@ export interface TripDescription {
   readonly state: TitleState;
   /** Shown under the dates for a "possible trip": why there is no place. */
   readonly locationNote: string | null;
+  /** Offline "CT, USA" of the trip's stops (all of them, de-duplicated) — shown from the first moment. */
+  readonly placeLabel: string | null;
+  /** Country of the offline label, for flags and filters while the real place is still loading. */
+  readonly quickCountryCode: string | null;
 }
 
 export const POSSIBLE_TRIP_TITLE = "Possível viagem";
@@ -69,6 +73,20 @@ export function describeTrip(input: {
   readonly quick?: Readonly<Record<string, QuickPlace | undefined>>;
 }): TripDescription {
   const { stops, labels, settled, locationQuality, quick = {} } = input;
+
+  const earlyLabels: string[] = [];
+  let quickCountryCode: string | null = null;
+  for (const stop of stops) {
+    const place = quick[stop.id];
+    if (!place) continue;
+    if (!earlyLabels.includes(place.label)) earlyLabels.push(place.label);
+    quickCountryCode ??= place.countryCode;
+  }
+  const early = {
+    placeLabel: locationQuality === "located" && earlyLabels.length > 0 ? earlyLabels.join(" · ") : null,
+    quickCountryCode: locationQuality === "located" ? quickCountryCode : null,
+  };
+
   if (locationQuality !== "located" || stops.length === 0) {
     return {
       title: POSSIBLE_TRIP_TITLE,
@@ -78,19 +96,22 @@ export function describeTrip(input: {
       state: "possible",
       locationNote:
         locationQuality === "limited" ? LIMITED_LOCATION_NOTE : NO_LOCATION_NOTE,
+      ...early,
     };
   }
 
   const waiting = stops.some((stop) => labels[stop.id] === undefined && !settled.has(stop.id));
   if (waiting) {
-    const early: string[] = [];
-    for (const stop of stops) {
-      const label = quick[stop.id]?.label;
-      if (label && !early.includes(label)) early.push(label);
-    }
     // countryCode stays null while pending: matching against existing trips must not
     // change just because an early label showed up.
-    return { title: early.join(" → "), name: "", countryCode: null, state: "pending", locationNote: null };
+    return {
+      title: earlyLabels.join(" → "),
+      name: "",
+      countryCode: null,
+      state: "pending",
+      locationNote: null,
+      ...early,
+    };
   }
 
   const localities: string[] = [];
@@ -118,6 +139,7 @@ export function describeTrip(input: {
       countryCode: null,
       state: "unnamed",
       locationNote: null,
+      ...early,
     };
   }
 
@@ -129,5 +151,6 @@ export function describeTrip(input: {
     countryCode: countryCodeFromPlaceLabel(firstLabel),
     state: "named",
     locationNote: null,
+    ...early,
   };
 }

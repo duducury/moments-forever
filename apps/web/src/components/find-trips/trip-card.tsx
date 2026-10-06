@@ -1,5 +1,7 @@
 "use client";
 
+import type { ReactNode } from "react";
+
 import {
   describeCounts,
   pickPreview,
@@ -82,6 +84,43 @@ export function PreviewStrip({
   );
 }
 
+function Icon({ children }: { readonly children: ReactNode }) {
+  return (
+    <svg
+      aria-hidden
+      className={styles.metaIcon}
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="1.8"
+      viewBox="0 0 24 24"
+    >
+      {children}
+    </svg>
+  );
+}
+
+const CalendarIcon = () => (
+  <Icon>
+    <rect height="16" rx="3" width="18" x="3" y="5" />
+    <path d="M3 10h18M8 3v4M16 3v4" />
+  </Icon>
+);
+const PinIcon = () => (
+  <Icon>
+    <path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11Z" />
+    <circle cx="12" cy="10" r="2.3" />
+  </Icon>
+);
+const ImageIcon = () => (
+  <Icon>
+    <rect height="16" rx="3" width="18" x="3" y="4" />
+    <circle cx="9" cy="10" r="1.6" />
+    <path d="m21 16-5-5-8 8" />
+  </Icon>
+);
+
 export function TripCard({
   candidate,
   selection,
@@ -100,6 +139,9 @@ export function TripCard({
   const ticked = selectedCount(candidate, selection);
   const preview = pickPreview(candidate.assets, PREVIEW_COUNT).map((asset) => asset.nativeId);
   const counts = describeCounts(total, ticked, candidate.kind);
+  const pending = candidate.titleState === "pending";
+  // The offline state/country pill: always next to the dates, unless it IS the title (while pending).
+  const placeLabel = candidate.placeLabel && candidate.placeLabel !== candidate.title ? candidate.placeLabel : null;
 
   return (
     <article
@@ -109,15 +151,31 @@ export function TripCard({
     >
       <button className={styles.cardMain} onClick={onOpen} type="button">
         <span className={styles.cardHead}>
-          <Flag code={candidate.countryCode} />
-          {candidate.titleState === "pending" && !candidate.title ? (
-            <span aria-label="Identificando o local" className={styles.skeleton} role="status" />
-          ) : (
-            <span className={styles.cardTitle}>{candidate.title}</span>
-          )}
+          <span className={styles.cardHeadMain}>
+            <Flag code={candidate.countryCode ?? candidate.quickCountryCode ?? null} />
+            {pending && !candidate.title ? (
+              <span aria-label="Identificando o local" className={styles.skeleton} role="status" />
+            ) : (
+              <span className={styles.cardTitle}>{candidate.title}</span>
+            )}
+          </span>
+          {candidate.kind === "new" ? (
+            <span className={styles.badgeNew}>
+              <span aria-hidden>✨</span> Nova
+            </span>
+          ) : null}
         </span>
-        <span className={styles.cardMeta}>
-          {formatPeriod(candidate.period)}
+        <span className={styles.cardMetaRow}>
+          <span className={styles.cardMeta}>
+            <CalendarIcon />
+            {formatPeriod(candidate.period)}
+          </span>
+          {placeLabel ? (
+            <span className={styles.placePill}>
+              <PinIcon />
+              {placeLabel}
+            </span>
+          ) : null}
         </span>
         {candidate.locationNote ? (
           <span className={styles.cardNote}>{candidate.locationNote}</span>
@@ -126,12 +184,18 @@ export function TripCard({
       </button>
       <div className={styles.cardActions}>
         <div className={styles.cardFoot}>
-          <span className={styles.countFound}>{counts.found}</span>
+          <span className={styles.countFound}>
+            <ImageIcon />
+            {counts.found}
+          </span>
           <button className={styles.viewAll} onClick={onOpen} type="button">
             Ver todas as fotos <span aria-hidden>›</span>
           </button>
         </div>
         <strong className={styles.countSelected} data-active={ticked > 0 ? "true" : "false"}>
+          <span aria-hidden className={styles.selectedDot} data-active={ticked > 0 ? "true" : "false"}>
+            {ticked > 0 ? "✓" : ""}
+          </span>
           {counts.selected}
         </strong>
       </div>

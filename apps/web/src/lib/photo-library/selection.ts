@@ -31,6 +31,10 @@ export interface Candidate {
   readonly countryCode: string | null;
   /** How many of the candidate's photos have no GPS (placed by date). */
   readonly withoutLocationCount: number;
+  /** Offline "CT, USA", shown from the start next to the dates (null when unknown). */
+  readonly placeLabel?: string | null;
+  /** Country of that label: flag and filters before the real place name arrives. */
+  readonly quickCountryCode?: string | null;
 }
 
 /** candidate key → ticked native ids. */

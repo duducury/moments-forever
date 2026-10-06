@@ -6,14 +6,32 @@ import type { CapacitorConfig } from "@capacitor/cli";
  * production site. The bundle ID / app name only matter once someone opens
  * Xcode; nothing here needs a Mac to write or review.
  */
+const PRODUCTION_URL = "https://momentsforever.vercel.app";
+
+/**
+ * CAPACITOR_SERVER_URL is only for pointing a test build at another HTTPS host
+ * (a Vercel preview, a tunnel to `next dev`); builds without it use production.
+ * An empty value counts as "not set", and anything that is not an https:// URL
+ * fails loudly — a build with no server URL would try to open a bundled
+ * index.html that does not exist ("index.html couldn't be opened").
+ */
+function resolveServerUrl(): string {
+  const override = process.env.CAPACITOR_SERVER_URL?.trim();
+  if (!override) return PRODUCTION_URL;
+  if (!/^https:\/\/[^\s/]+/u.test(override)) {
+    throw new Error(
+      `CAPACITOR_SERVER_URL must be a full https:// URL (got "${override}").`,
+    );
+  }
+  return override.replace(/\/+$/u, "");
+}
+
 const config: CapacitorConfig = {
   appId: "com.momentsforever.app",
   appName: "Moments Forever",
   webDir: "public",
   server: {
-    // CAPACITOR_SERVER_URL is only for pointing a test build at another HTTPS
-    // host (e.g. a tunnel to `next dev`); builds without it use production.
-    url: process.env.CAPACITOR_SERVER_URL ?? "https://momentsforever.vercel.app",
+    url: resolveServerUrl(),
     cleartext: false,
   },
   /**

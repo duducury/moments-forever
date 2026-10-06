@@ -71,9 +71,12 @@ CONFIG_JSON="$WEB_DIR/ios/App/App/capacitor.config.json"
 [ -f "$CONFIG_JSON" ] || fail "$CONFIG_JSON was not generated"
 grep -q 'NFCPlugin' "$CONFIG_JSON" || fail "NFCPlugin is missing from packageClassList in $CONFIG_JSON"
 grep -q 'SignInWithApple' "$CONFIG_JSON" || fail "SignInWithApple is missing from packageClassList in $CONFIG_JSON"
+grep -q 'MomentsPhotoLibraryPlugin' "$CONFIG_JSON" || fail "MomentsPhotoLibraryPlugin is missing from packageClassList in $CONFIG_JSON"
 grep -q 'ExxiliCapacitorNfc' "$WEB_DIR/ios/App/CapApp-SPM/Package.swift" \
   || fail "CapApp-SPM/Package.swift does not reference ExxiliCapacitorNfc"
 grep -q 'CapacitorCommunityAppleSignIn' "$WEB_DIR/ios/App/CapApp-SPM/Package.swift" \
   || fail "CapApp-SPM/Package.swift does not reference CapacitorCommunityAppleSignIn"
+grep -q 'MomentsForeverCapacitorPhotoLibrary' "$WEB_DIR/ios/App/CapApp-SPM/Package.swift" \
+  || fail "CapApp-SPM/Package.swift does not reference MomentsForeverCapacitorPhotoLibrary"
 
 log "done: Swift packages can be resolved"

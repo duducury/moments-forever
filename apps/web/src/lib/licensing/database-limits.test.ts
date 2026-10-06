@@ -408,3 +408,40 @@ test("places.country_code accepts ISO codes, refuses anything else, and the migr
     "1",
   );
 });
+
+test("photos.source_asset_id: format is enforced, and deleting the photo forgets it (so it can be found again)", suite, () => {
+  const owner = newUser();
+  grantPlan(owner, "BASIC");
+  const [trip] = createTrips(owner, 1);
+  addPhotos(trip as string, 1);
+  const photoId = must(
+    psqlSync(conn, `SELECT id FROM public.photos WHERE experience_id = '${trip}' LIMIT 1;`),
+  );
+  const setOrigin = (value: string) =>
+    psqlSync(conn, `UPDATE public.photos SET source_asset_id = ${value} WHERE id = '${photoId}';`);
+
+  assert.ok(setOrigin("'ios:ABC-123/L0/001'").ok, "iOS id");
+  assert.ok(setOrigin("'android:4812'").ok, "Android id");
+  assert.ok(setOrigin("NULL").ok, "photos added by the normal pickers have none");
+  assert.ok(!setOrigin("'4812'").ok, "platform prefix required");
+  assert.ok(!setOrigin("'windows:1'").ok, "unknown platform refused");
+  assert.ok(!setOrigin("'ios:'").ok, "empty id refused");
+
+  must(setOrigin("'ios:ABC-123/L0/001'"));
+  const count = () =>
+    must(
+      psqlSync(
+        conn,
+        `SELECT count(*) FROM public.photos WHERE experience_id = '${trip}' AND source_asset_id = 'ios:ABC-123/L0/001';`,
+      ),
+    );
+  assert.equal(count(), "1", "remembered while the photo exists");
+  must(psqlSync(conn, `DELETE FROM public.photos WHERE id = '${photoId}';`));
+  assert.equal(count(), "0", "forgotten with the photo: no permanent 'already imported' list");
+
+  const migration = readFileSync(
+    path.join(MIGRATIONS, "20261008100000_photo_source_asset_id.sql"),
+    "utf8",
+  );
+  must(psqlSync(conn, migration)); // repeatable
+});

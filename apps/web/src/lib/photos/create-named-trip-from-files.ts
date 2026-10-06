@@ -6,6 +6,7 @@ import type { LocalPhotoMetadata, PhotoImportGroup } from "@moments-forever/type
 
 import { mapWithConcurrency } from "@/lib/async/map-with-concurrency";
 import { putLocalPhotoBlobs } from "@/lib/local-photos/photo-blob-store";
+import { applyNativeOrigin, type NativeOrigins } from "@/lib/photo-library/native-origin";
 import {
   createBrowserPhotoDerivatives,
   extractBrowserPhotoMetadata,
@@ -38,6 +39,8 @@ export async function createNamedTripFromFiles(input: {
   readonly name: string;
   readonly story?: string;
   readonly ownerId: string;
+  /** Set only by "Encontrar viagem": which library photo each file came from. */
+  readonly origins?: NativeOrigins;
   readonly onProgress?: (message: string) => void;
 }): Promise<{
   readonly experienceId: string;
@@ -61,7 +64,10 @@ export async function createNamedTripFromFiles(input: {
     PREPARE_CONCURRENCY,
     async (file, index) => {
       const id = crypto.randomUUID();
-      const metadata = await extractBrowserPhotoMetadata(id, file);
+      const metadata = applyNativeOrigin(
+        await extractBrowserPhotoMetadata(id, file),
+        input.origins?.get(file),
+      );
       const derivatives = await createBrowserPhotoDerivatives(file);
       const thumbnail = derivatives?.thumbnail ?? null;
       const preview = derivatives?.preview ?? null;
@@ -179,6 +185,29 @@ export async function createNamedTripFromFiles(input: {
   const albumId = roots[0]?.id;
   if (!albumId) {
     throw new Error("Álbum criado, mas a pasta principal não foi encontrada.");
+  }
+
+  // New trips are created through the import RPC, which does not carry the
+  // library origin: record it afterwards (best effort — the photos exist either way).
+  if (input.origins && input.origins.size > 0) {
+    const items = input.files.flatMap((file, index) => {
+      const origin = input.origins?.get(file);
+      const photoId = blobs[index]?.id;
+      return origin && photoId
+        ? [{ photo_id: photoId, source_asset_id: origin.sourceAssetId }]
+        : [];
+    });
+    if (items.length > 0) {
+      try {
+        await fetch(`/api/experiences/${body.id}/photos/source-assets`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ items }),
+        });
+      } catch {
+        // Only weakens duplicate detection for this trip.
+      }
+    }
   }
 
   // Make the starred photo the album's cover too (that is what the profile card shows).

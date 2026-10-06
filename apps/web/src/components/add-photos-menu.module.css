@@ -1,0 +1,79 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: grid;
+  place-items: end center;
+  padding: 16px;
+  background: rgb(29 29 27 / 45%);
+}
+
+.sheet {
+  width: min(100%, 460px);
+  display: grid;
+  gap: 4px;
+  border-radius: 24px;
+  padding: 14px;
+  background: var(--surface);
+  box-shadow: 0 24px 60px rgb(29 29 27 / 25%);
+}
+
+.title {
+  margin: 4px 8px 8px;
+  font-size: 0.8rem;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.option {
+  display: flex;
+  min-height: 56px;
+  align-items: center;
+  gap: 14px;
+  border: 0;
+  border-radius: 16px;
+  padding: 0 14px;
+  color: var(--ink);
+  background: transparent;
+  font: inherit;
+  font-size: 1.02rem;
+  font-weight: 650;
+  text-align: left;
+  cursor: pointer;
+}
+
+.option:active {
+  background: var(--surface-secondary);
+}
+
+.optionIcon {
+  width: 28px;
+  font-size: 1.3rem;
+  text-align: center;
+}
+
+.optionHint {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+.cancel {
+  margin-top: 6px;
+  min-height: 52px;
+  border: 0;
+  border-radius: 16px;
+  color: var(--ink);
+  background: var(--surface-secondary);
+  font: inherit;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.hidden {
+  display: none;
+}

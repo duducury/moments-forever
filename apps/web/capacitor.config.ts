@@ -11,7 +11,9 @@ const config: CapacitorConfig = {
   appName: "Moments Forever",
   webDir: "public",
   server: {
-    url: "https://momentsforever.vercel.app",
+    // CAPACITOR_SERVER_URL is only for pointing a test build at another HTTPS
+    // host (e.g. a tunnel to `next dev`); builds without it use production.
+    url: process.env.CAPACITOR_SERVER_URL ?? "https://momentsforever.vercel.app",
     cleartext: false,
   },
   /**

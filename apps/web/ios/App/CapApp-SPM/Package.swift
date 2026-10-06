@@ -13,7 +13,8 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/ionic-team/capacitor-swift-pm.git", exact: "8.5.2"),
         .package(name: "CapacitorCommunityAppleSignIn", path: "../../../../../node_modules/@capacitor-community/apple-sign-in"),
-        .package(name: "ExxiliCapacitorNfc", path: "../../../../../node_modules/@exxili/capacitor-nfc")
+        .package(name: "ExxiliCapacitorNfc", path: "../../../../../node_modules/@exxili/capacitor-nfc"),
+        .package(name: "MomentsForeverCapacitorPhotoLibrary", path: "../../../../../packages/capacitor-photo-library")
     ],
     targets: [
         .target(
@@ -22,7 +23,8 @@ let package = Package(
                 .product(name: "Capacitor", package: "capacitor-swift-pm"),
                 .product(name: "Cordova", package: "capacitor-swift-pm"),
                 .product(name: "CapacitorCommunityAppleSignIn", package: "CapacitorCommunityAppleSignIn"),
-                .product(name: "ExxiliCapacitorNfc", package: "ExxiliCapacitorNfc")
+                .product(name: "ExxiliCapacitorNfc", package: "ExxiliCapacitorNfc"),
+                .product(name: "MomentsForeverCapacitorPhotoLibrary", package: "MomentsForeverCapacitorPhotoLibrary")
             ]
         )
     ]

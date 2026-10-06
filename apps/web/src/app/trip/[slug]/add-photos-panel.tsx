@@ -1,8 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
+import {
+  useAddPhotosMenu,
+  useNativeLibraryAvailable,
+} from "@/components/add-photos-menu";
+import { FindTripsFlow } from "@/components/find-trips/find-trips-flow";
 import { ExperienceCoverThumb } from "@/components/experience-cover-thumb";
 import {
   createTripAlbum,
@@ -62,7 +67,17 @@ export function AddPhotosPanel({
     !lockedAlbum &&
     (albumId === NEW_ALBUM_VALUE || sortedAlbums.length === 0);
 
-  async function onFilesSelected(fileList: FileList | null) {
+  // "✨ Encontrar fotos": the menu exists only where the native photo plugin does.
+  const nativeLibrary = useNativeLibraryAvailable();
+  const [finding, setFinding] = useState(false);
+  const foundPhotosAdded = useRef(false);
+  const { openMenu, menu } = useAddPhotosMenu({
+    findLabel: "Encontrar fotos",
+    onFiles: (files) => void onFilesSelected(files),
+    onFind: () => setFinding(true),
+  });
+
+  async function onFilesSelected(fileList: FileList | readonly File[] | null) {
     if (!fileList || fileList.length === 0) return;
 
     setBusy(true);
@@ -222,24 +237,42 @@ export function AddPhotosPanel({
           </>
         ) : null}
 
-        <label className={styles.addPhotosFileLabel} htmlFor="add-photos-files">
-          {busy
-            ? "Adicionando…"
-            : creatingNew && !newAlbumName.trim()
-              ? "Dê um nome ao álbum"
-              : "Escolher fotos"}
-          <input
-            accept="image/*"
-            disabled={busy || (creatingNew && !newAlbumName.trim())}
-            id="add-photos-files"
-            multiple
-            onChange={(event) => {
-              void onFilesSelected(event.target.files);
-              event.currentTarget.value = "";
-            }}
-            type="file"
-          />
-        </label>
+        {nativeLibrary ? (
+          <>
+            <button
+              className={styles.addPhotosFileLabel}
+              disabled={busy || (creatingNew && !newAlbumName.trim())}
+              onClick={openMenu}
+              type="button"
+            >
+              {busy
+                ? "Adicionando…"
+                : creatingNew && !newAlbumName.trim()
+                  ? "Dê um nome ao álbum"
+                  : "Escolher fotos"}
+            </button>
+            {menu}
+          </>
+        ) : (
+          <label className={styles.addPhotosFileLabel} htmlFor="add-photos-files">
+            {busy
+              ? "Adicionando…"
+              : creatingNew && !newAlbumName.trim()
+                ? "Dê um nome ao álbum"
+                : "Escolher fotos"}
+            <input
+              accept="image/*"
+              disabled={busy || (creatingNew && !newAlbumName.trim())}
+              id="add-photos-files"
+              multiple
+              onChange={(event) => {
+                void onFilesSelected(event.target.files);
+                event.currentTarget.value = "";
+              }}
+              type="file"
+            />
+          </label>
+        )}
 
         {progress ? <p className={styles.sectionHint}>{progress}</p> : null}
         {error ? (
@@ -259,6 +292,30 @@ export function AddPhotosPanel({
           </button>
         </div>
       </div>
+      {finding ? (
+        <FindTripsFlow
+          onClose={() => {
+            setFinding(false);
+            if (foundPhotosAdded.current) onClose();
+          }}
+          onImported={() => {
+            foundPhotosAdded.current = true;
+            onAdded?.();
+          }}
+          target={{
+            mode: "related",
+            experienceId,
+            albumId: lockedAlbum?.id ?? (creatingNew ? null : albumId),
+            resolveAlbumId: async () => {
+              const name = newAlbumName.trim();
+              if (!name) throw new Error("Escolha um nome para o álbum.");
+              const created = await createTripAlbum(experienceId, name, newAlbumStory);
+              setAlbumId(created);
+              return created;
+            },
+          }}
+        />
+      ) : null}
     </div>
   );
 }

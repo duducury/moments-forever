@@ -42,7 +42,7 @@ export function photosBetween(
   ) {
     const day = new Date(time).toISOString().slice(0, 10);
     for (let index = 0; index < perDay; index += 1) {
-      result.push(asset(day, 9 + index * 2, place));
+      result.push(asset(day, 6 + (index % 17), place));
     }
   }
   return result;
@@ -68,3 +68,7 @@ export function existingTrip(overrides: Partial<ExistingTrip> = {}): ExistingTri
     ...overrides,
   };
 }
+
+export const NEW_YORK = { latitude: 40.7128, longitude: -74.006 };
+export const BOSTON = { latitude: 42.3601, longitude: -71.0589 };
+export const VERSAILLES = { latitude: 48.8049, longitude: 2.1204 };

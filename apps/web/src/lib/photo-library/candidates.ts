@@ -4,8 +4,6 @@
  * created — a candidate is only a suggestion until the final confirmation.
  */
 
-import { countryCodeFromPlaceLabel } from "@moments-forever/shared";
-
 import {
   buildPresenceIndex,
   findRelatedAssets,
@@ -13,6 +11,7 @@ import {
   withoutPresent,
 } from "./match-existing";
 import type { Candidate } from "./selection";
+import { describeTrip, type TripDescription } from "./trip-naming";
 import type {
   DiscoveredTrip,
   ExistingTrip,
@@ -28,15 +27,31 @@ export interface DiscoverCandidates {
   readonly existing: readonly Candidate[];
 }
 
-/** Default name when the place could not be named (geocoder offline / no GPS). */
-export function fallbackTripTitle(trip: DiscoveredTrip): string {
-  return `Viagem de ${trip.startDate.slice(8, 10)}/${trip.startDate.slice(5, 7)}/${trip.startDate.slice(0, 4)}`;
+/** How each discovered trip is presented (place names, loading state, no-location). */
+export function describeTrips(
+  trips: readonly DiscoveredTrip[],
+  labels: Readonly<Record<string, string | undefined>>,
+  settled: ReadonlySet<string>,
+): Map<string, TripDescription> {
+  return new Map(
+    trips.map((trip) => [
+      trip.id,
+      describeTrip({
+        stops: trip.stops,
+        locationQuality: trip.locationQuality,
+        labels,
+        settled,
+      }),
+    ]),
+  );
 }
 
 export function buildDiscoverCandidates(input: {
   readonly trips: readonly DiscoveredTrip[];
-  /** Reverse-geocoded "País, Localidade" per discovered trip id (may be missing). */
+  /** Reverse-geocoded "País, Localidade" per trip STOP id (may be missing). */
   readonly labels: Readonly<Record<string, string | undefined>>;
+  /** Stops whose place lookup has finished (found or not). */
+  readonly settled: ReadonlySet<string>;
   readonly context: PhotoLibraryContext;
   /** Older photos (no source_asset_id) of the experiences that matched, once loaded. */
   readonly legacyPhotos?: readonly (LegacyPhoto & { readonly experienceId: string })[];
@@ -44,20 +59,21 @@ export function buildDiscoverCandidates(input: {
   const fresh: Candidate[] = [];
   const existing: Candidate[] = [];
   const everywhere = buildPresenceIndex({ knownAssets: input.context.knownAssets });
+  const descriptions = describeTrips(input.trips, input.labels, input.settled);
 
   for (const trip of input.trips) {
-    const label = input.labels[trip.id] ?? null;
-    const countryCode = countryCodeFromPlaceLabel(label);
+    const description = descriptions.get(trip.id) as TripDescription;
+    // "Same country, other dates" (match.similarTo) is deliberately NOT shown:
+    // it is a weak signal and read as noise. The logic stays in match-existing.
     const match = matchDiscoveredTrip({
       trip,
-      countryCode,
+      countryCode: description.countryCode,
       existingTrips: input.context.trips,
       knownAssets: input.context.knownAssets,
     });
     const base = {
       key: trip.id,
       period: { start: trip.startDate, end: trip.endDate },
-      countryCode,
       withoutLocationCount: trip.withoutLocationCount,
     };
 
@@ -73,10 +89,12 @@ export function buildDiscoverCandidates(input: {
         ...base,
         kind: "existing",
         title: match.trip.title,
+        name: match.trip.title,
+        titleState: "named",
+        locationNote: null,
         target: match.trip,
         assets: withoutPresent(trip.assets, presence),
-        hint: null,
-        countryCode: countryCode ?? match.trip.countryCode,
+        countryCode: description.countryCode ?? match.trip.countryCode,
       });
       continue;
     }
@@ -84,11 +102,14 @@ export function buildDiscoverCandidates(input: {
     fresh.push({
       ...base,
       kind: "new",
-      title: label ?? fallbackTripTitle(trip),
+      title: description.title,
+      name: description.name,
+      titleState: description.state,
+      locationNote: description.locationNote,
       target: null,
       // Already stored anywhere in the account (and not deleted since): not offered again.
       assets: withoutPresent(trip.assets, everywhere),
-      hint: match.similarTo ? `Parece com “${match.similarTo.title}”` : null,
+      countryCode: description.countryCode,
     });
   }
 
@@ -100,12 +121,14 @@ export function experiencesToCheck(
   trips: readonly DiscoveredTrip[],
   context: PhotoLibraryContext,
   labels: Readonly<Record<string, string | undefined>>,
+  settled: ReadonlySet<string>,
 ): string[] {
+  const descriptions = describeTrips(trips, labels, settled);
   const ids = new Set<string>();
   for (const trip of trips) {
     const match = matchDiscoveredTrip({
       trip,
-      countryCode: countryCodeFromPlaceLabel(labels[trip.id] ?? null),
+      countryCode: descriptions.get(trip.id)?.countryCode ?? null,
       existingTrips: context.trips,
       knownAssets: context.knownAssets,
     });
@@ -146,14 +169,16 @@ export function buildRelatedCandidate(input: {
     candidate: {
       key: `related-${input.experienceId}`,
       kind: "existing",
-      title: focus.length === 1 ? target.title : target.title,
+      title: target.title,
+      name: target.title,
+      titleState: "named",
+      locationNote: null,
       target,
       assets: related.assets,
       period: related.window
         ? { start: related.window.start, end: related.window.end }
         : null,
       countryCode: target.countryCode,
-      hint: null,
       withoutLocationCount: related.assets.filter(
         (asset) => asset.latitude === null || asset.longitude === null,
       ).length,

@@ -48,7 +48,7 @@ test("the same period and place is recognised as the existing trip", () => {
   assert.equal(match.kind, "existing");
 });
 
-test("Brasil 2024 is not confused with Brasil 2026: same country, other dates = new, with a hint", () => {
+test("Brasil 2024 is not confused with Brasil 2026: same country, other dates = new (the similarity stays internal)", () => {
   const match = matchDiscoveredTrip({
     trip: parisTrip(),
     countryCode: "FR",

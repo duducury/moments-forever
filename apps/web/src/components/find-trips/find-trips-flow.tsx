@@ -22,11 +22,17 @@ import {
   type ScanOutcome,
 } from "@/lib/photo-library/library-client";
 import {
+  loadKnownCities,
+  nearestKnownCity,
+} from "@/lib/photo-library/place-fallback";
+import {
   clearAll,
   emptySelection,
+  pickPreview,
   reviewSelection,
   selectAll,
   selectedAssets,
+  selectedCount,
   toggleAsset,
   type Candidate,
   type Selection,
@@ -40,6 +46,15 @@ import { createNamedTripFromFiles, TripLicenseError } from "@/lib/photos/create-
 import { uploadFilesToAlbum } from "@/lib/photos/upload-files-to-album";
 
 import styles from "./find-trips.module.css";
+import { PhotoGrid } from "./photo-grid";
+import {
+  Flag,
+  formatPeriod,
+  photosLabel,
+  PREVIEW_COUNT,
+  PreviewStrip,
+  TripCard,
+} from "./trip-card";
 
 export type FindFlowTarget =
   | { readonly mode: "discover" }
@@ -56,7 +71,7 @@ type Step =
   | "intro"
   | "scanning"
   | "trips"
-  | "photos"
+  | "detail"
   | "review"
   | "importing"
   | "done"
@@ -72,41 +87,9 @@ interface ImportResult {
 }
 
 const PAGE = 60;
-const GEOCODE_BATCH = 6;
-const GEOCODE_MAX_TRIPS = 24;
-
-function formatPeriod(period: Candidate["period"]): string {
-  if (!period) return "";
-  const day = (iso: string) =>
-    new Date(`${iso}T00:00:00Z`).toLocaleDateString("pt-BR", {
-      day: "numeric",
-      month: "short",
-      timeZone: "UTC",
-    });
-  const year = period.end.slice(0, 4);
-  return period.start === period.end
-    ? `${day(period.start)} de ${year}`
-    : `${day(period.start)} – ${day(period.end)} de ${year}`;
-}
-
-function photosLabel(count: number): string {
-  return `${count} foto${count === 1 ? "" : "s"}`;
-}
-
-function Flag({ code }: { readonly code: string | null }) {
-  if (!code) return null;
-  return (
-    // eslint-disable-next-line @next/next/no-img-element -- small flag CDN asset
-    <img
-      alt=""
-      className={styles.flag}
-      decoding="async"
-      height={16}
-      src={`https://flagcdn.com/w40/${code.toLowerCase()}.png`}
-      width={22}
-    />
-  );
-}
+/** Place lookups per request (the geocoder allows ~1 request/second, so keep batches small). */
+const GEOCODE_BATCH = 4;
+const GEOCODE_MAX_STOPS = 60;
 
 async function fetchContext(experienceIds?: readonly string[]): Promise<PhotoLibraryContext> {
   const query =
@@ -152,13 +135,13 @@ export function FindTripsFlow({
   const [discovered, setDiscovered] = useState<readonly DiscoveredTrip[]>([]);
   const [context, setContext] = useState<PhotoLibraryContext | null>(null);
   const [labels, setLabels] = useState<Record<string, string>>({});
+  const [settled, setSettled] = useState<ReadonlySet<string>>(new Set());
   const [legacy, setLegacy] = useState<PhotoLibraryContext["legacyPhotos"]>([]);
   const [renames, setRenames] = useState<Record<string, string>>({});
   const [relatedCandidate, setRelatedCandidate] = useState<Candidate | null>(null);
   const [emptyReason, setEmptyReason] = useState<string>("");
-  const [chosen, setChosen] = useState<ReadonlySet<string>>(new Set());
   const [selection, setSelection] = useState<Selection>(emptySelection());
-  const [photoIndex, setPhotoIndex] = useState(0);
+  const [detailKey, setDetailKey] = useState<string | null>(null);
   const [visible, setVisible] = useState(PAGE);
   const [thumbs, setThumbs] = useState<ReadonlyMap<string, string>>(new Map());
   const [status, setStatus] = useState("");
@@ -166,6 +149,7 @@ export function FindTripsFlow({
   const [licenseBlock, setLicenseBlock] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const requestedThumbs = useRef(new Set<string>());
+  const thumbQueue = useRef<Promise<void>>(Promise.resolve());
   const mounted = useRef(true);
 
   useEffect(() => {
@@ -184,21 +168,60 @@ export function FindTripsFlow({
     const built = buildDiscoverCandidates({
       trips: discovered,
       labels,
+      settled,
       context,
       legacyPhotos: legacy,
     });
     return [...built.fresh, ...built.existing].map((candidate) =>
       candidate.kind === "new" && renames[candidate.key] !== undefined
-        ? { ...candidate, title: renames[candidate.key] as string }
+        ? { ...candidate, name: renames[candidate.key] as string }
         : candidate,
     );
-  }, [related, relatedCandidate, context, discovered, labels, legacy, renames]);
+  }, [related, relatedCandidate, context, discovered, labels, settled, legacy, renames]);
 
   const fresh = candidates.filter((candidate) => candidate.kind === "new");
-  const existing = candidates.filter((candidate) => candidate.kind === "existing");
-  const chosenCandidates = candidates.filter((candidate) => chosen.has(candidate.key));
-  const current = chosenCandidates[photoIndex] ?? null;
-  const review = reviewSelection(candidates, selection, chosen);
+  const existing = candidates.filter(
+    (candidate) => candidate.kind === "existing" && candidate.assets.length > 0,
+  );
+  const detail = candidates.find((candidate) => candidate.key === detailKey) ?? null;
+  const review = reviewSelection(candidates, selection);
+
+  // ---- thumbnails: only for what is on screen, one request at a time --------------
+
+  const ensureThumbs = useCallback(
+    (ids: readonly string[]) => {
+      const wanted = ids.filter((id) => !requestedThumbs.current.has(id));
+      if (wanted.length === 0) return;
+      for (const id of wanted) requestedThumbs.current.add(id);
+      thumbQueue.current = thumbQueue.current.then(async () => {
+        for (let start = 0; start < wanted.length; start += 20) {
+          if (!mounted.current) return;
+          try {
+            const batch = await client.thumbnails(wanted.slice(start, start + 20));
+            if (!mounted.current) return;
+            setThumbs((previous) => new Map([...previous, ...batch]));
+          } catch {
+            // A missing thumbnail is just a gray square.
+          }
+        }
+      });
+    },
+    [client],
+  );
+
+  useEffect(() => {
+    if (step !== "detail" || !detail) return;
+    ensureThumbs(detail.assets.slice(0, visible).map((asset) => asset.nativeId));
+  }, [step, detail, visible, ensureThumbs]);
+
+  useEffect(() => {
+    if (step !== "review") return;
+    for (const row of review.rows) {
+      const candidate = candidates.find((item) => item.key === row.key);
+      if (!candidate) continue;
+      ensureThumbs(pickPreview(selectedAssets(candidate, selection), 3).map((asset) => asset.nativeId));
+    }
+  }, [step, review.rows, candidates, selection, ensureThumbs]);
 
   // ---- scanning -------------------------------------------------------------
 
@@ -238,10 +261,9 @@ export function FindTripsFlow({
           return;
         }
         setRelatedCandidate(candidate);
-        setChosen(new Set([candidate.key]));
-        setPhotoIndex(0);
+        setDetailKey(candidate.key);
         setVisible(PAGE);
-        setStep("photos");
+        setStep("detail");
         return;
       }
 
@@ -252,8 +274,7 @@ export function FindTripsFlow({
         setStep("empty");
         return;
       }
-      const trips = discoverTrips(outcome.assets);
-      setDiscovered(trips);
+      setDiscovered(discoverTrips(outcome.assets));
       setStep("trips");
     } catch (caught) {
       if (caught instanceof LibraryCancelledError || !mounted.current) return;
@@ -282,39 +303,62 @@ export function FindTripsFlow({
     }
   }
 
-  // Name the trips by their place — only the centers (a few coordinates) are sent.
+  // ---- naming the places (only a few centers are sent — never the library) --------
+
   useEffect(() => {
     if (related || discovered.length === 0) return;
     let cancelled = false;
+    const stops = discovered.flatMap((trip) => trip.stops);
+    const lookups = stops.slice(0, GEOCODE_MAX_STOPS);
+    const unlooked = stops.slice(GEOCODE_MAX_STOPS);
+
     (async () => {
-      const withCenter = discovered
-        .filter((trip) => trip.center)
-        .slice(0, GEOCODE_MAX_TRIPS);
-      for (let start = 0; start < withCenter.length; start += GEOCODE_BATCH) {
-        const batch = withCenter.slice(start, start + GEOCODE_BATCH);
+      const cities = await loadKnownCities();
+      const offline = (stop: (typeof stops)[number]): string | undefined =>
+        nearestKnownCity(stop.center, cities)?.name;
+
+      // Stops beyond the lookup budget get the offline name (or none) right away.
+      if (unlooked.length > 0 && !cancelled) {
+        const names: Record<string, string> = {};
+        for (const stop of unlooked) {
+          const name = offline(stop);
+          if (name) names[stop.id] = name;
+        }
+        setLabels((previous) => ({ ...previous, ...names }));
+        setSettled((previous) => new Set([...previous, ...unlooked.map((stop) => stop.id)]));
+      }
+
+      for (let start = 0; start < lookups.length; start += GEOCODE_BATCH) {
+        const batch = lookups.slice(start, start + GEOCODE_BATCH);
+        let found: Record<string, string> = {};
         try {
           const response = await fetch("/api/geocode/reverse", {
             method: "POST",
             headers: { "content-type": "application/json" },
             body: JSON.stringify({
-              lookups: batch.map((trip) => ({
-                id: trip.id,
-                latitude: trip.center?.latitude,
-                longitude: trip.center?.longitude,
+              lookups: batch.map((stop) => ({
+                id: stop.id,
+                latitude: stop.center.latitude,
+                longitude: stop.center.longitude,
                 name: "Lugar 1",
                 confirmedByUser: false,
               })),
             }),
           });
-          if (!response.ok) continue;
-          const body = (await response.json()) as { labels?: Record<string, string> };
-          if (!cancelled && body.labels) {
-            setLabels((previous) => ({ ...previous, ...body.labels }));
+          if (response.ok) {
+            found = ((await response.json()) as { labels?: Record<string, string> }).labels ?? {};
           }
         } catch {
-          // Names are a nicety: keep the date-based title.
+          // Offline / rate-limited: the offline names below still apply.
         }
         if (cancelled) return;
+        const names: Record<string, string> = {};
+        for (const stop of batch) {
+          const name = found[stop.id] ?? offline(stop);
+          if (name) names[stop.id] = name;
+        }
+        setLabels((previous) => ({ ...previous, ...names }));
+        setSettled((previous) => new Set([...previous, ...batch.map((stop) => stop.id)]));
       }
     })();
     return () => {
@@ -327,8 +371,8 @@ export function FindTripsFlow({
     () =>
       related || !context
         ? ""
-        : experiencesToCheck(discovered, context, labels).sort().join(","),
-    [related, context, discovered, labels],
+        : experiencesToCheck(discovered, context, labels, settled).sort().join(","),
+    [related, context, discovered, labels, settled],
   );
   useEffect(() => {
     if (!legacyKey) return;
@@ -343,33 +387,6 @@ export function FindTripsFlow({
     };
   }, [legacyKey]);
 
-  // ---- thumbnails (only for the page of photos being looked at) ---------------
-
-  useEffect(() => {
-    if (step !== "photos" || !current) return;
-    const wanted = current.assets
-      .slice(0, visible)
-      .map((asset) => asset.nativeId)
-      .filter((id) => !requestedThumbs.current.has(id));
-    if (wanted.length === 0) return;
-    for (const id of wanted) requestedThumbs.current.add(id);
-    let cancelled = false;
-    (async () => {
-      for (let start = 0; start < wanted.length; start += 20) {
-        try {
-          const batch = await client.thumbnails(wanted.slice(start, start + 20));
-          if (cancelled || !mounted.current) return;
-          setThumbs((previous) => new Map([...previous, ...batch]));
-        } catch {
-          // A missing thumbnail is just a gray square.
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [step, current, visible, client]);
-
   // ---- importing --------------------------------------------------------------
 
   async function importAll() {
@@ -380,12 +397,13 @@ export function FindTripsFlow({
     abortRef.current = controller;
     const done: ImportResult[] = [];
 
-    for (const row of review.importable) {
+    for (const row of review.rows) {
       const candidate = candidates.find((item) => item.key === row.key);
       if (!candidate) continue;
+      const label = row.kind === "new" ? row.name : row.title;
       const assets = selectedAssets(candidate, selection);
       try {
-        setStatus(`Preparando as fotos de ${row.title || "esta viagem"}…`);
+        setStatus(`Preparando as fotos de ${label || "esta viagem"}…`);
         const exported = await client.exportAssets(assets, {
           signal: controller.signal,
           onProgress: (finished, total) =>
@@ -399,13 +417,13 @@ export function FindTripsFlow({
           if (!user) throw new Error("Entre na sua conta para criar a viagem.");
           const created = await createNamedTripFromFiles({
             files: exported.files,
-            name: row.title,
+            name: row.name,
             ownerId: user.id,
             origins: exported.origins,
             onProgress: setStatus,
           });
           done.push({
-            title: row.title,
+            title: row.name,
             added: exported.files.length,
             skipped: exported.failed.length,
             href: profileTripAlbumPath(created.slug, created.albumId),
@@ -439,16 +457,16 @@ export function FindTripsFlow({
         }
       } catch (caught) {
         if (caught instanceof LibraryCancelledError) {
-          done.push({ title: row.title, added: 0, skipped: 0, href: null, error: "Cancelado.", warning: null });
+          done.push({ title: label, added: 0, skipped: 0, href: null, error: "Cancelado.", warning: null });
           break;
         }
         if (caught instanceof TripLicenseError) {
           setLicenseBlock(caught.message);
-          done.push({ title: row.title, added: 0, skipped: 0, href: null, error: caught.message, warning: null });
+          done.push({ title: label, added: 0, skipped: 0, href: null, error: caught.message, warning: null });
           break;
         }
         done.push({
-          title: row.title,
+          title: label,
           added: 0,
           skipped: 0,
           href: null,
@@ -472,19 +490,10 @@ export function FindTripsFlow({
 
   // ---- rendering --------------------------------------------------------------
 
-  function toggleChosen(key: string) {
-    setChosen((previous) => {
-      const next = new Set(previous);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
-  }
-
-  function openPhotos() {
-    setPhotoIndex(0);
+  function openDetail(key: string) {
+    setDetailKey(key);
     setVisible(PAGE);
-    setStep("photos");
+    setStep("detail");
   }
 
   const stats = scan
@@ -500,18 +509,20 @@ export function FindTripsFlow({
     </div>
   ) : null;
 
-  const busyStep = step === "scanning" || step === "importing";
-  const title = related ? "✨ Encontrar fotos" : "✨ Encontrar viagem";
+  const heading = related ? "Encontrar fotos" : "Encontrar uma viagem";
 
   const content = (() => {
     if (step === "intro") {
       return (
         <>
-          <h2>{title}</h2>
+          <p className={styles.eyebrow}>✨ Moments Forever</p>
+          <h2>{heading}</h2>
           <p className={styles.hint}>
             {related
               ? "Vamos procurar, nas fotos deste aparelho, as que combinam com as datas e os lugares desta viagem e que ainda não estão nela."
-              : "Vamos olhar as datas e os lugares das fotos deste aparelho para achar viagens que você ainda não guardou."}{" "}
+              : "Vamos olhar as datas e os lugares das fotos deste aparelho para achar viagens que você ainda não guardou."}
+          </p>
+          <p className={styles.hint}>
             Tudo acontece aqui no aparelho. Nada é enviado, importado ou criado sem você escolher e confirmar.
           </p>
           {access?.blocked ? (
@@ -538,7 +549,8 @@ export function FindTripsFlow({
     if (step === "scanning") {
       return (
         <>
-          <h2>{title}</h2>
+          <p className={styles.eyebrow}>✨ Moments Forever</p>
+          <h2>{heading}</h2>
           <div className={styles.progress}>
             <p>Procurando nas suas fotos…</p>
             {scanned > 0 ? <p className={styles.hint}>{scanned.toLocaleString("pt-BR")} fotos lidas</p> : null}
@@ -562,7 +574,7 @@ export function FindTripsFlow({
     if (step === "empty") {
       return (
         <>
-          <h2>{title}</h2>
+          <h2>{heading}</h2>
           <p className={styles.hint}>{emptyReason}</p>
           {limitedBanner}
           {stats ? <p className={styles.stats}>{stats}</p> : null}
@@ -576,37 +588,38 @@ export function FindTripsFlow({
     }
 
     if (step === "trips") {
-      const freshSection = fresh.length > 0;
-      const existingWithNew = existing.filter((candidate) => candidate.assets.length > 0);
-      const nothing = !freshSection && existingWithNew.length === 0;
-      const renderRow = (candidate: Candidate, disabled = false) => {
-        const selected = chosen.has(candidate.key);
-        return (
-          <li key={candidate.key}>
-            <button
-              className={styles.row}
-              data-selected={selected ? "true" : "false"}
-              disabled={disabled}
-              onClick={() => toggleChosen(candidate.key)}
-              type="button"
-            >
-              <span aria-hidden className={styles.check}>{selected ? "✓" : ""}</span>
-              <Flag code={candidate.countryCode} />
-              <span className={styles.rowCopy}>
-                <span className={styles.rowTitle}>{candidate.title}</span>
-                <span className={styles.rowMeta}>
-                  {formatPeriod(candidate.period)} · {photosLabel(candidate.assets.length)}
-                  {candidate.kind === "existing" ? " novas" : ""}
-                </span>
-                {candidate.hint ? <span className={styles.rowHint}>{candidate.hint}</span> : null}
-              </span>
-            </button>
-          </li>
-        );
-      };
+      const nothing = fresh.length === 0 && existing.length === 0;
+      const renderCard = (candidate: Candidate) => (
+        <li key={candidate.key}>
+          <TripCard
+            candidate={candidate}
+            onOpen={() => openDetail(candidate.key)}
+            onToggleAll={() =>
+              setSelection((previous) =>
+                selectedCount(candidate, previous) === candidate.assets.length
+                  ? clearAll(previous, candidate.key)
+                  : selectAll(previous, candidate),
+              )
+            }
+            onVisible={() =>
+              ensureThumbs(
+                pickPreview(candidate.assets, PREVIEW_COUNT).map((asset) => asset.nativeId),
+              )
+            }
+            selection={selection}
+            thumbs={thumbs}
+          />
+        </li>
+      );
       return (
         <>
-          <h2>{freshSection ? "✨ Encontramos novas viagens" : title}</h2>
+          <div>
+            <p className={styles.eyebrow}>✨ Moments Forever</p>
+            <h2>{fresh.length > 0 ? "Encontramos viagens nas suas fotos" : heading}</h2>
+            <p className={styles.hint}>
+              Toque numa viagem para ver as fotos. Só o que você marcar será adicionado.
+            </p>
+          </div>
           {limitedBanner}
           <div className={styles.body}>
             {nothing ? (
@@ -614,18 +627,16 @@ export function FindTripsFlow({
                 Não encontramos viagens novas nas fotos deste aparelho. O que achamos já está no Moments Forever.
               </p>
             ) : null}
-            {freshSection ? (
+            {fresh.length > 0 ? (
               <>
                 <p className={styles.section}>Novas viagens</p>
-                <ul className={styles.list}>{fresh.map((candidate) => renderRow(candidate))}</ul>
+                <ul className={styles.list}>{fresh.map(renderCard)}</ul>
               </>
             ) : null}
-            {existingWithNew.length > 0 ? (
+            {existing.length > 0 ? (
               <>
-                <p className={styles.section}>Já no Moments Forever — com fotos novas</p>
-                <ul className={styles.list}>
-                  {existingWithNew.map((candidate) => renderRow(candidate))}
-                </ul>
+                <p className={styles.section}>Já no Moments Forever, com fotos novas</p>
+                <ul className={styles.list}>{existing.map(renderCard)}</ul>
               </>
             ) : null}
             {stats ? <p className={styles.stats}>{stats}</p> : null}
@@ -636,135 +647,113 @@ export function FindTripsFlow({
             </button>
             <button
               className="button primary"
-              disabled={chosen.size === 0}
-              onClick={openPhotos}
+              disabled={review.tripCount === 0}
+              onClick={() => setStep("review")}
               type="button"
             >
-              Continuar
+              {review.tripCount === 0
+                ? "Revisar"
+                : `Revisar · ${review.tripCount} viage${review.tripCount === 1 ? "m" : "ns"} · ${photosLabel(review.photoCount)}`}
             </button>
           </div>
         </>
       );
     }
 
-    if (step === "photos" && current) {
-      const ticked = selection.get(current.key) ?? new Set<string>();
-      const shown = current.assets.slice(0, visible);
-      const last = photoIndex >= chosenCandidates.length - 1;
+    if (step === "detail" && detail) {
+      const ticked = selection.get(detail.key) ?? new Set<string>();
+      const count = selectedCount(detail, selection);
+      const shown = detail.assets.slice(0, visible);
       return (
         <>
-          <div>
-            <h2>
-              {related ? "Fotos que podem ser desta viagem" : current.title || "Nova viagem"}
-            </h2>
-            <p className={styles.hint}>
-              {related ? `${current.title} · ` : ""}
-              {formatPeriod(current.period)} · {photosLabel(current.assets.length)} encontradas ·{" "}
-              {ticked.size} selecionada{ticked.size === 1 ? "" : "s"}
-              {chosenCandidates.length > 1
-                ? ` · viagem ${photoIndex + 1} de ${chosenCandidates.length}`
-                : ""}
-            </p>
+          <div className={styles.detailHead}>
+            {related ? null : (
+              <button
+                aria-label="Voltar para as viagens"
+                className={styles.back}
+                onClick={() => setStep("trips")}
+                type="button"
+              >
+                ‹
+              </button>
+            )}
+            <div className={styles.detailTitleBlock}>
+              <h2 className={styles.detailTitle}>
+                <Flag code={detail.countryCode} />
+                {related ? "Fotos que combinam com esta viagem" : detail.title || "Viagem"}
+              </h2>
+              <p className={styles.hint}>
+                {related ? `${detail.title} · ` : ""}
+                {formatPeriod(detail.period)} · {photosLabel(detail.assets.length)} encontradas
+                {detail.locationNote ? ` · ${detail.locationNote}` : ""}
+              </p>
+            </div>
           </div>
-          {current.kind === "new" ? (
-            <input
-              aria-label="Nome da viagem"
-              className={styles.nameInput}
-              maxLength={80}
-              onChange={(event) =>
-                setRenames((previous) => ({ ...previous, [current.key]: event.target.value }))
-              }
-              placeholder="Nome da viagem"
-              type="text"
-              value={current.title}
-            />
-          ) : null}
           <div className={styles.toolbar}>
-            <button
-              className={styles.linkButton}
-              onClick={() => setSelection((previous) => selectAll(previous, current))}
-              type="button"
-            >
-              Selecionar todas
-            </button>
-            <button
-              className={styles.linkButton}
-              onClick={() => setSelection((previous) => clearAll(previous, current.key))}
-              type="button"
-            >
-              Desmarcar todas
-            </button>
+            <strong className={styles.selectedCount}>
+              {count} de {detail.assets.length} fotos selecionadas
+            </strong>
+            <span className={styles.toolbarActions}>
+              <button
+                className={styles.linkButton}
+                onClick={() => setSelection((previous) => selectAll(previous, detail))}
+                type="button"
+              >
+                Selecionar todas
+              </button>
+              <button
+                className={styles.linkButton}
+                onClick={() => setSelection((previous) => clearAll(previous, detail.key))}
+                type="button"
+              >
+                Desmarcar todas
+              </button>
+            </span>
           </div>
           <div className={styles.body}>
-            <div className={styles.grid}>
-              {shown.map((asset) => {
-                const on = ticked.has(asset.nativeId);
-                const src = thumbs.get(asset.nativeId);
-                return (
-                  <button
-                    aria-label={on ? "Desmarcar foto" : "Selecionar foto"}
-                    aria-pressed={on}
-                    className={styles.cell}
-                    data-selected={on ? "true" : "false"}
-                    key={asset.nativeId}
-                    onClick={() =>
-                      setSelection((previous) => toggleAsset(previous, current.key, asset.nativeId))
-                    }
-                    type="button"
-                  >
-                    {src ? (
-                      // eslint-disable-next-line @next/next/no-img-element -- local data URL thumbnail
-                      <img alt="" decoding="async" src={src} />
-                    ) : null}
-                    <span aria-hidden className={styles.cellMark}>✓</span>
-                  </button>
-                );
-              })}
-            </div>
-            {visible < current.assets.length ? (
+            <PhotoGrid
+              assets={shown}
+              onToggle={(id) => setSelection((previous) => toggleAsset(previous, detail.key, id))}
+              thumbs={thumbs}
+              ticked={ticked}
+            />
+            {visible < detail.assets.length ? (
               <p>
                 <button
                   className={styles.linkButton}
-                  onClick={() => setVisible((count) => count + PAGE)}
+                  onClick={() => setVisible((value) => value + PAGE)}
                   type="button"
                 >
                   Ver mais fotos
                 </button>
               </p>
             ) : null}
-            {current.withoutLocationCount > 0 ? (
+            {detail.withoutLocationCount > 0 ? (
               <p className={styles.stats}>
-                {photosLabel(current.withoutLocationCount)} sem localização foram incluídas pela data.
+                {photosLabel(detail.withoutLocationCount)} sem localização foram incluídas pela data.
               </p>
             ) : null}
           </div>
           <div className={styles.actions}>
-            <button
-              className="button secondary"
-              onClick={() => {
-                if (photoIndex > 0) {
-                  setPhotoIndex(photoIndex - 1);
-                  setVisible(PAGE);
-                } else if (related) onClose();
-                else setStep("trips");
-              }}
-              type="button"
-            >
-              {photoIndex === 0 && related ? "Cancelar" : "Voltar"}
-            </button>
-            <button
-              className="button primary"
-              onClick={() => {
-                if (last) setStep("review");
-                else {
-                  setPhotoIndex(photoIndex + 1);
-                  setVisible(PAGE);
-                }
-              }}
-              type="button"
-            >
-              {last ? "Revisar" : "Próxima viagem"}
-            </button>
+            {related ? (
+              <>
+                <button className="button secondary" onClick={onClose} type="button">
+                  Cancelar
+                </button>
+                <button
+                  className="button primary"
+                  disabled={count === 0}
+                  onClick={() => setStep("review")}
+                  type="button"
+                >
+                  {count === 0 ? "Revisar" : `Revisar · ${photosLabel(count)}`}
+                </button>
+              </>
+            ) : (
+              <button className="button primary" onClick={() => setStep("trips")} type="button">
+                {count === 0 ? "Voltar" : `Pronto · ${photosLabel(count)}`}
+              </button>
+            )}
           </div>
         </>
       );
@@ -773,24 +762,51 @@ export function FindTripsFlow({
     if (step === "review") {
       return (
         <>
-          <h2>Pronto para adicionar</h2>
+          <div>
+            <p className={styles.eyebrow}>✨ Moments Forever</p>
+            <h2>Pronto para adicionar</h2>
+          </div>
           <div className={styles.body}>
-            {review.rows.map((row) => (
-              <div className={styles.summaryRow} key={row.key}>
-                <span>
-                  <strong>{row.title || "Sem nome"}</strong>
-                  <br />
-                  <span className={styles.rowMeta}>
-                    {row.kind === "existing" ? "Entra na viagem que você já tem" : "Viagem nova"} ·{" "}
-                    {row.found} encontradas
-                  </span>
-                </span>
-                <strong>{photosLabel(row.selected)}</strong>
-              </div>
-            ))}
+            {review.rows.map((row) => {
+              const candidate = candidates.find((item) => item.key === row.key);
+              const previewIds = candidate
+                ? pickPreview(selectedAssets(candidate, selection), 3).map((asset) => asset.nativeId)
+                : [];
+              return (
+                <div className={styles.reviewRow} key={row.key}>
+                  <div className={styles.reviewTop}>
+                    <span className={styles.reviewTitle}>
+                      <Flag code={candidate?.countryCode ?? null} />
+                      {row.title || "Nova viagem"}
+                    </span>
+                    <strong>{photosLabel(row.selected)}</strong>
+                  </div>
+                  {row.kind === "new" ? (
+                    <input
+                      aria-label="Nome da viagem"
+                      className={styles.nameInput}
+                      maxLength={80}
+                      onChange={(event) =>
+                        setRenames((previous) => ({ ...previous, [row.key]: event.target.value }))
+                      }
+                      placeholder="Nome da viagem"
+                      type="text"
+                      value={candidate?.name ?? row.name}
+                    />
+                  ) : (
+                    <span className={styles.rowMeta}>Entra na viagem que você já tem</span>
+                  )}
+                  <PreviewStrip
+                    ids={previewIds}
+                    size="small"
+                    thumbs={thumbs}
+                    total={row.selected}
+                  />
+                </div>
+              );
+            })}
             <p className={styles.summaryTotal}>
-              Total: {review.tripCount} viage{review.tripCount === 1 ? "m" : "ns"} ·{" "}
-              {photosLabel(review.photoCount)}
+              Total: {review.tripCount} viage{review.tripCount === 1 ? "m" : "ns"} · {photosLabel(review.photoCount)}
             </p>
             <p className={styles.hint}>
               Só agora as fotos escolhidas serão preparadas e enviadas. Nada mais é adicionado.
@@ -802,7 +818,11 @@ export function FindTripsFlow({
             <button className="button secondary" onClick={onClose} type="button">
               Cancelar
             </button>
-            <button className="button secondary" onClick={() => { setPhotoIndex(0); setStep("photos"); }} type="button">
+            <button
+              className="button secondary"
+              onClick={() => setStep(related ? "detail" : "trips")}
+              type="button"
+            >
               Voltar
             </button>
             <button
@@ -891,13 +911,16 @@ export function FindTripsFlow({
     <div
       className={styles.backdrop}
       onClick={(event) => {
-        if (event.target === event.currentTarget && !busyStep && step !== "photos" && step !== "review") {
+        if (
+          event.target === event.currentTarget &&
+          (step === "intro" || step === "empty" || step === "done")
+        ) {
           onClose();
         }
       }}
       role="presentation"
     >
-      <div aria-label={title} aria-modal="true" className={styles.card} role="dialog">
+      <div aria-label={heading} aria-modal="true" className={styles.card} role="dialog">
         {content}
       </div>
     </div>,

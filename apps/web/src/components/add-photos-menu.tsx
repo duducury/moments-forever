@@ -115,36 +115,52 @@ export function useAddPhotosMenu({
                 <p className={styles.title} id={titleId}>
                   Adicionar fotos
                 </p>
-                <button className={styles.option} onClick={() => pick(libraryRef)} type="button">
-                  <span aria-hidden className={styles.optionIcon}>📷</span>
-                  Fototeca
-                </button>
-                <button className={styles.option} onClick={() => pick(cameraRef)} type="button">
-                  <span aria-hidden className={styles.optionIcon}>📸</span>
-                  Tirar foto
-                </button>
-                <button className={styles.option} onClick={() => pick(filesRef)} type="button">
-                  <span aria-hidden className={styles.optionIcon}>📁</span>
-                  Escolher arquivos
-                </button>
+
+                <div className={styles.actions}>
+                  <button className={styles.action} onClick={() => pick(libraryRef)} type="button">
+                    <span aria-hidden className={styles.icon}><GalleryIcon /></span>
+                    <span className={styles.copy}>
+                      <span className={styles.copyTitle}>Fototeca</span>
+                      <span className={styles.copyHint}>Selecione fotos da sua galeria</span>
+                    </span>
+                  </button>
+                  <button className={styles.action} onClick={() => pick(cameraRef)} type="button">
+                    <span aria-hidden className={styles.icon}><CameraIcon /></span>
+                    <span className={styles.copy}>
+                      <span className={styles.copyTitle}>Tirar foto</span>
+                      <span className={styles.copyHint}>Use a câmera</span>
+                    </span>
+                  </button>
+                  <button className={styles.action} onClick={() => pick(filesRef)} type="button">
+                    <span aria-hidden className={styles.icon}><FolderIcon /></span>
+                    <span className={styles.copy}>
+                      <span className={styles.copyTitle}>Escolher arquivos</span>
+                      <span className={styles.copyHint}>Fotos e arquivos do dispositivo</span>
+                    </span>
+                  </button>
+                </div>
+
                 <button
-                  className={styles.option}
+                  className={styles.find}
                   onClick={() => {
                     setOpen(false);
                     onFind();
                   }}
                   type="button"
                 >
-                  <span aria-hidden className={styles.optionIcon}>✨</span>
+                  <span aria-hidden className={styles.findIcon}><SparkleIcon /></span>
                   <span>
-                    {findLabel}
-                    <span className={styles.optionHint}>
+                    <span className={styles.findTitle}>
+                      {findLabel === "Encontrar viagem" ? "Encontrar uma viagem" : "Encontrar fotos"}
+                    </span>
+                    <span className={styles.findHint}>
                       {findLabel === "Encontrar viagem"
-                        ? "Procura viagens nas fotos deste aparelho"
-                        : "Procura, nas suas fotos, o que ainda não está aqui"}
+                        ? "Deixe o Moments Forever procurar viagens nas suas fotos"
+                        : "Deixe o Moments Forever procurar, nas suas fotos, o que ainda não está nesta viagem"}
                     </span>
                   </span>
                 </button>
+
                 <button className={styles.cancel} onClick={() => setOpen(false)} type="button">
                   Cancelar
                 </button>
@@ -157,4 +173,40 @@ export function useAddPhotosMenu({
   );
 
   return { openMenu, menu };
+}
+
+function GalleryIcon() {
+  return (
+    <svg fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" viewBox="0 0 24 24">
+      <rect height="16" rx="3" width="18" x="3" y="4" />
+      <circle cx="9" cy="10" r="1.6" />
+      <path d="m21 16-5-5-8 8" />
+    </svg>
+  );
+}
+
+function CameraIcon() {
+  return (
+    <svg fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" viewBox="0 0 24 24">
+      <path d="M4 8h3l1.6-2.4h6.8L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z" />
+      <circle cx="12" cy="13.2" r="3.3" />
+    </svg>
+  );
+}
+
+function FolderIcon() {
+  return (
+    <svg fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" viewBox="0 0 24 24">
+      <path d="M3 7a2 2 0 0 1 2-2h4l2 2.4h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" />
+    </svg>
+  );
+}
+
+function SparkleIcon() {
+  return (
+    <svg fill="currentColor" viewBox="0 0 24 24">
+      <path d="M11 2.5c.4 3.9 1.7 5.2 5.6 5.6-3.9.4-5.2 1.7-5.6 5.6-.4-3.9-1.7-5.2-5.6-5.6 3.9-.4 5.2-1.7 5.6-5.6Z" />
+      <path d="M18.5 13c.3 2.4 1.1 3.2 3.5 3.5-2.4.3-3.2 1.1-3.5 3.5-.3-2.4-1.1-3.2-3.5-3.5 2.4-.3 3.2-1.1 3.5-3.5Z" />
+    </svg>
+  );
 }

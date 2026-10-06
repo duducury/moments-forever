@@ -135,14 +135,6 @@
   font-size: 0.8rem;
 }
 
-.toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
 .linkButton {
   min-height: 40px;
   border: 0;
@@ -154,9 +146,25 @@
   cursor: pointer;
 }
 
+.toolbar {
+  display: grid;
+  gap: 4px;
+}
+
+.toolbarActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+
 .toolbar .linkButton {
-  padding: 0 4px;
+  min-height: 36px;
+  padding: 0;
   font-size: 0.92rem;
+}
+
+.selectedCount {
+  font-size: 1rem;
 }
 
 .nameInput {
@@ -267,4 +275,208 @@
   padding: 12px;
   background: var(--surface-secondary);
   font-size: 0.9rem;
+}
+
+.eyebrow {
+  margin: 0;
+  color: var(--accent);
+  font-size: 0.74rem;
+  font-weight: 750;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.card h2 {
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 600;
+  line-height: 1.15;
+}
+
+/* One discovered trip: real pictures first, then place, dates and count. */
+.card2 {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--surface);
+}
+
+.card2[data-selected="true"] {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.cardMain {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  border: 0;
+  padding: 14px 14px 12px;
+  color: var(--ink);
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.cardHead {
+  display: flex;
+  min-height: 28px;
+  align-items: center;
+  gap: 8px;
+}
+
+.cardTitle {
+  overflow: hidden;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.3rem;
+  font-weight: 600;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cardMeta {
+  margin-bottom: 8px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.skeleton {
+  display: block;
+  width: 46%;
+  height: 20px;
+  border-radius: 8px;
+  background: linear-gradient(
+    90deg,
+    var(--surface-secondary),
+    var(--border),
+    var(--surface-secondary)
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.strip,
+.stripSmall {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
+}
+
+.stripSmall {
+  grid-template-columns: repeat(3, 56px);
+}
+
+.stripCell {
+  position: relative;
+  display: block;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 10px;
+  background: var(--surface-secondary);
+}
+
+.stripCell img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.stripMore {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: rgb(0 0 0 / 45%);
+  font-size: 0.95rem;
+  font-weight: 750;
+}
+
+.cardFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-top: 1px solid var(--border);
+  padding: 4px 14px;
+}
+
+.cardCount {
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.card2 .linkButton {
+  padding: 0;
+  font-size: 0.9rem;
+}
+
+.detailHead {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.back {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  color: var(--ink);
+  background: var(--surface-secondary);
+  font-size: 1.6rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.detailTitleBlock {
+  min-width: 0;
+}
+
+.detailTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.reviewRow {
+  display: grid;
+  gap: 8px;
+  border-bottom: 1px solid var(--border);
+  padding: 14px 0;
+}
+
+.reviewTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.reviewTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 750;
+}
+
+.cardNote {
+  margin: -4px 0 8px;
+  color: var(--accent);
+  font-size: 0.82rem;
+  font-weight: 650;
 }

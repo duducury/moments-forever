@@ -24,6 +24,24 @@ export interface GeoPoint {
   readonly longitude: number;
 }
 
+/**
+ * How much GPS backs a discovered trip:
+ *  - "located": 3+ geotagged photos far from home — named by place, matched by place;
+ *  - "limited": 1–2 geotagged photos plus photos without GPS — a possible trip, location NOT trusted;
+ *  - "none":    no GPS at all, found only by the burst of photos over several days.
+ */
+export type LocationQuality = "located" | "limited" | "none";
+
+/** A place the trip passed through (≈15 km cluster), used to name it ("New York → Boston"). */
+export interface TripStop {
+  /** Stable within one scan; the key for its place name. */
+  readonly id: string;
+  readonly center: GeoPoint;
+  readonly photoCount: number;
+  /** First day (YYYY-MM-DD) there — orders the stops. */
+  readonly firstDay: string;
+}
+
 /** A trip found in the library by looking at dates and places. Not created anywhere yet. */
 export interface DiscoveredTrip {
   /** Stable within one scan: derived from the first photo. */
@@ -37,6 +55,12 @@ export interface DiscoveredTrip {
   readonly assets: readonly LibraryAsset[];
   /** How many of those have no GPS (placed by date only). */
   readonly withoutLocationCount: number;
+  /**
+   * The most representative places, in the order they were visited (at most 3).
+   * Empty when the trip has no usable GPS — then it is never given a place name.
+   */
+  readonly stops: readonly TripStop[];
+  readonly locationQuality: LocationQuality;
 }
 
 /** A root album ("viagem" card on the profile) that already exists in Moments Forever. */

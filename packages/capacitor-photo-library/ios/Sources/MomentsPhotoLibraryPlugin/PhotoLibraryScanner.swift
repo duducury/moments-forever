@@ -285,7 +285,7 @@ enum PhotoLibraryScanner {
 
         let output = NSMutableData()
         guard let destination = CGImageDestinationCreateWithData(
-            output, "public.jpeg" as CFString, 1, nil
+            output as CFMutableData, "public.jpeg" as CFString, 1, nil
         ) else {
             throw ExportError.encodingFailed
         }

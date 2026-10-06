@@ -1,6 +1,7 @@
 import Foundation
 import Capacitor
 import Photos
+import PhotosUI
 import UIKit
 
 /// Capacitor bridge for the photo-library prototype. All methods are read-only
@@ -163,7 +164,11 @@ public class MomentsPhotoLibraryPlugin: CAPPlugin, CAPBridgedPlugin {
 
             let thumbnails: [[String: Any]] = identifiers.map { identifier in
                 var item: [String: Any] = ["localIdentifier": identifier]
-                item["data"] = byId[identifier] ?? NSNull()
+                if let data = byId[identifier] {
+                    item["data"] = data
+                } else {
+                    item["data"] = NSNull()
+                }
                 return item
             }
             call.resolve(["thumbnails": thumbnails])

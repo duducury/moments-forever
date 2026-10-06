@@ -10,6 +10,7 @@ import {
   MomentsPhotoLibrary,
 } from "@moments-forever/capacitor-photo-library";
 
+import { PageScrollLock } from "@/components/use-lock-page-scroll";
 import { createLibraryClient } from "@/lib/photo-library/library-client";
 import type { NativeOrigins } from "@/lib/photo-library/native-origin";
 
@@ -145,6 +146,7 @@ export function useAddPhotosMenu({
               }}
               role="presentation"
             >
+              <PageScrollLock />
               <div
                 aria-labelledby={titleId}
                 aria-modal="true"

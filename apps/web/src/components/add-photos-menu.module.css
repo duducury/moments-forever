@@ -5,17 +5,24 @@
   display: grid;
   place-items: end center;
   padding: 12px 12px calc(12px + env(safe-area-inset-bottom, 0px));
-  background: rgb(29 29 27 / 45%);
+  overscroll-behavior: none;
+  touch-action: none;
+  background: var(--overlay);
 }
 
 .sheet {
+  /* The sheet is its own surface, lifted off the page in both themes (see --sheet in globals.css). */
+  --surface: var(--sheet-raised);
+  --surface-secondary: var(--sheet-inset);
+  --border: var(--sheet-border);
   display: grid;
   width: min(100%, 460px);
   gap: 12px;
+  border: 1px solid var(--sheet-border);
   border-radius: 28px;
   padding: 18px 14px 14px;
-  background: var(--surface);
-  box-shadow: 0 24px 60px rgb(29 29 27 / 25%);
+  background: var(--sheet);
+  box-shadow: 0 -8px 48px rgb(0 0 0 / 38%);
 }
 
 .title {
@@ -27,51 +34,52 @@
   text-transform: uppercase;
 }
 
-/* The everyday ways to add photos: one quiet, grouped list. */
+/* "Escolher fotos" and "Tirar uma foto": two identical tiles — same size, border, radius,
+   icon box, type and pressed state. Neither is more important than the other. */
 .actions {
   display: grid;
-  overflow: hidden;
-  border-radius: 20px;
-  background: var(--surface-secondary);
+  gap: 10px;
 }
 
 .action {
   display: flex;
-  min-height: 64px;
+  min-height: 68px;
   align-items: center;
   gap: 14px;
-  border: 0;
-  border-bottom: 1px solid var(--border);
-  padding: 10px 16px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 10px 14px;
   color: var(--ink);
-  background: transparent;
+  background: var(--surface);
   font: inherit;
   text-align: left;
   cursor: pointer;
 }
 
-.action:last-child {
-  border-bottom: 0;
+.action:active {
+  background: var(--surface-secondary);
 }
 
-.action:active {
-  background: color-mix(in srgb, var(--ink) 8%, transparent);
+@media (hover: hover) {
+  .action:hover {
+    background: var(--surface-secondary);
+  }
 }
 
 .icon {
   display: grid;
   flex: none;
-  width: 38px;
-  height: 38px;
+  width: 40px;
+  height: 40px;
   place-items: center;
   border-radius: 12px;
   color: var(--ink);
-  background: var(--surface);
+  background: var(--sheet);
 }
 
 .icon svg {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
 }
 
 .copy {
@@ -107,7 +115,7 @@
       color-mix(in srgb, var(--accent) 26%, transparent),
       transparent 60%
     ),
-    color-mix(in srgb, var(--accent) 9%, var(--surface));
+    color-mix(in srgb, var(--accent) 9%, var(--sheet));
   font: inherit;
   text-align: left;
   cursor: pointer;
@@ -124,7 +132,7 @@
   height: 44px;
   place-items: center;
   border-radius: 14px;
-  color: var(--surface);
+  color: var(--sheet);
   background: var(--accent);
   box-shadow: 0 6px 16px color-mix(in srgb, var(--accent) 40%, transparent);
 }
@@ -175,11 +183,11 @@
   align-self: center;
   gap: 12px;
   margin: auto;
-  border: 1px solid var(--border);
+  border: 1px solid var(--sheet-border);
   border-radius: 18px;
   padding: 16px 20px;
   color: var(--ink);
-  background: var(--surface);
+  background: var(--sheet);
   font-weight: 700;
   box-shadow: 0 12px 32px rgb(0 0 0 / 0.25);
 }

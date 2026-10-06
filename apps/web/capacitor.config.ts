@@ -40,16 +40,28 @@ const config: CapacitorConfig = {
    * setting, not this app's own in-page theme toggle (default: dark, see
    * DEFAULT_THEME in src/lib/theme/theme.ts). On a phone set to iOS light
    * mode, that native background is white, so the area the web content
-   * doesn't paint over — the status bar strip under contentInset: "always",
-   * or a frame during scroll/reload — shows as a white bar near the clock
-   * and battery instead of matching the app. Matching it to the app's
+   * doesn't paint over — a frame during scroll/reload or the rubber-band
+   * overscroll — shows as a white bar near the clock and battery instead of
+   * matching the app. Matching it to the app's
    * default dark background (#121110, see --background in globals.css)
    * fixes that; it can't follow a live theme *toggle* since this is native
    * config baked in at build time, but it now matches the common case.
    */
   backgroundColor: "#121110",
   ios: {
-    contentInset: "always",
+    /**
+     * "never": the WebView fills the whole screen and the PAGE owns the safe
+     * areas through env(safe-area-inset-*) (the site already sets
+     * viewport-fit=cover and pads for them, as it does in the PWA).
+     *
+     * It used to be "always", which makes iOS inset the scroll view natively.
+     * That strip is drawn by the scroll view itself, so scrolled content
+     * (cover images, headers) showed through it behind the clock / Dynamic
+     * Island, no CSS could cover it, and env(safe-area-inset-top) read 0 so
+     * the page's own safe-area handling never kicked in. See the status-bar
+     * strip in globals.css (body::before).
+     */
+    contentInset: "never",
     backgroundColor: "#121110",
   },
 };

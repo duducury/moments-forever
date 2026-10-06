@@ -11,6 +11,14 @@ html[data-resolved-theme="light"] {
   --border: #c9bfb0;
   --accent: #8b3f28;
   --shadow: rgb(42 32 22 / 16%);
+  /* Modal / bottom-sheet surface: clearly lifted off the page, in each theme.
+     --sheet = the sheet itself, --sheet-raised = cards inside it, --sheet-inset =
+     wells inside it, --overlay = the dim behind it. */
+  --sheet: #fffdf8;
+  --sheet-raised: #f3ede2;
+  --sheet-inset: #e9e1d3;
+  --sheet-border: #d3c8b6;
+  --overlay: rgb(30 24 16 / 52%);
   --paper: var(--background);
   --ink: var(--text);
   --muted: var(--text-secondary);
@@ -34,6 +42,11 @@ html[data-resolved-theme="dark"] {
   --border: #3a3631;
   --accent: #d08a6e;
   --shadow: rgb(0 0 0 / 40%);
+  --sheet: #2a2623;
+  --sheet-raised: #332f2b;
+  --sheet-inset: #3b3631;
+  --sheet-border: #4b453f;
+  --overlay: rgb(0 0 0 / 66%);
   --paper: var(--background);
   --ink: var(--text);
   --muted: var(--text-secondary);
@@ -109,6 +122,23 @@ a {
 :focus-visible {
   outline: 3px solid color-mix(in srgb, var(--accent) 55%, var(--surface));
   outline-offset: 3px;
+}
+
+/* Status-bar strip (clock / Dynamic Island / notch). The page is drawn under it
+   (viewport-fit=cover), so without this, scrolled covers and headers show through
+   behind the system icons. It paints the strip in the page background and sits
+   above page content but below every modal, drawer and toast, so those can still
+   dim it. Zero-height wherever there is no top inset (Android, desktop, browsers). */
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: calc(var(--z-drawer) - 1);
+  height: env(safe-area-inset-top, 0px);
+  background: var(--background);
+  pointer-events: none;
 }
 
 .landing,

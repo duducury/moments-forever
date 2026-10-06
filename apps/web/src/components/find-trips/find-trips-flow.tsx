@@ -9,6 +9,7 @@ import { createPortal } from "react-dom";
 import { MomentsPhotoLibrary } from "@moments-forever/capacitor-photo-library";
 
 import { useAuth } from "@/components/auth-provider";
+import { PageScrollLock } from "@/components/use-lock-page-scroll";
 import {
   buildDiscoverCandidates,
   buildRelatedCandidate,
@@ -922,6 +923,7 @@ export function FindTripsFlow({
       }}
       role="presentation"
     >
+      <PageScrollLock />
       <div aria-label={heading} aria-modal="true" className={styles.card} role="dialog">
         {content}
       </div>

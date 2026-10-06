@@ -1,5 +1,8 @@
 import {
+  CONTINENT_BY_COUNTRY_CODE,
+  TROPICAL_COUNTRY_CODES,
   countryCodeFromPlaceLabel,
+  countryNameFromCode,
   coarsenTravelLabel,
   shortPlaceCaption,
   usStateCodeFromPlaceLabel,
@@ -7,84 +10,6 @@ import {
 
 import type { OwnerPlaceCardItem } from "@/lib/experiences/load-owner-place-cards";
 import { profileTripAlbumPath } from "@/lib/routes/app-routes";
-
-const COUNTRY_NAME_BY_CODE: Readonly<Record<string, string>> = {
-  US: "Estados Unidos",
-  ID: "Indonésia",
-  BR: "Brasil",
-  AE: "Emirados Árabes Unidos",
-  PT: "Portugal",
-  ES: "Espanha",
-  FR: "França",
-  IT: "Itália",
-  JP: "Japão",
-  TH: "Tailândia",
-  GB: "Reino Unido",
-  DE: "Alemanha",
-  MX: "México",
-  AR: "Argentina",
-  CL: "Chile",
-  CO: "Colômbia",
-  CA: "Canadá",
-  AU: "Austrália",
-  NL: "Países Baixos",
-  QA: "Catar",
-  SG: "Singapura",
-  PH: "Filipinas",
-  MY: "Malásia",
-  MV: "Maldivas",
-  LK: "Sri Lanka",
-  CR: "Costa Rica",
-  PA: "Panamá",
-  CU: "Cuba",
-  DO: "República Dominicana",
-  JM: "Jamaica",
-  KE: "Quênia",
-  TZ: "Tanzânia",
-  FJ: "Fiji",
-  VN: "Vietnã",
-  KH: "Camboja",
-  IN: "Índia",
-  GR: "Grécia",
-  TR: "Turquia",
-  MA: "Marrocos",
-  EG: "Egito",
-  NZ: "Nova Zelândia",
-  PE: "Peru",
-  EC: "Equador",
-};
-
-const TROPICAL_COUNTRY_CODES: ReadonlySet<string> = new Set([
-  "ID",
-  "TH",
-  "PH",
-  "MY",
-  "SG",
-  "MV",
-  "LK",
-  "CR",
-  "PA",
-  "CU",
-  "DO",
-  "JM",
-  "BZ",
-  "HN",
-  "NI",
-  "GT",
-  "BR",
-  "CO",
-  "EC",
-  "PE",
-  "KE",
-  "TZ",
-  "MU",
-  "SC",
-  "FJ",
-  "KH",
-  "VN",
-  "IN",
-  "MX",
-]);
 
 export interface PassportJourneyItem {
   readonly albumId: string;
@@ -111,58 +36,6 @@ export interface PassportCountry {
   readonly stateCodes: readonly string[];
   readonly albumHrefs: readonly { readonly href: string; readonly title: string }[];
 }
-
-const CONTINENT_BY_CODE: Readonly<Record<string, string>> = {
-  US: "NA",
-  CA: "NA",
-  MX: "NA",
-  CR: "NA",
-  PA: "NA",
-  CU: "NA",
-  DO: "NA",
-  JM: "NA",
-  GT: "NA",
-  HN: "NA",
-  NI: "NA",
-  BZ: "NA",
-  BR: "SA",
-  AR: "SA",
-  CL: "SA",
-  CO: "SA",
-  PE: "SA",
-  EC: "SA",
-  PT: "EU",
-  ES: "EU",
-  FR: "EU",
-  IT: "EU",
-  DE: "EU",
-  GB: "EU",
-  NL: "EU",
-  GR: "EU",
-  TR: "AS",
-  AE: "AS",
-  QA: "AS",
-  JP: "AS",
-  TH: "AS",
-  ID: "AS",
-  SG: "AS",
-  PH: "AS",
-  MY: "AS",
-  VN: "AS",
-  KH: "AS",
-  IN: "AS",
-  LK: "AS",
-  MV: "AS",
-  MA: "AF",
-  EG: "AF",
-  KE: "AF",
-  TZ: "AF",
-  MU: "AF",
-  SC: "AF",
-  AU: "OC",
-  NZ: "OC",
-  FJ: "OC",
-};
 
 export type AchievementIcon =
   | "passport"
@@ -197,6 +70,7 @@ const CONTINENT_LABEL: Readonly<Record<string, string>> = {
   AS: "Ásia",
   AF: "África",
   OC: "Oceania",
+  AN: "Antártida",
 };
 
 const RANK_STEPS = [
@@ -308,11 +182,11 @@ function cityFromPlace(place: OwnerPlaceCardItem): string | null {
     if (locality) return locality;
   }
   if (!caption?.shortLabel) return null;
-  if (place.countryCode && caption.shortLabel === COUNTRY_NAME_BY_CODE[place.countryCode]) {
+  if (place.countryCode && caption.shortLabel === countryNameFromCode(place.countryCode)) {
     return null;
   }
   const codeName = place.countryCode
-    ? COUNTRY_NAME_BY_CODE[place.countryCode]
+    ? countryNameFromCode(place.countryCode)
     : null;
   if (codeName && caption.shortLabel === codeName) return null;
   if (countryCodeFromPlaceLabel(caption.shortLabel) === place.countryCode) {
@@ -335,7 +209,7 @@ function albumChipTitle(title: string): string {
 }
 
 function countryName(code: string, fallbackLabel: string): string {
-  return COUNTRY_NAME_BY_CODE[code] ?? fallbackLabel;
+  return countryNameFromCode(code) ?? fallbackLabel;
 }
 
 export function buildPassport(
@@ -445,7 +319,7 @@ export function buildPassport(
   ).length;
   const continents = new Set(
     countries
-      .map((country) => CONTINENT_BY_CODE[country.code])
+      .map((country) => CONTINENT_BY_COUNTRY_CODE[country.code])
       .filter((value): value is string => Boolean(value)),
   );
   const usStates = new Set<string>();

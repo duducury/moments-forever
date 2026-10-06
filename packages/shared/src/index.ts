@@ -44,7 +44,14 @@ export {
 } from "./geocode-place-name";
 
 export {
+  CONTINENT_BY_COUNTRY_CODE,
+  TROPICAL_COUNTRY_CODES,
+} from "./country-continent";
+
+export {
+  KNOWN_COUNTRY_CODES,
   countryCodeFromName,
+  countryNameFromCode,
   countryCodeFromPlaceLabel,
   countryFlagFromPlaceLabel,
   countryNameFromPlaceLabel,

@@ -3,6 +3,7 @@
  * Presentation helper — does not invent geography beyond known name → ISO maps.
  */
 
+import { COUNTRY_NAMES_BY_ISO } from "./country-names.generated";
 import { cleanLocationLabel } from "./location-name";
 
 /**
@@ -119,8 +120,14 @@ const US_STATE_CODE_BY_NAME: Readonly<Record<string, string>> = {
   wyoming: "WY",
 };
 
-/** Normalized country name (EN/PT variants, accents folded) → ISO 3166-1 alpha-2. */
-const COUNTRY_ISO_BY_NAME: Readonly<Record<string, string>> = {
+/**
+ * Hand-written extras on top of the generated ISO table: trip-folder shortcuts
+ * (cities, states, "dubai", "nyc"…) and spellings geocoders/people use that are
+ * not the official display name. Wins over the generated table on conflict.
+ * Every real country already resolves through the generated table below, so a
+ * country missing from here is NOT a bug — do not add plain country names.
+ */
+const MANUAL_ISO_BY_NAME: Readonly<Record<string, string>> = {
   indonesia: "ID",
   brasil: "BR",
   brazil: "BR",
@@ -310,9 +317,99 @@ function normalizeCountryKey(value: string): string {
   return value
     .normalize("NFD")
     .replace(/\p{M}/gu, "")
+    .replace(/[\u2018\u2019\u02bc`]/gu, "'")
     .replace(/\s+/gu, " ")
     .trim()
     .toLowerCase();
+}
+
+/** Spellings that differ from the ICU display names (OSM, ISO long forms, local names). */
+const COUNTRY_ALIASES: Readonly<Record<string, readonly string[]>> = {
+  TZ: [
+    "united republic of tanzania",
+    "tanzania, united republic of",
+    "republic of tanzania",
+    "zanzibar",
+  ],
+  CI: ["ivory coast", "cote d'ivoire", "costa do marfim"],
+  CV: ["cape verde", "cabo verde"],
+  MM: ["burma", "myanmar (burma)"],
+  SZ: ["swaziland", "eswatini"],
+  MK: ["macedonia", "north macedonia", "macedonia do norte"],
+  TL: ["east timor", "timor-leste", "timor leste"],
+  CD: ["dr congo", "drc", "democratic republic of the congo", "congo-kinshasa", "republica democratica do congo"],
+  CG: ["republic of the congo", "congo-brazzaville", "republica do congo"],
+  VA: ["vatican", "vatican city", "holy see", "vaticano"],
+  PS: ["palestine", "state of palestine", "palestinian territories", "palestina"],
+  KR: ["republic of korea"],
+  KP: ["north korea", "democratic people's republic of korea", "coreia do norte"],
+  LA: ["laos", "lao people's democratic republic"],
+  SY: ["syria", "syrian arab republic", "siria"],
+  IR: ["iran", "iran, islamic republic of"],
+  VN: ["viet nam"],
+  RU: ["russia", "russian federation"],
+  MD: ["moldova", "republic of moldova"],
+  BO: ["bolivia", "plurinational state of bolivia"],
+  VE: ["venezuela", "bolivarian republic of venezuela"],
+  BN: ["brunei", "brunei darussalam"],
+  FM: ["micronesia", "federated states of micronesia"],
+  TR: ["turkiye", "turquia"],
+  CZ: ["czech republic", "czechia", "republica tcheca", "tchequia"],
+  GB: ["uk", "u.k.", "great britain", "scotland", "wales", "northern ireland", "england", "inglaterra", "escocia", "pais de gales"],
+  US: ["usa", "u.s.a.", "u.s.", "estados unidos da america"],
+  NL: ["holland", "the netherlands", "paises baixos", "holanda"],
+  PH: ["the philippines"],
+  GM: ["the gambia", "gambia"],
+  BS: ["the bahamas", "bahamas"],
+  HK: ["hong kong sar china", "hong kong"],
+  MO: ["macau", "macao", "macau sar china"],
+  TW: ["taiwan", "republic of china"],
+  AE: ["uae", "emirados", "emirados arabes"],
+  CW: ["curacao"],
+  RE: ["la reunion", "reunion"],
+  SH: ["saint helena", "santa helena"],
+  FK: ["falkland islands", "malvinas"],
+  KN: ["st kitts and nevis", "saint kitts and nevis"],
+  LC: ["st lucia", "saint lucia"],
+  VC: ["st vincent and the grenadines", "saint vincent and the grenadines"],
+  ST: ["sao tome and principe", "sao tome e principe"],
+  BA: ["bosnia", "bosnia and herzegovina", "bosnia e herzegovina"],
+  TT: ["trinidad", "trinidad and tobago", "trinidad e tobago"],
+  AG: ["antigua", "antigua and barbuda", "antigua e barbuda"],
+};
+
+/** Normalised country name → ISO alpha-2, built once from ICU data + aliases + extras. */
+const COUNTRY_ISO_BY_NAME: Readonly<Record<string, string>> = (() => {
+  const table: Record<string, string> = {};
+  for (const [code, names] of Object.entries(COUNTRY_NAMES_BY_ISO)) {
+    for (const name of names) {
+      const key = normalizeCountryKey(name);
+      if (key && !(key in table)) table[key] = code;
+    }
+  }
+  for (const [code, names] of Object.entries(COUNTRY_ALIASES)) {
+    for (const name of names) {
+      table[normalizeCountryKey(name)] = code;
+    }
+  }
+  for (const [key, code] of Object.entries(MANUAL_ISO_BY_NAME)) {
+    table[normalizeCountryKey(key)] = code;
+  }
+  return table;
+})();
+
+/** All ISO alpha-2 codes the country table knows (used by tests and the passport). */
+export const KNOWN_COUNTRY_CODES: readonly string[] =
+  Object.keys(COUNTRY_NAMES_BY_ISO);
+
+/**
+ * Portuguese (pt-BR) country name for an ISO alpha-2 code, or null when the
+ * code is not a known country. Works for every ISO country.
+ */
+export function countryNameFromCode(code: string): string | null {
+  const names = COUNTRY_NAMES_BY_ISO[code.trim().toUpperCase()];
+  if (!names) return null;
+  return names[1] ?? names[0] ?? null;
 }
 
 function usStateCodeFromToken(token: string): string | null {

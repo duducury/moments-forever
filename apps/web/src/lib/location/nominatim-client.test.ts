@@ -27,7 +27,7 @@ test("reverseGeocode returns travel label for valid GPS", async () => {
 
   const result = await client.reverseGeocode(-8.7275, 115.5444);
   assert.equal(result.status, "ok");
-  assert.equal(result.label, "Nusa Penida");
+  assert.equal(result.label, "Indonésia, Nusa Penida");
 });
 
 test("HTTP 429 is treated without throwing", async () => {

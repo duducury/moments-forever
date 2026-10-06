@@ -27,6 +27,11 @@ import {
   nearestKnownCity,
 } from "@/lib/photo-library/place-fallback";
 import {
+  loadAdminGeo,
+  quickPlace,
+  type QuickPlace,
+} from "@/lib/photo-library/quick-place";
+import {
   clearAll,
   describeCounts,
   emptySelection,
@@ -129,7 +134,9 @@ export function FindTripsFlow({
     [],
   );
 
-  const [step, setStep] = useState<Step>("intro");
+  // "Encontrar uma viagem" starts reading the library right away (no explanatory screen);
+  // "intro" is then only the fallback for a blocked permission or a failed start.
+  const [step, setStep] = useState<Step>(related ? "intro" : "scanning");
   const [access, setAccess] = useState<AccessState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [scanned, setScanned] = useState(0);
@@ -138,6 +145,7 @@ export function FindTripsFlow({
   const [context, setContext] = useState<PhotoLibraryContext | null>(null);
   const [labels, setLabels] = useState<Record<string, string>>({});
   const [settled, setSettled] = useState<ReadonlySet<string>>(new Set());
+  const [quick, setQuick] = useState<Record<string, QuickPlace>>({});
   const [legacy, setLegacy] = useState<PhotoLibraryContext["legacyPhotos"]>([]);
   const [renames, setRenames] = useState<Record<string, string>>({});
   const [relatedCandidate, setRelatedCandidate] = useState<Candidate | null>(null);
@@ -172,6 +180,7 @@ export function FindTripsFlow({
       trips: discovered,
       labels,
       settled,
+      quick,
       context,
       legacyPhotos: legacy,
     });
@@ -180,7 +189,7 @@ export function FindTripsFlow({
         ? { ...candidate, name: renames[candidate.key] as string }
         : candidate,
     );
-  }, [related, relatedCandidate, context, discovered, labels, settled, legacy, renames]);
+  }, [related, relatedCandidate, context, discovered, labels, settled, quick, legacy, renames]);
 
   const fresh = candidates.filter((candidate) => candidate.kind === "new");
   const existing = candidates.filter(
@@ -301,16 +310,25 @@ export function FindTripsFlow({
     }
   }, [client, target]);
 
-  async function begin() {
+  const begin = useCallback(async () => {
     setError(null);
     try {
       const state = await client.ensureAccess();
       setAccess(state);
       if (state.canRead) await run();
+      else if (!related) setStep("intro"); // blocked: say so (and offer Ajustes)
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Não foi possível pedir acesso às fotos.");
+      if (!related) setStep("intro");
     }
-  }
+  }, [client, run, related]);
+
+  const autoStarted = useRef(false);
+  useEffect(() => {
+    if (related || autoStarted.current) return;
+    autoStarted.current = true;
+    void begin();
+  }, [related, begin]);
 
   async function chooseMorePhotos() {
     try {
@@ -320,6 +338,28 @@ export function FindTripsFlow({
       setError("Não foi possível abrir a seleção de fotos.");
     }
   }
+
+  // ---- instant state/country, offline, before any city name is known ------------------
+
+  useEffect(() => {
+    if (related || discovered.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      const geo = await loadAdminGeo();
+      if (!geo || cancelled) return;
+      const early: Record<string, QuickPlace> = {};
+      for (const trip of discovered) {
+        for (const stop of trip.stops) {
+          const place = quickPlace(stop.center, geo);
+          if (place) early[stop.id] = place;
+        }
+      }
+      setQuick(early);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [related, discovered]);
 
   // ---- naming the places (only a few centers are sent — never the library) --------
 
@@ -535,14 +575,16 @@ export function FindTripsFlow({
         <>
           <p className={styles.eyebrow}>✨ Moments Forever</p>
           <h2>{heading}</h2>
-          <p className={styles.hint}>
-            {related
-              ? "Vamos procurar, nas fotos deste aparelho, as que combinam com as datas e os lugares desta viagem e que ainda não estão nela."
-              : "Vamos olhar as datas e os lugares das fotos deste aparelho para achar viagens que você ainda não guardou."}
-          </p>
-          <p className={styles.hint}>
-            Tudo acontece aqui no aparelho. Nada é enviado, importado ou criado sem você escolher e confirmar.
-          </p>
+          {related ? (
+            <>
+              <p className={styles.hint}>
+                Vamos procurar, nas fotos deste aparelho, as que combinam com as datas e os lugares desta viagem e que ainda não estão nela.
+              </p>
+              <p className={styles.hint}>
+                Tudo acontece aqui no aparelho. Nada é enviado, importado ou criado sem você escolher e confirmar.
+              </p>
+            </>
+          ) : null}
           {access?.blocked ? (
             <div className={styles.banner}>
               <span>O acesso às fotos está desligado. Ligue em Ajustes para continuar.</span>
@@ -554,10 +596,10 @@ export function FindTripsFlow({
           {error ? <p className={styles.error} role="alert">{error}</p> : null}
           <div className={styles.actions}>
             <button className="button secondary" onClick={onClose} type="button">
-              Cancelar
+              {related ? "Cancelar" : "Fechar"}
             </button>
             <button className="button primary" onClick={() => void begin()} type="button">
-              Continuar
+              {related ? "Continuar" : "Tentar de novo"}
             </button>
           </div>
         </>

@@ -148,3 +148,48 @@ test("offline fallback names a spot only when a listed city is really close", ()
   assert.equal(nearestKnownCity({ latitude: 40.75, longitude: -73.99 }, cities)?.name, "Nova York");
   assert.equal(nearestKnownCity({ latitude: 41.5, longitude: -72.5 }, cities), null, "far from both: no guess");
 });
+
+test("while the city is still loading, the offline state/country is shown right away", () => {
+  const pending = describeTrip({
+    stops: [stop("a"), stop("b")],
+    locationQuality: "located",
+    labels: {},
+    settled: new Set(),
+    quick: {
+      a: { label: "CT, USA", countryCode: "US" },
+      b: { label: "MA, USA", countryCode: "US" },
+    },
+  });
+  assert.equal(pending.state, "pending");
+  assert.equal(pending.title, "CT, USA → MA, USA");
+  // No flag / country yet: matching against existing trips is unchanged while loading.
+  assert.equal(pending.countryCode, null);
+  assert.equal(pending.name, "");
+
+  const sameState = describeTrip({
+    stops: [stop("a"), stop("b")],
+    locationQuality: "located",
+    labels: {},
+    settled: new Set(),
+    quick: { a: { label: "CT, USA", countryCode: "US" }, b: { label: "CT, USA", countryCode: "US" } },
+  });
+  assert.equal(sameState.title, "CT, USA");
+});
+
+test("once the real place arrives, the city takes over from the early label", () => {
+  const named = describeTrip({
+    stops: [stop("a")],
+    locationQuality: "located",
+    labels: { a: "Estados Unidos, Hartford" },
+    settled: new Set(["a"]),
+    quick: { a: { label: "CT, USA", countryCode: "US" } },
+  });
+  assert.equal(named.state, "named");
+  assert.equal(named.title, "Hartford");
+});
+
+test("no offline label: still the placeholder (empty title)", () => {
+  const pending = describeTrip({ stops: [stop("a")], locationQuality: "located", labels: {}, settled: new Set() });
+  assert.equal(pending.state, "pending");
+  assert.equal(pending.title, "");
+});

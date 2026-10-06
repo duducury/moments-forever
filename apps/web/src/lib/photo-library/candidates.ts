@@ -10,6 +10,7 @@ import {
   matchDiscoveredTrip,
   withoutPresent,
 } from "./match-existing";
+import type { QuickPlace } from "./quick-place";
 import type { Candidate } from "./selection";
 import { describeTrip, type TripDescription } from "./trip-naming";
 import type {
@@ -32,6 +33,7 @@ export function describeTrips(
   trips: readonly DiscoveredTrip[],
   labels: Readonly<Record<string, string | undefined>>,
   settled: ReadonlySet<string>,
+  quick?: Readonly<Record<string, QuickPlace | undefined>>,
 ): Map<string, TripDescription> {
   return new Map(
     trips.map((trip) => [
@@ -41,6 +43,7 @@ export function describeTrips(
         locationQuality: trip.locationQuality,
         labels,
         settled,
+        quick,
       }),
     ]),
   );
@@ -52,6 +55,8 @@ export function buildDiscoverCandidates(input: {
   readonly labels: Readonly<Record<string, string | undefined>>;
   /** Stops whose place lookup has finished (found or not). */
   readonly settled: ReadonlySet<string>;
+  /** Instant offline "CT, USA" per trip STOP id, shown until the real place name arrives. */
+  readonly quick?: Readonly<Record<string, QuickPlace | undefined>>;
   readonly context: PhotoLibraryContext;
   /** Older photos (no source_asset_id) of the experiences that matched, once loaded. */
   readonly legacyPhotos?: readonly (LegacyPhoto & { readonly experienceId: string })[];
@@ -59,7 +64,7 @@ export function buildDiscoverCandidates(input: {
   const fresh: Candidate[] = [];
   const existing: Candidate[] = [];
   const everywhere = buildPresenceIndex({ knownAssets: input.context.knownAssets });
-  const descriptions = describeTrips(input.trips, input.labels, input.settled);
+  const descriptions = describeTrips(input.trips, input.labels, input.settled, input.quick);
 
   for (const trip of input.trips) {
     const description = descriptions.get(trip.id) as TripDescription;

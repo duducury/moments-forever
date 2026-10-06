@@ -30,6 +30,10 @@ html[data-resolved-theme="light"] {
   --z-drawer: 2000;
   --z-modal: 2100;
   --z-toast: 2200;
+  /* What a bottom sheet must leave free on pages with the floating tab bar (see
+     app-bottom-nav.module.css): the bar's offset from the bottom + its height + the
+     raised "+" + a comfortable gap. Includes the Home Indicator. */
+  --bottom-nav-clearance: calc(max(8px, env(safe-area-inset-bottom, 0px) - 16px) + 82px);
 }
 
 html[data-resolved-theme="dark"] {

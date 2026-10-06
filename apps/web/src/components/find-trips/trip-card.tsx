@@ -110,7 +110,7 @@ export function TripCard({
       <button className={styles.cardMain} onClick={onOpen} type="button">
         <span className={styles.cardHead}>
           <Flag code={candidate.countryCode} />
-          {candidate.titleState === "pending" ? (
+          {candidate.titleState === "pending" && !candidate.title ? (
             <span aria-label="Identificando o local" className={styles.skeleton} role="status" />
           ) : (
             <span className={styles.cardTitle}>{candidate.title}</span>

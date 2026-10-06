@@ -2,7 +2,8 @@
  * How a discovered trip is presented: by its PLACE, never by a made-up name.
  *
  *  - 3+ GPS photos, place resolved → "New York", "Paris → Versailles"
- *  - place still loading           → pending (the UI shows a placeholder, not a guess)
+ *  - place still loading           → pending: the offline state/country ("CT, USA") when known,
+ *                                    otherwise a placeholder — never a guessed city
  *  - GPS, place not found          → "Local não identificado"
  *  - 1–2 GPS photos / none         → "Possível viagem" + a note that the location is
  *                                    limited (never a place, a flag or a made-up name)
@@ -16,12 +17,13 @@ import {
   countryCodeFromPlaceLabel,
 } from "@moments-forever/shared";
 
+import type { QuickPlace } from "./quick-place";
 import type { LocationQuality, TripStop } from "./types";
 
 export type TitleState = "named" | "pending" | "unnamed" | "possible";
 
 export interface TripDescription {
-  /** What the list shows: the places, joined with " → ". Empty while pending. */
+  /** What the list shows: the places, joined with " → ". While pending: the offline state/country, or empty. */
   readonly title: string;
   /** Default name for a new trip: "País, Local → Local". */
   readonly name: string;
@@ -63,8 +65,10 @@ export function describeTrip(input: {
   readonly labels: Readonly<Record<string, string | undefined>>;
   /** Stops whose lookup is finished, whether or not it found a name. */
   readonly settled: ReadonlySet<string>;
+  /** Instant offline "CT, USA" per stop id, shown only while the real place is still loading. */
+  readonly quick?: Readonly<Record<string, QuickPlace | undefined>>;
 }): TripDescription {
-  const { stops, labels, settled, locationQuality } = input;
+  const { stops, labels, settled, locationQuality, quick = {} } = input;
   if (locationQuality !== "located" || stops.length === 0) {
     return {
       title: POSSIBLE_TRIP_TITLE,
@@ -79,7 +83,14 @@ export function describeTrip(input: {
 
   const waiting = stops.some((stop) => labels[stop.id] === undefined && !settled.has(stop.id));
   if (waiting) {
-    return { title: "", name: "", countryCode: null, state: "pending", locationNote: null };
+    const early: string[] = [];
+    for (const stop of stops) {
+      const label = quick[stop.id]?.label;
+      if (label && !early.includes(label)) early.push(label);
+    }
+    // countryCode stays null while pending: matching against existing trips must not
+    // change just because an early label showed up.
+    return { title: early.join(" → "), name: "", countryCode: null, state: "pending", locationNote: null };
   }
 
   const localities: string[] = [];

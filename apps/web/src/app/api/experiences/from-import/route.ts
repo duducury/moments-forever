@@ -12,6 +12,7 @@ import {
   buildSeedCacheFromPlaces,
   enrichImportDraftPlaces,
 } from "@/lib/location/resolve-place-labels";
+import { persistExperiencePlaceCountryCodes } from "@/lib/location/place-country-code";
 import { getUserLicense } from "@/lib/licensing/get-user-license";
 import {
   NO_ACTIVE_LICENSE_MESSAGE,
@@ -132,6 +133,9 @@ export async function POST(request: Request) {
         albumStory,
       );
     }
+
+    // Best-effort: reuses the country codes the geocoder just returned.
+    await persistExperiencePlaceCountryCodes(supabase, result.id);
 
     return NextResponse.json(result);
   } catch (error) {

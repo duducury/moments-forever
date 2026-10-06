@@ -4,7 +4,7 @@
  */
 
 import {
-  countryCodeFromPlaceLabel,
+  countryCodeFromStoredOrLabel,
   resolveLocationDisplayName,
 } from "@moments-forever/shared";
 
@@ -35,6 +35,8 @@ export interface OwnerPlaceCardItem {
 type PlaceLink = {
   readonly name: string;
   readonly confirmed: boolean;
+  /** Stored `places.country_code` (null until resolved / pre-migration). */
+  readonly countryCode: string | null;
 };
 
 type AlbumRow = {
@@ -61,6 +63,8 @@ function placeLinkFromEmbed(momentEmbed: unknown): PlaceLink | null {
   return {
     name: place.name,
     confirmed: Boolean(place.confirmed_by_user),
+    countryCode:
+      typeof place.country_code === "string" ? place.country_code : null,
   };
 }
 
@@ -133,7 +137,8 @@ export async function loadOwnerPlaceCards(
         moment:moments!albums_source_moment_fkey (
           place:places (
             name,
-            confirmed_by_user
+            confirmed_by_user,
+            country_code
           )
         )
       `,
@@ -230,9 +235,11 @@ export async function loadOwnerPlaceCards(
       placeName: linkedPlace?.name ?? null,
       placeConfirmedByUser: linkedPlace?.confirmed ?? false,
     });
-    const countryCode =
-      countryCodeFromPlaceLabel(title) ??
-      countryCodeFromPlaceLabel(linkedPlace?.name);
+    const countryCode = countryCodeFromStoredOrLabel({
+      storedCode: linkedPlace?.countryCode,
+      confirmedByUser: linkedPlace?.confirmed ?? false,
+      labels: [title, linkedPlace?.name],
+    });
 
     return {
       albumId: album.id,
@@ -287,6 +294,7 @@ async function loadPlaceNamesByMoment(
     placesById.set(place.id as string, {
       name: place.name as string,
       confirmed: Boolean(place.confirmed_by_user),
+      countryCode: null,
     });
   }
   for (const moment of moments.data ?? []) {

@@ -13,7 +13,9 @@ import {
 } from "@moments-forever/shared";
 
 import {
+  getCachedGeocodeCountry,
   getCachedGeocodeLabel,
+  setCachedGeocodeCountry,
   setCachedGeocodeLabel,
 } from "./geocode-memory-cache";
 import {
@@ -57,12 +59,15 @@ export async function resolveLabelsForCoordinates(
   options: ResolvePlaceLabelsOptions = {},
 ): Promise<{
   readonly labels: Map<string, string>;
+  /** Geocoder-reported ISO alpha-2 per coordinate key (not every key has one). */
+  readonly countryCodes: Map<string, string>;
   readonly stats: ResolvePlaceLabelsStats;
 }> {
   const client = options.client ?? createNominatimClient();
   seedMemory(options.seedCache);
 
   const labels = new Map<string, string>();
+  const countryCodes = new Map<string, string>();
   let networkCount = 0;
   let resolvedCount = 0;
   let skippedCount = 0;
@@ -70,6 +75,8 @@ export async function resolveLabelsForCoordinates(
 
   for (const point of points) {
     const cached = getCachedGeocodeLabel(point.key);
+    const cachedCountry = getCachedGeocodeCountry(point.key);
+    if (cachedCountry) countryCodes.set(point.key, cachedCountry);
     if (cached !== undefined) {
       skippedCount += 1;
       if (cached) {
@@ -85,6 +92,11 @@ export async function resolveLabelsForCoordinates(
       point.longitude,
     );
 
+    if (result.countryCode) {
+      setCachedGeocodeCountry(point.key, result.countryCode);
+      countryCodes.set(point.key, result.countryCode);
+    }
+
     if (result.status === "rate_limited") {
       // One retry after the client already waited.
       const retry = await client.reverseGeocode(
@@ -92,6 +104,10 @@ export async function resolveLabelsForCoordinates(
         point.longitude,
       );
       networkCount += 1;
+      if (retry.countryCode) {
+        setCachedGeocodeCountry(point.key, retry.countryCode);
+        countryCodes.set(point.key, retry.countryCode);
+      }
       if (retry.label) {
         setCachedGeocodeLabel(point.key, retry.label);
         labels.set(point.key, retry.label);
@@ -120,6 +136,7 @@ export async function resolveLabelsForCoordinates(
 
   return {
     labels,
+    countryCodes,
     stats: {
       lookupCount: points.length,
       networkCount,

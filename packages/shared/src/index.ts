@@ -51,7 +51,9 @@ export {
 export {
   KNOWN_COUNTRY_CODES,
   countryCodeFromName,
+  countryCodeFromStoredOrLabel,
   countryNameFromCode,
+  normalizeCountryCode,
   countryCodeFromPlaceLabel,
   countryFlagFromPlaceLabel,
   countryNameFromPlaceLabel,

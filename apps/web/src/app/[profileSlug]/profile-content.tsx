@@ -5,6 +5,7 @@ import { AppWordmark } from "@/components/app-wordmark";
 import { ProfileCarousel } from "@/app/perfil/profile-carousel";
 import { loadOwnerCarouselPhotos } from "@/lib/experiences/load-owner-carousel-photos";
 import { loadOwnerPlaceCards } from "@/lib/experiences/load-owner-place-cards";
+import { persistOwnerPlaceCountryCodes } from "@/lib/location/place-country-code";
 import { LicenseGate } from "@/components/license-gate";
 import { getUserLicense } from "@/lib/licensing/get-user-license";
 import { isAdminUser } from "@/lib/licensing/require-admin";
@@ -75,6 +76,10 @@ async function ProfilePlacesBody({
       />
     );
   }
+
+  // Owner views record the country of any place that has none yet (one-time,
+  // best-effort) so flags/stamps do not depend on how a place is named.
+  if (isOwner) await persistOwnerPlaceCountryCodes(supabase, profile.id);
 
   // Only the owner ever needs to know whether the account has a license.
   const [result, license] = await Promise.all([

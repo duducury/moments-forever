@@ -382,3 +382,29 @@ test("trips created as draft/private are published by the backfill, and then sho
   must(psqlSync(conn, backfill));
   assert.equal(asVisitor(), "2");
 });
+
+test("places.country_code accepts ISO codes, refuses anything else, and the migration is repeatable", suite, () => {
+  const owner = newUser();
+  grantPlan(owner, "BASIC");
+  const [trip] = createTrips(owner, 1);
+  const insert = (code: string) =>
+    psqlSync(
+      conn,
+      `INSERT INTO public.places (experience_id, name, country_code) VALUES ('${trip}', 'Zanzibar', ${code});`,
+    );
+
+  assert.ok(insert("'TZ'").ok, "valid code");
+  assert.ok(insert("NULL").ok, "not resolved yet");
+  assert.ok(!insert("'tz'").ok, "lowercase refused");
+  assert.ok(!insert("'TZA'").ok, "alpha-3 refused");
+
+  const migration = readFileSync(
+    path.join(MIGRATIONS, "20261007100000_place_country_code.sql"),
+    "utf8",
+  );
+  must(psqlSync(conn, migration));
+  assert.equal(
+    must(psqlSync(conn, `SELECT count(*) FROM public.places WHERE country_code = 'TZ';`)),
+    "1",
+  );
+});

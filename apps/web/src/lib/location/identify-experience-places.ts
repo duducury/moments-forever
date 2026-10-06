@@ -5,6 +5,7 @@ import {
 } from "@moments-forever/shared";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { persistExperiencePlaceCountryCodes } from "./place-country-code";
 import {
   buildSeedCacheFromPlaces,
   resolveLabelsForCoordinates,
@@ -18,10 +19,28 @@ export interface IdentifyExperiencePlacesResult {
 }
 
 /**
- * Reverse-geocode generic places for an experience and write `places.name`.
- * Skips user-confirmed non-generic names. Does not throw on Nominatim errors.
+ * Reverse-geocode generic places for an experience and write `places.name`,
+ * then record each place's country (`places.country_code`) so the profile flag
+ * and passport stamp never depend on the name. Skips user-confirmed non-generic
+ * names. Does not throw on Nominatim errors.
  */
 export async function identifyExperiencePlaces(
+  supabase: SupabaseClient,
+  experienceId: string,
+  options: ResolvePlaceLabelsOptions = {},
+): Promise<IdentifyExperiencePlacesResult> {
+  const result = await identifyExperiencePlaceNames(
+    supabase,
+    experienceId,
+    options,
+  );
+  await persistExperiencePlaceCountryCodes(supabase, experienceId, {
+    client: options.client,
+  });
+  return result;
+}
+
+async function identifyExperiencePlaceNames(
   supabase: SupabaseClient,
   experienceId: string,
   options: ResolvePlaceLabelsOptions = {},

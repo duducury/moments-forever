@@ -5,6 +5,7 @@ import { AppWordmark } from "@/components/app-wordmark";
 import { AuthStatus } from "@/components/auth-status";
 import { SignalPwaBootReady } from "@/components/signal-pwa-boot-ready";
 import { displayNameFromUser } from "@/lib/auth/display-name";
+import { persistOwnerPlaceCountryCodes } from "@/lib/location/place-country-code";
 import { loadOwnerPlaceCards } from "@/lib/experiences/load-owner-place-cards";
 import { buildPassport } from "@/lib/passport/build-passport";
 import {
@@ -43,6 +44,9 @@ export default async function PassaportePage() {
   if (!user) {
     redirect("/login");
   }
+
+  // Record the country of any place that has none yet (one-time, best-effort).
+  await persistOwnerPlaceCountryCodes(supabase, user.id);
 
   // Profile + places in parallel — biggest win vs sequential waterfall.
   const [profileResult, placesResult] = await Promise.all([

@@ -11,6 +11,7 @@
  */
 
 import {
+  normalizeCountryCode,
   pickTravelPlaceName,
   type NominatimReverseLike,
 } from "@moments-forever/shared";
@@ -34,6 +35,8 @@ export type NominatimFetch = (
 
 export interface ReverseGeocodeResult {
   readonly label: string | null;
+  /** ISO 3166-1 alpha-2 from the geocoder's `address.country_code`, when valid. */
+  readonly countryCode?: string | null;
   readonly status: "ok" | "empty" | "error" | "rate_limited" | "timeout";
   readonly httpStatus?: number;
 }
@@ -122,8 +125,10 @@ export function createNominatimClient(options: NominatimClientOptions = {}) {
 
       const payload = (await response.json()) as NominatimReverseLike;
       const label = pickTravelPlaceName(payload);
+      const countryCode = normalizeCountryCode(payload.address?.country_code);
       return {
         label,
+        countryCode,
         status: label ? "ok" : "empty",
         httpStatus: response.status,
       };

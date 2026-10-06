@@ -20,9 +20,27 @@ export function setCachedGeocodeLabel(
   memory.set(key, label);
 }
 
+const countryMemory = new Map<string, string | null>();
+
+/** ISO alpha-2 the geocoder reported for the same rounded coordinates. */
+export function getCachedGeocodeCountry(
+  key: string,
+): string | null | undefined {
+  if (!countryMemory.has(key)) return undefined;
+  return countryMemory.get(key) ?? null;
+}
+
+export function setCachedGeocodeCountry(
+  key: string,
+  countryCode: string | null,
+): void {
+  countryMemory.set(key, countryCode);
+}
+
 /** Test helper — clears process cache. */
 export function clearGeocodeMemoryCache(): void {
   memory.clear();
+  countryMemory.clear();
 }
 
 export function geocodeMemoryCacheSize(): number {

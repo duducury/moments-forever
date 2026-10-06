@@ -403,6 +403,39 @@ export const KNOWN_COUNTRY_CODES: readonly string[] =
   Object.keys(COUNTRY_NAMES_BY_ISO);
 
 /**
+ * Validate a raw ISO alpha-2 value (e.g. Nominatim `address.country_code`, which
+ * is lowercase). Returns the upper-case code only when it is a known country.
+ */
+export function normalizeCountryCode(
+  raw: string | null | undefined,
+): string | null {
+  const code = raw?.trim().toUpperCase() ?? "";
+  return COUNTRY_NAMES_BY_ISO[code] ? code : null;
+}
+
+/**
+ * Country of a place from its stored `country_code` and its labels (see order below).
+ * Pure.
+ */
+export function countryCodeFromStoredOrLabel(input: {
+  readonly storedCode: string | null | undefined;
+  readonly confirmedByUser: boolean;
+  readonly labels: readonly (string | null | undefined)[];
+}): string | null {
+  const stored = normalizeCountryCode(input.storedCode);
+  const fromLabel = (): string | null => {
+    for (const label of input.labels) {
+      const code = countryCodeFromPlaceLabel(label);
+      if (code) return code;
+    }
+    return null;
+  };
+  // A place the user renamed on purpose wins over what the geocoder said then.
+  if (input.confirmedByUser) return fromLabel() ?? stored;
+  return stored ?? fromLabel();
+}
+
+/**
  * Portuguese (pt-BR) country name for an ISO alpha-2 code, or null when the
  * code is not a known country. Works for every ISO country.
  */

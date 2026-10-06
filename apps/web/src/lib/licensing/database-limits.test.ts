@@ -354,3 +354,31 @@ test("a burst with 2 free slots lets exactly 2 through", suite, async () => {
     "5",
   );
 });
+
+test("trips created as draft/private are published by the backfill, and then show on the public profile", suite, () => {
+  const owner = newUser();
+  grantPlan(owner, "BASIC");
+  must(psqlSync(conn, `UPDATE public.users SET profile_slug = 'perfil-${randomBytes(3).toString("hex")}' WHERE id = '${owner}';`));
+  const [first, second] = createTrips(owner, 2);
+  // What the app used to store for a new trip.
+  must(psqlSync(conn, `UPDATE public.experiences SET status = 'draft', visibility = 'private' WHERE id IN ('${first}', '${second}');`));
+
+  const asVisitor = () =>
+    must(
+      psqlSync(
+        conn,
+        `SET ROLE anon;\nSELECT count(*) FROM public.experiences WHERE owner_id = '${owner}';`,
+      ),
+    );
+  assert.equal(asVisitor(), "0", "private trips are invisible to visitors");
+
+  const backfill = readFileSync(
+    path.join(MIGRATIONS, "20261006100000_publish_trips_created_as_private.sql"),
+    "utf8",
+  );
+  must(psqlSync(conn, backfill));
+  assert.equal(asVisitor(), "2", "both trips show on the profile");
+  // Idempotent.
+  must(psqlSync(conn, backfill));
+  assert.equal(asVisitor(), "2");
+});

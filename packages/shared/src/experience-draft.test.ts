@@ -7,6 +7,7 @@ import type {
 } from "@moments-forever/types";
 
 import {
+  buildCreateExperiencePayload,
   buildExperienceDraftFromImport,
   mapLocalDateSourceToDb,
   suggestCoverPhotoId,
@@ -450,4 +451,25 @@ test("buildExperienceDraftFromImport: manual place name is confirmed", () => {
   });
   assert.equal(draft.places[0]?.name, "Nusa Penida");
   assert.equal(draft.places[0]?.confirmedByUser, true);
+});
+
+test("buildCreateExperiencePayload: a new trip is stored published and public, so its owner's profile shows it", () => {
+  // The in-memory draft is still a draft...
+  const draft = buildExperienceDraftFromImport({
+    ownerId: "11111111-1111-4111-8111-111111111111",
+    title: "Viagem",
+    slug: "viagem",
+    photos: [photo("p1", { gps: { latitude: 1, longitude: 2 } })],
+    groups: [group("g1", { kind: "location", label: "Local 1", photoIds: ["p1"] })],
+    selectedIds: ["p1"],
+  });
+  assert.equal(draft.experience.status, "draft");
+  assert.equal(draft.experience.visibility, "private");
+
+  // ...but what is sent to the database must not be: 'draft'/'private' there
+  // hid every trip created after the public-profile RLS migration from
+  // everyone except its owner (an admin visiting the profile saw "0 viagens").
+  const payload = buildCreateExperiencePayload(draft);
+  assert.equal(payload.experience.status, "published");
+  assert.equal(payload.experience.visibility, "public");
 });

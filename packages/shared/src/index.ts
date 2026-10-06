@@ -943,8 +943,8 @@ export interface CreateExperienceFromImportPayload {
     readonly primary_city: string | null;
     readonly primary_country: string | null;
     readonly cover_photo_id: string | null;
-    readonly status: "draft";
-    readonly visibility: "private";
+    readonly status: "published";
+    readonly visibility: "public";
   };
   readonly places: readonly {
     readonly id: string;
@@ -1024,8 +1024,14 @@ export function buildCreateExperiencePayload(
       primary_city: draft.experience.primaryCity,
       primary_country: draft.experience.primaryCountry,
       cover_photo_id: coverPhotoId,
-      status: "draft",
-      visibility: "private",
+      // What gets stored for a new trip. The in-memory draft says "draft"/"private",
+      // but sending that made every trip created after 20261001100000 invisible
+      // on its owner's public profile (the RPC's own 'published'/'public'
+      // fallback only applies when these are absent). There is no publish step
+      // or privacy switch in the app yet, so a new trip is shown on the
+      // owner's profile right away, exactly like before that migration.
+      status: "published",
+      visibility: "public",
     },
     places: draft.places.map((place) => {
       const id = placeIds.get(place.id);

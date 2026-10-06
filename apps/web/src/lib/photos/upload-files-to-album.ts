@@ -2,6 +2,7 @@ import { mapWithConcurrency } from "@/lib/async/map-with-concurrency";
 import { mapLocalDateSourceToDb } from "@moments-forever/shared";
 
 import { putLocalPhotoBlobs } from "@/lib/local-photos/photo-blob-store";
+import { applyNativeOrigin, type NativeOrigins } from "@/lib/photo-library/native-origin";
 import {
   createBrowserPhotoDerivatives,
   extractBrowserPhotoMetadata,
@@ -37,9 +38,11 @@ export async function uploadFilesToAlbum(input: {
   readonly experienceId: string;
   readonly albumId: string;
   readonly files: readonly File[];
+  /** Set only by "Encontrar viagem/fotos": which library photo each file came from. */
+  readonly origins?: NativeOrigins;
   readonly onProgress?: (message: string) => void;
 }): Promise<{ readonly cloudWarning: string | null }> {
-  const { experienceId, albumId, files, onProgress } = input;
+  const { experienceId, albumId, files, origins, onProgress } = input;
   type PreparedPhoto = {
     readonly id: string;
     readonly full: Blob;
@@ -54,6 +57,7 @@ export async function uploadFilesToAlbum(input: {
       readonly height: number | null;
       readonly bytes: number;
       readonly format: string | null;
+      readonly source_asset_id?: string;
     };
   };
 
@@ -64,7 +68,11 @@ export async function uploadFilesToAlbum(input: {
     2,
     async (file, index): Promise<PreparedPhoto> => {
       const id = crypto.randomUUID();
-      const metadata = await extractBrowserPhotoMetadata(id, file);
+      const origin = origins?.get(file);
+      const metadata = applyNativeOrigin(
+        await extractBrowserPhotoMetadata(id, file),
+        origin,
+      );
       const derivatives = await createBrowserPhotoDerivatives(file);
       const thumbnail = derivatives?.thumbnail ?? null;
       const preview = derivatives?.preview ?? null;
@@ -95,6 +103,7 @@ export async function uploadFilesToAlbum(input: {
           height: metadata.dimensions?.height ?? thumbnail?.height ?? null,
           bytes: full.size,
           format: full.type || "image/jpeg",
+          ...(origin ? { source_asset_id: origin.sourceAssetId } : {}),
         },
       };
     },

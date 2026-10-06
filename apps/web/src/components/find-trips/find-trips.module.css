@@ -1,0 +1,709 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: grid;
+  /* A track that may shrink: without minmax(0, …) the card's min-content (a long
+     place name) would stretch the track — and the sheet — past the screen. */
+  grid-template-columns: minmax(0, 1fr);
+  /* A foreground screen: the page behind is dimmed and cannot be reached. The sheet
+     hangs from just under the status bar / Dynamic Island down to the bottom edge. */
+  place-items: end center;
+  padding: max(12px, env(safe-area-inset-top)) 0 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: none;
+  background: var(--overlay);
+}
+
+.card {
+  /* Everything inside the sheet is drawn on the sheet's own palette, in both themes. */
+  --surface: var(--sheet-raised);
+  --surface-secondary: var(--sheet-inset);
+  --border: var(--sheet-border);
+  --sheet-pad: 20px;
+  display: flex;
+  min-width: 0;
+  width: min(100%, 560px);
+  max-height: calc(100dvh - max(12px, env(safe-area-inset-top)) - 12px);
+  flex-direction: column;
+  gap: 12px;
+  overflow: hidden;
+  border: 1px solid var(--sheet-border);
+  border-bottom: 0;
+  border-radius: 26px 26px 0 0;
+  /* The bottom inset belongs to the sheet: the footer sits above the Home Indicator. */
+  padding: var(--sheet-pad) var(--sheet-pad) calc(var(--sheet-pad) + env(safe-area-inset-bottom, 0px));
+  color: var(--ink);
+  background: var(--sheet);
+  box-shadow: 0 -16px 48px rgb(0 0 0 / 38%);
+}
+
+@media (min-width: 640px) {
+  .backdrop {
+    place-items: center;
+    padding: 24px;
+  }
+
+  .card {
+    max-height: min(85dvh, 780px);
+    border-bottom: 1px solid var(--sheet-border);
+    border-radius: 26px;
+    padding-bottom: var(--sheet-pad);
+  }
+}
+
+.card h2 {
+  margin: 2px 0 4px;
+  font-size: 1.4rem;
+}
+
+/* Filter chips: compact pills; the selected one wears the terracotta. They wrap — never a sideways scroll. */
+.chips {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0 10px;
+  color: var(--ink);
+  background: transparent;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 650;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.chip[data-active="true"] {
+  border-color: var(--accent);
+  color: var(--sheet);
+  background: var(--accent);
+}
+
+.chip .flag {
+  width: 18px;
+  height: 13px;
+}
+
+.hint {
+  overflow-wrap: anywhere;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.body {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+}
+
+.section {
+  margin: 14px 0 8px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 64px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 10px 12px;
+  color: var(--ink);
+  background: var(--surface);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.row[data-selected="true"] {
+  border-color: var(--accent);
+  background: var(--surface-secondary);
+}
+
+.row:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.check {
+  display: grid;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.row[data-selected="true"] .check {
+  border-color: var(--accent);
+  color: var(--surface);
+  background: var(--accent);
+}
+
+.flag {
+  flex: none;
+  width: 22px;
+  height: 16px;
+  border-radius: 3px;
+  object-fit: cover;
+}
+
+.rowCopy {
+  display: grid;
+  min-width: 0;
+  flex: 1;
+  gap: 2px;
+}
+
+.rowTitle {
+  overflow: hidden;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rowMeta {
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.rowHint {
+  color: var(--accent);
+  font-size: 0.8rem;
+}
+
+.linkButton {
+  min-height: 40px;
+  border: 0;
+  padding: 0 8px;
+  color: var(--accent);
+  background: transparent;
+  font: inherit;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.toolbar {
+  display: grid;
+  gap: 4px;
+}
+
+.toolbarActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+
+.toolbar .linkButton {
+  min-height: 36px;
+  padding: 0;
+  font-size: 0.92rem;
+}
+
+.nameInput {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  color: var(--ink);
+  background: var(--surface);
+  font: inherit;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.cell {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border: 0;
+  border-radius: 8px;
+  padding: 0;
+  background: var(--surface-secondary);
+  cursor: pointer;
+}
+
+.cell img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.cellMark {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  color: transparent;
+  background: rgb(0 0 0 / 25%);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.cell[data-selected="true"] .cellMark {
+  border-color: var(--accent);
+  color: #fff;
+  background: var(--accent);
+}
+
+.cell[data-selected="true"] img {
+  opacity: 0.8;
+}
+
+.summaryRow {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--border);
+  padding: 12px 0;
+}
+
+.summaryTotal {
+  margin: 14px 0 0;
+  font-weight: 750;
+}
+
+/* The footer is part of the sheet: pinned under the scrolling content, divided from it,
+   and carrying the Home Indicator inset. */
+.actions {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin: 4px calc(-1 * var(--sheet-pad)) calc(-1 * (var(--sheet-pad) + env(safe-area-inset-bottom, 0px)));
+  border-top: 1px solid var(--sheet-border);
+  padding: 14px var(--sheet-pad) calc(14px + env(safe-area-inset-bottom, 0px));
+  background: var(--sheet);
+  box-shadow: 0 -12px 18px -14px rgb(0 0 0 / 40%);
+}
+
+@media (min-width: 640px) {
+  .actions {
+    margin-bottom: calc(-1 * var(--sheet-pad));
+    padding-bottom: 14px;
+  }
+}
+
+.error {
+  margin: 0;
+  color: #b3261e;
+  font-size: 0.92rem;
+}
+
+.progress {
+  display: grid;
+  gap: 10px;
+  padding: 18px 0;
+  text-align: center;
+}
+
+.stats {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.banner {
+  display: grid;
+  gap: 8px;
+  border-radius: 14px;
+  padding: 12px;
+  background: var(--surface-secondary);
+  font-size: 0.9rem;
+}
+
+.eyebrow {
+  margin: 0;
+  color: var(--accent);
+  font-size: 0.74rem;
+  font-weight: 750;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.card h2 {
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 600;
+  line-height: 1.15;
+}
+
+/* One discovered trip: real pictures first, then place, dates and count. */
+.card2 {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--surface);
+}
+
+.card2[data-selected="true"] {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.cardMain {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 4px;
+  min-width: 0;
+  width: 100%;
+  border: 0;
+  padding: 14px 14px 12px;
+  color: var(--ink);
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.cardHead {
+  display: flex;
+  min-width: 0;
+  min-height: 28px;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.cardHeadMain {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 8px;
+}
+
+/* The root cause of the sideways scroll was here: `white-space: nowrap` on a
+   long place name made the card as wide as the text. It now wraps. */
+.cardTitle {
+  min-width: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.3rem;
+  font-weight: 600;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+/* "✨ Nova": discreet, terracotta — only on trips that are not in Moments Forever yet. */
+.badgeNew {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--border));
+  border-radius: 999px;
+  padding: 4px 10px;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.cardMetaRow {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin-bottom: 8px;
+}
+
+.cardMeta {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+  overflow-wrap: anywhere;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.metaIcon {
+  flex: none;
+  width: 16px;
+  height: 16px;
+}
+
+.placePill {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px 10px 3px 8px;
+  color: var(--muted);
+  background: color-mix(in srgb, var(--ink) 5%, transparent);
+  font-size: 0.82rem;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.skeleton {
+  display: block;
+  width: 46%;
+  height: 20px;
+  border-radius: 8px;
+  background: linear-gradient(
+    90deg,
+    var(--surface-secondary),
+    var(--border),
+    var(--surface-secondary)
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.strip,
+.stripSmall {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.stripSmall {
+  grid-template-columns: repeat(3, 56px);
+}
+
+.stripCell {
+  position: relative;
+  display: block;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 10px;
+  background: var(--surface-secondary);
+}
+
+.stripCell img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.stripMore {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: rgb(0 0 0 / 45%);
+  font-size: 0.95rem;
+  font-weight: 750;
+}
+
+.cardActions {
+  display: grid;
+  gap: 2px;
+  border-top: 1px solid var(--border);
+  padding: 8px 12px 12px 14px;
+}
+
+/* "27 fotos encontradas" on the left, "Ver todas as fotos ›" on the right, on one line.
+   The photos are ticked in the grid it opens — never on the card. */
+.cardFoot {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0 6px;
+}
+
+.viewAll {
+  display: inline-flex;
+  flex: none;
+  min-height: 44px;
+  align-items: center;
+  gap: 4px;
+  margin-right: -2px;
+  border: 0;
+  border-radius: 12px;
+  padding: 0 2px 0 6px;
+  color: var(--ink);
+  background: transparent;
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.viewAll:active {
+  background: var(--surface-secondary);
+}
+
+.cardCounts,
+.toolbarCounts {
+  display: grid;
+  min-width: 0;
+  gap: 1px;
+}
+
+.countFound {
+  display: inline-flex;
+  min-width: 0;
+  flex: 1 1 0;
+  align-items: center;
+  gap: 6px;
+  overflow-wrap: anywhere;
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.countSelected {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 0.95rem;
+  font-weight: 750;
+}
+
+/* The ring before "0 selecionadas": empty at zero, a terracotta check once something is ticked. */
+.selectedDot {
+  display: grid;
+  flex: none;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  color: inherit;
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.selectedDot[data-active="true"] {
+  border-color: var(--accent);
+  color: var(--sheet);
+  background: var(--accent);
+}
+
+.countSelected[data-active="true"] {
+  color: var(--accent);
+}
+
+.detailHead {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.back {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  color: var(--ink);
+  background: var(--surface-secondary);
+  font-size: 1.6rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.detailTitleBlock {
+  min-width: 0;
+}
+
+.detailTitle {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  overflow-wrap: anywhere;
+}
+
+.reviewRow {
+  display: grid;
+  gap: 8px;
+  border-bottom: 1px solid var(--border);
+  padding: 14px 0;
+}
+
+.reviewTop {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.reviewTitle {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  font-weight: 750;
+  overflow-wrap: anywhere;
+}
+
+.cardNote {
+  margin: -4px 0 8px;
+  color: var(--accent);
+  font-size: 0.82rem;
+  font-weight: 650;
+}

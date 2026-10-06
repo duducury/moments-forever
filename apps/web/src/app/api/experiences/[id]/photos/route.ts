@@ -3,6 +3,10 @@ import { NextResponse } from "next/server";
 import { assignPhotosToAlbumsInExperience } from "@/lib/location/assign-photos-to-places";
 import { ensureAlbumMomentId } from "@/lib/location/ensure-album-moment";
 import { identifyExperiencePlaces } from "@/lib/location/identify-experience-places";
+import {
+  isMissingSourceAssetColumn,
+  normalizeSourceAssetId,
+} from "@/lib/photo-library/source-asset-id";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 interface IncomingPhoto {
@@ -17,6 +21,8 @@ interface IncomingPhoto {
   readonly height?: number | null;
   readonly bytes?: number | null;
   readonly format?: string | null;
+  /** Only sent by "Encontrar viagem/fotos": '<platform>:<native id>' of the library photo. */
+  readonly source_asset_id?: string | null;
 }
 
 interface PostBody {
@@ -280,6 +286,7 @@ export async function POST(
       Number.isFinite(lat) &&
       Number.isFinite(lng);
 
+    const sourceAssetId = normalizeSourceAssetId(photo.source_asset_id);
     rows.push({
       id: photo.id,
       experience_id: experienceId,
@@ -295,15 +302,31 @@ export async function POST(
       height: photo.height ?? null,
       bytes: photo.bytes ?? null,
       format: photo.format ?? null,
+      // Key only present when sent, so the normal pickers never depend on the column.
+      ...(sourceAssetId ? { source_asset_id: sourceAssetId } : {}),
     });
   }
 
-  const inserted = await supabase
-    .from("photos")
-    .insert(rows)
-    .select(
-      "id, experience_id, album_id, moment_id, position_in_album, position_in_moment, captured_at, width, height, exact_latitude, exact_longitude",
-    );
+  const SELECT_COLUMNS =
+    "id, experience_id, album_id, moment_id, position_in_album, position_in_moment, captured_at, width, height, exact_latitude, exact_longitude";
+  let inserted = await supabase.from("photos").insert(rows).select(SELECT_COLUMNS);
+  if (
+    inserted.error &&
+    isMissingSourceAssetColumn(inserted.error.message) &&
+    rows.some((row) => "source_asset_id" in row)
+  ) {
+    // Migration not applied yet: still add the photos, just without remembering their origin.
+    inserted = await supabase
+      .from("photos")
+      .insert(
+        rows.map((row) => {
+          const withoutOrigin: Record<string, unknown> = { ...row };
+          delete withoutOrigin.source_asset_id;
+          return withoutOrigin;
+        }),
+      )
+      .select(SELECT_COLUMNS);
+  }
 
   if (inserted.error || !inserted.data) {
     return NextResponse.json(

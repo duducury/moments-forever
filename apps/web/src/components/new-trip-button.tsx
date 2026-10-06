@@ -1,15 +1,21 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useRef, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 import {
   IMPORT_FILE_ACCEPT,
   setPendingImportFiles,
 } from "@/lib/photo-import/pending-import-files";
 
+import { useAddPhotosMenu } from "./add-photos-menu";
+import { FindTripsFlow } from "./find-trips/find-trips-flow";
+
 /**
- * Opens the device photo picker first; only then goes to /import with those files.
+ * Opens the app's "Adicionar fotos" menu (Escolher fotos, Tirar uma foto,
+ * ✨ Encontrar viagem) and only then goes to /import with the chosen
+ * files. Without the native photo plugin (browser, older app) it opens the
+ * device photo picker directly, as it always did.
  */
 export function NewTripButton({
   className,
@@ -19,31 +25,30 @@ export function NewTripButton({
   readonly children: ReactNode;
 }) {
   const router = useRouter();
-  const inputRef = useRef<HTMLInputElement | null>(null);
+  const [finding, setFinding] = useState(false);
+  const { openMenu, menu } = useAddPhotosMenu({
+    findLabel: "Encontrar viagem",
+    libraryAccept: IMPORT_FILE_ACCEPT,
+    // /import has its own pipeline: the native picker's `origins` are not used here.
+    onFiles: (files) => {
+      setPendingImportFiles(files);
+      router.push("/import");
+    },
+    onFind: () => setFinding(true),
+  });
 
   return (
     <>
-      <button
-        className={className}
-        onClick={() => inputRef.current?.click()}
-        type="button"
-      >
+      <button className={className} onClick={openMenu} type="button">
         {children}
       </button>
-      <input
-        accept={IMPORT_FILE_ACCEPT}
-        multiple
-        onChange={(event) => {
-          const files = [...(event.target.files ?? [])];
-          event.target.value = "";
-          if (files.length === 0) return;
-          setPendingImportFiles(files);
-          router.push("/import");
-        }}
-        ref={inputRef}
-        style={{ display: "none" }}
-        type="file"
-      />
+      {menu}
+      {finding ? (
+        <FindTripsFlow
+          onClose={() => setFinding(false)}
+          target={{ mode: "discover" }}
+        />
+      ) : null}
     </>
   );
 }

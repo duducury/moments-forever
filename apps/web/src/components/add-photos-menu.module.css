@@ -1,0 +1,155 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: grid;
+  place-items: end center;
+  padding: 12px 12px calc(12px + env(safe-area-inset-bottom, 0px));
+  overscroll-behavior: none;
+  touch-action: none;
+  background: var(--overlay);
+}
+
+.sheet {
+  /* The sheet is its own surface, lifted off the page in both themes (see --sheet in globals.css). */
+  --surface: var(--sheet-raised);
+  --surface-secondary: var(--sheet-inset);
+  --border: var(--sheet-border);
+  display: grid;
+  width: min(100%, 460px);
+  gap: 12px;
+  border: 1px solid var(--sheet-border);
+  border-radius: 28px;
+  padding: 18px 14px 14px;
+  background: var(--sheet);
+  box-shadow: 0 -8px 48px rgb(0 0 0 / 38%);
+}
+
+.title {
+  margin: 0 6px;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 750;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* "Escolher fotos", "Tirar uma foto" and "Encontrar uma viagem": three identical tiles — same size, border, radius,
+   icon box, type and pressed state. None is more important than the others. */
+.actions {
+  display: grid;
+  gap: 10px;
+}
+
+.action {
+  display: flex;
+  min-height: 78px;
+  align-items: center;
+  gap: 14px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 10px 14px;
+  color: var(--ink);
+  background: var(--surface);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.action:active {
+  background: var(--surface-secondary);
+}
+
+@media (hover: hover) {
+  .action:hover {
+    background: var(--surface-secondary);
+  }
+}
+
+.icon {
+  display: grid;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border-radius: 12px;
+  color: var(--ink);
+  background: var(--sheet);
+}
+
+.icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.copy {
+  display: grid;
+  gap: 2px;
+}
+
+.copyTitle {
+  font-size: 1.02rem;
+  font-weight: 700;
+}
+
+.copyHint {
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.3;
+}
+
+.cancel {
+  min-height: 50px;
+  border: 0;
+  border-radius: 16px;
+  color: var(--muted);
+  background: transparent;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.busy {
+  display: flex;
+  align-items: center;
+  align-self: center;
+  gap: 12px;
+  margin: auto;
+  border: 1px solid var(--sheet-border);
+  border-radius: 18px;
+  padding: 16px 20px;
+  color: var(--ink);
+  background: var(--sheet);
+  font-weight: 700;
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.25);
+}
+
+.busyClose {
+  border: 0;
+  border-radius: 12px;
+  padding: 8px 12px;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: addPhotosSpin 0.8s linear infinite;
+}
+
+@keyframes addPhotosSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.hidden {
+  display: none;
+}

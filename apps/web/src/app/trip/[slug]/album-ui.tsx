@@ -12,6 +12,7 @@ import {
 import { createPortal } from "react-dom";
 
 import { AppWordmark } from "@/components/app-wordmark";
+import { useLockPageScroll } from "@/components/use-lock-page-scroll";
 import { deleteLocalPhotoBlobs } from "@/lib/local-photos/photo-blob-store";
 import {
   isLocalPhotoFullPreloaded,
@@ -615,41 +616,7 @@ export function TripBreadcrumb({
   );
 }
 
-export function useLockPageScroll() {
-  useEffect(() => {
-    const html = document.documentElement;
-    const body = document.body;
-    const scrollY = window.scrollY;
-    const previous = {
-      htmlOverflow: html.style.overflow,
-      htmlOverscroll: html.style.overscrollBehavior,
-      bodyOverflow: body.style.overflow,
-      bodyOverscroll: body.style.overscrollBehavior,
-      bodyPosition: body.style.position,
-      bodyTop: body.style.top,
-      bodyWidth: body.style.width,
-    };
-
-    html.style.overflow = "hidden";
-    html.style.overscrollBehavior = "none";
-    body.style.overflow = "hidden";
-    body.style.overscrollBehavior = "none";
-    body.style.position = "fixed";
-    body.style.top = `-${scrollY}px`;
-    body.style.width = "100%";
-
-    return () => {
-      html.style.overflow = previous.htmlOverflow;
-      html.style.overscrollBehavior = previous.htmlOverscroll;
-      body.style.overflow = previous.bodyOverflow;
-      body.style.overscrollBehavior = previous.bodyOverscroll;
-      body.style.position = previous.bodyPosition;
-      body.style.top = previous.bodyTop;
-      body.style.width = previous.bodyWidth;
-      window.scrollTo(0, scrollY);
-    };
-  }, []);
-}
+export { useLockPageScroll };
 
 export function NameDialog({
   title,

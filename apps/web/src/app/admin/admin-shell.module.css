@@ -26,7 +26,8 @@
   width: 272px;
   height: 100dvh;
   height: 100vh;
-  padding: 28px 20px 24px;
+  /* The page draws under the status bar / Dynamic Island: keep the drawer's content below it. */
+  padding: calc(28px + env(safe-area-inset-top, 0px)) 20px calc(24px + env(safe-area-inset-bottom, 0px));
   border-right: 1px solid var(--border);
   background: color-mix(in srgb, var(--surface) 96%, black 4%);
   transform: translateX(-100%);
@@ -69,7 +70,7 @@
 
 .closeDrawer {
   position: absolute;
-  top: 18px;
+  top: calc(18px + env(safe-area-inset-top, 0px));
   right: 16px;
   display: grid;
   place-items: center;
@@ -198,8 +199,9 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  min-height: 56px;
-  padding: 0 16px;
+  /* Starts under the status bar / Dynamic Island, so the buttons are never behind it. */
+  min-height: calc(56px + env(safe-area-inset-top, 0px));
+  padding: env(safe-area-inset-top, 0px) 16px 0;
   border-bottom: 1px solid var(--border);
   background: color-mix(in srgb, var(--background) 92%, transparent);
   backdrop-filter: blur(10px);
@@ -223,6 +225,45 @@
   background: var(--surface);
   color: var(--text);
   cursor: pointer;
+}
+
+/* Always-visible way out of the admin area (the drawer has it too). */
+.mobileBack {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  padding: 0 14px 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+/* First thing in the sidebar / drawer: back to the app. */
+.backApp {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-secondary);
+  color: var(--text);
+  font-size: 0.92rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.backApp:hover {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
 }
 
 .mobileBrand {

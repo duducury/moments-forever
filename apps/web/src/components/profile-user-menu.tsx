@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
@@ -14,9 +15,17 @@ import styles from "./profile-user-menu.module.css";
  * caller, see /api/blocks and /api/reports). Replaces a previous standalone
  * "Denunciar" button that sat directly over the album cover photo — this
  * consolidates every profile-level action behind one discreet trigger.
+ * "Administrador" appears only for the admin on their own profile.
  * "Sair" is shown to any signed-in user, last and set apart.
  */
-export function ProfileUserMenu({ ownerId }: { readonly ownerId: string }) {
+export function ProfileUserMenu({
+  ownerId,
+  isAdmin = false,
+}: {
+  readonly ownerId: string;
+  /** Only ever true on the admin's own profile (the page decides), never for a visitor. */
+  readonly isAdmin?: boolean;
+}) {
   const router = useRouter();
   const { user, signOut } = useAuth();
   const [open, setOpen] = useState(false);
@@ -169,6 +178,16 @@ export function ProfileUserMenu({ ownerId }: { readonly ownerId: string }) {
                 Denunciar usuário
               </button>
             </>
+          ) : null}
+          {isAdmin ? (
+            <Link
+              className={styles.menuItem}
+              href="/admin"
+              onClick={() => setOpen(false)}
+              role="menuitem"
+            >
+              Administrador
+            </Link>
           ) : null}
           {user ? (
             <button

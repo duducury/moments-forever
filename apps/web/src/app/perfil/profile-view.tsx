@@ -1,4 +1,3 @@
-import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { countryCodeFromPlaceLabel } from "@moments-forever/shared";
@@ -96,13 +95,8 @@ export function ProfileView({
               Nova viagem
             </NewTripButton>
           ) : null}
-          {isAdmin ? (
-            <Link className="text-link" href="/admin">
-              Admin
-            </Link>
-          ) : null}
           <AuthStatus hideUserName={isOwner} />
-          <ProfileUserMenu ownerId={ownerId} />
+          <ProfileUserMenu isAdmin={isAdmin} ownerId={ownerId} />
         </div>
       </nav>
 

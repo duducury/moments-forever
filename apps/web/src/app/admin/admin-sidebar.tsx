@@ -47,6 +47,9 @@ export function AdminSidebar() {
         <span className={styles.mobileBrand}>
           Moments Forever<em>Admin</em>
         </span>
+        <Link className={styles.mobileBack} href="/perfil">
+          <span aria-hidden>‹</span> Voltar
+        </Link>
       </header>
 
       {open ? (
@@ -71,6 +74,10 @@ export function AdminSidebar() {
           <span className={styles.brandName}>Moments Forever</span>
           <span className={styles.brandEyebrow}>Admin</span>
         </div>
+
+        <Link className={styles.backApp} href="/perfil" onClick={() => setOpen(false)}>
+          <span aria-hidden>‹</span> Voltar ao app
+        </Link>
 
         <nav aria-label="Admin" className={styles.nav}>
           {NAV_ITEMS.map(({ href, label, Icon }) => (

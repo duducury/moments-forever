@@ -40,7 +40,9 @@
 }
 
 .menuItem {
+  display: block;
   width: 100%;
+  text-decoration: none;
   padding: 10px 12px;
   border: none;
   border-radius: 9px;

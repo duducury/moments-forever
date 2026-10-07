@@ -5,6 +5,7 @@ import { SignalPwaBootReady } from "@/components/signal-pwa-boot-ready";
 import { APP_STORE_URL } from "@/lib/ios/app-store";
 import { loadPricingPlans } from "@/lib/pricing/load-pricing-plans";
 import { HomePrimaryCta } from "./home-cta";
+import { HomeAppStoreBadge } from "./home-app-store-badge";
 import { HomeFooterNav } from "./home-footer-nav";
 import { HomeHeader } from "./home-header";
 import { JourneySky } from "./journey-sky";
@@ -292,6 +293,7 @@ export default async function Home() {
           <AppCreditFooter />
         </div>
         <HomeFooterNav />
+        <HomeAppStoreBadge />
       </footer>
     </main>
   );

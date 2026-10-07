@@ -75,20 +75,16 @@ export function HomeDownloadSection() {
         </div>
         <div className={styles.downloadPhone}>
           <div className={styles.downloadScreen}>
+            {/* Real capture of the app (Mapa), used as sent: no edits, no filters. */}
             <Image
               alt=""
               className={styles.downloadScreenImage}
-              height={1600}
+              height={2796}
               sizes="240px"
-              src="/home/santorini.jpg"
-              width={1200}
+              src="/home/app-screen-mapa.png"
+              width={1290}
             />
             <span className={styles.downloadIsland} />
-            <div className={styles.downloadScreenCard}>
-              <p className={styles.downloadScreenKicker}>Perfil</p>
-              <p className={styles.downloadScreenTitle}>Santorini, Grécia</p>
-              <p className={styles.downloadScreenMeta}>12 jun 2024 · 9 fotos</p>
-            </div>
           </div>
         </div>
       </div>

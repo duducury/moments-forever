@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { copyLink } from "@/lib/share/share-link";
 import { ExperienceCoverThumb } from "@/components/experience-cover-thumb";
 import {
   isNativeNfcSupported,
@@ -254,11 +255,7 @@ export function NfcManagerClient() {
   }
 
   async function copyUrl(albumId: string, url: string) {
-    try {
-      await navigator.clipboard.writeText(url);
-    } catch {
-      window.prompt("Copie o link:", url);
-    }
+    if ((await copyLink(url)) === "failed") window.prompt("Copie o link:", url);
     setCopiedId(albumId);
     setTimeout(() => {
       setCopiedId((current) => (current === albumId ? null : current));

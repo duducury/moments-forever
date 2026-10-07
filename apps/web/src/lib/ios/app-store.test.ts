@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
@@ -107,3 +108,26 @@ test("the download section sits right after the plans, the footer has no badge, 
     /prefers-reduced-motion: reduce\)\s*\{\s*\.download \.downloadEyebrow[\s\S]*?\.download \.downloadPolaroid\s*\{\s*animation: none !important;/,
   );
 });
+
+/** sha256 of the capture exactly as it was sent (iPhone screenshot, 1290x2796). */
+const APP_SCREEN_SHA256 = "b658af2ff3a42ac379850a176b8b9a87caf545e43b6d91e0c231ee485a5e6c8f";
+
+test("the iPhone in the download section shows the real app capture, byte for byte", () => {
+  const web = path.resolve(__dirname, "../../..");
+  const png = readFileSync(path.join(web, "public/home/app-screen-mapa.png"));
+  assert.equal(createHash("sha256").update(png).digest("hex"), APP_SCREEN_SHA256, "file is the supplied capture");
+  assert.equal(png.readUInt32BE(16), 1290, "width");
+  assert.equal(png.readUInt32BE(20), 2796, "height");
+
+  const section = readFileSync(path.join(web, "src/app/home-download-section.tsx"), "utf8");
+  assert.match(section, /src="\/home\/app-screen-mapa\.png"/);
+  // No invented screen: the old generic trip content is gone.
+  assert.doesNotMatch(section, /Santorini|santorini|9 fotos|Perfil<|downloadScreenCard/);
+
+  const css = readFileSync(path.join(web, "src/app/home.module.css"), "utf8");
+  const rule = css.match(/\.downloadScreenImage\s*\{([^}]*)\}/)?.[1] ?? "";
+  assert.doesNotMatch(rule, /filter/, "no filters on the capture");
+  assert.match(rule, /object-fit: cover/);
+  assert.doesNotMatch(css, /downloadScreenCard|downloadScreenKicker|downloadScreenTitle|downloadScreenMeta/);
+});
+

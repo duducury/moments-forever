@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
+import { canShareNatively, copyLink as copyLinkToClipboard, shareLink as shareLinkNatively } from "@/lib/share/share-link";
 import { useAuth } from "./auth-provider";
 import { ReportContentDialog } from "./report-content-dialog";
 import styles from "./profile-user-menu.module.css";
@@ -38,7 +39,7 @@ export function ProfileUserMenu({
   // Only read when the menu is actually open — i.e. only after a client
   // interaction, never during the initial render — so this never causes a
   // server/client hydration mismatch (navigator isn't defined during SSR).
-  const canShare = open && typeof navigator !== "undefined" && Boolean(navigator.share);
+  const canShare = open && canShareNatively();
 
   useEffect(() => {
     if (!open) return;
@@ -73,21 +74,25 @@ export function ProfileUserMenu({
 
   async function copyLink() {
     setOpen(false);
-    try {
-      await navigator.clipboard.writeText(window.location.href);
+    const url = window.location.href;
+    if ((await copyLinkToClipboard(url)) === "copied") {
       setStatus("Link copiado");
-    } catch {
-      window.prompt("Copie o link:", window.location.href);
+    } else {
+      window.prompt("Copie o link:", url);
     }
   }
 
   async function shareLink() {
     setOpen(false);
-    try {
-      await navigator.share({ url: window.location.href });
-    } catch {
-      // User cancelled the share sheet, or it failed — nothing to report.
-    }
+    const url = window.location.href;
+    const result = await shareLinkNatively({
+      url,
+      title: "Perfil no Moments Forever",
+      text: "Veja este perfil no Moments Forever.",
+    });
+    if (result === "copied") setStatus("Link copiado");
+    else if (result === "failed") window.prompt("Copie o link:", url);
+    // "shared" / "cancelled": nothing to show.
   }
 
   // Same behaviour as "Sair" in Geral: end the session, then back to the login.

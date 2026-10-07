@@ -1015,54 +1015,20 @@ html[data-nav-hidden="true"] .header {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  filter: saturate(1.05);
+  object-position: top center;
 }
 
 .downloadIsland {
   position: absolute;
-  top: 9px;
+  /* Real Dynamic Island proportions (in % of the screen) so it stays inside the
+     status bar of the capture at any size and never covers the app's header. */
+  top: 1.4%;
   left: 50%;
-  width: 62px;
-  height: 18px;
+  width: 31%;
+  height: 3.6%;
   border-radius: 999px;
   background: #000;
   transform: translateX(-50%);
-}
-
-.downloadScreenCard {
-  position: absolute;
-  right: 10px;
-  bottom: 12px;
-  left: 10px;
-  display: grid;
-  gap: 2px;
-  padding: 12px 13px;
-  border-radius: 16px;
-  background: rgb(18 17 16 / 82%);
-  backdrop-filter: blur(8px);
-}
-
-.downloadScreenKicker {
-  margin: 0;
-  color: #d08a6e;
-  font-size: 0.62rem;
-  font-weight: 750;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.downloadScreenTitle {
-  margin: 0;
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: 1.05rem;
-  font-weight: 500;
-  letter-spacing: -0.02em;
-}
-
-.downloadScreenMeta {
-  margin: 0;
-  color: rgb(247 242 234 / 64%);
-  font-size: 0.66rem;
 }
 
 .downloadPolaroid {

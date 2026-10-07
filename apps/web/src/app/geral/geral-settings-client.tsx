@@ -11,6 +11,8 @@ import { displayNameFromUser } from "@/lib/auth/display-name";
 import { toggleThemePreference } from "@/lib/theme/theme";
 
 import { DeleteAccountSection } from "./delete-account-section";
+import { EditProfileDialog } from "../perfil/edit-profile-dialog";
+import { DEFAULT_BIO } from "../perfil/profile-header";
 import { ProfileAvatar } from "../perfil/profile-avatar";
 import styles from "./geral.module.css";
 
@@ -124,18 +126,46 @@ function PhotosIcon() {
   );
 }
 
+function AdminIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" height="20" viewBox="0 0 24 24" width="20">
+      <path
+        d="M12 3 5 6v5.5c0 4.1 2.8 7.6 7 9 4.2-1.4 7-4.9 7-9V6l-7-3Z"
+        stroke="currentColor"
+        strokeLinejoin="round"
+        strokeWidth="1.5"
+      />
+      <path
+        d="m9.2 12 2 2 3.6-3.8"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.5"
+      />
+    </svg>
+  );
+}
+
 export function GeralSettingsClient({
   avatarPhotoId = null,
   avatarRemoteSrc = null,
-  profileHref = "/perfil",
+  isAdmin = false,
+  ownerId = "",
+  profileBio = null,
+  profileName = "",
 }: {
   readonly avatarPhotoId?: string | null;
   readonly avatarRemoteSrc?: string | null;
-  readonly profileHref?: string;
+  /** Decided on the server (see page.tsx); the admin entry is not rendered at all when false. */
+  readonly isAdmin?: boolean;
+  readonly ownerId?: string;
+  readonly profileBio?: string | null;
+  readonly profileName?: string;
 } = {}) {
   const router = useRouter();
   const { user, signOut } = useAuth();
   const { preference, setPreference } = useTheme();
+  const [editProfileOpen, setEditProfileOpen] = useState(false);
   const [optimizeStatus, setOptimizeStatus] = useState<
     "idle" | "running" | "done" | "error"
   >("idle");
@@ -218,7 +248,12 @@ export function GeralSettingsClient({
       <p className={styles.sectionLabel}>Conta</p>
       <ul className={styles.list}>
         <li>
-          <Link className={styles.accountCard} href={profileHref}>
+          <button
+            aria-label="Editar perfil"
+            className={styles.accountCard}
+            onClick={() => setEditProfileOpen(true)}
+            type="button"
+          >
             <ProfileAvatar
               avatarPhotoId={avatarPhotoId}
               displayName={name ?? "Você"}
@@ -228,14 +263,38 @@ export function GeralSettingsClient({
             />
             <div className={styles.accountMeta}>
               <p className={styles.accountName}>{name ?? "Sua conta"}</p>
-              <p className={styles.accountHint}>Ajustes da conta e do app.</p>
+              <p className={styles.accountHint}>Toque para editar seu perfil.</p>
             </div>
             <span aria-hidden className={styles.rowAction}>
               ›
             </span>
-          </Link>
+          </button>
         </li>
       </ul>
+
+      {isAdmin ? (
+        <>
+          <p className={styles.sectionLabel}>Administração</p>
+          <ul className={styles.list}>
+            <li>
+              <Link className={styles.row} href="/admin">
+                <span className={styles.rowIcon} data-tone="premium">
+                  <AdminIcon />
+                </span>
+                <div className={styles.rowMeta}>
+                  <p className={styles.rowLabel}>Administração</p>
+                  <p className={styles.rowHint}>
+                    Usuários, planos, códigos e denúncias
+                  </p>
+                </div>
+                <span aria-hidden className={styles.rowAction}>
+                  ›
+                </span>
+              </Link>
+            </li>
+          </ul>
+        </>
+      ) : null}
 
       <p className={styles.sectionLabel}>Preferências</p>
       <ul className={styles.list}>
@@ -370,6 +429,17 @@ export function GeralSettingsClient({
       <footer>
         <AppCreditFooter />
       </footer>
+
+      {/* The same editor the profile home opens from "Editar". */}
+      {editProfileOpen && ownerId ? (
+        <EditProfileDialog
+          initialBio={profileBio?.trim() || DEFAULT_BIO}
+          initialName={profileName || name || ""}
+          onClose={() => setEditProfileOpen(false)}
+          ownerId={ownerId}
+          remoteSrc={avatarRemoteSrc}
+        />
+      ) : null}
     </section>
   );
 }

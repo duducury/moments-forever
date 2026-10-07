@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import { mapLocalDateSourceToDb } from "@moments-forever/shared";
 
+import { copyLink } from "@/lib/share/share-link";
 import { ExperienceCoverThumb } from "@/components/experience-cover-thumb";
 import type { OwnerExperienceListItem } from "@/lib/experiences/load-owner-experiences";
 import {
@@ -154,11 +155,10 @@ export function EditTripDialog({
   }
 
   async function copyNfcUrl(url: string) {
-    try {
-      await navigator.clipboard.writeText(url);
+    if ((await copyLink(url)) === "copied") {
       setNfcCopied(true);
       setTimeout(() => setNfcCopied(false), 2000);
-    } catch {
+    } else {
       window.prompt("Copie o link:", url);
     }
   }

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import { useLockPageScroll } from "../../album-ui";
 import styles from "../../trip.module.css";
+import { copyLink } from "@/lib/share/share-link";
 import { buildNfcTagRequestBody } from "@/lib/nfc/album-nfc-link";
 import {
   isNativeNfcSupported,
@@ -109,11 +110,7 @@ export function NfcLinkPanel({
   }
 
   async function copyUrl(url: string) {
-    try {
-      await navigator.clipboard.writeText(url);
-    } catch {
-      window.prompt("Copie o link:", url);
-    }
+    if ((await copyLink(url)) === "failed") window.prompt("Copie o link:", url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }

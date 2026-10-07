@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+
+import { canShareNatively, shareLink } from "@/lib/share/share-link";
 
 /** On an album page this resolves the short /a/{code} link; anything else
  * (not the owner, no short link, request failed) falls back to the full URL. */
@@ -19,18 +21,30 @@ async function resolveShareUrl(albumId: string | undefined): Promise<string> {
   return window.location.href;
 }
 
+const subscribeNever = () => () => {};
+
+/** Server and first client render say "no" (so hydration matches); then the real answer. */
+function useCanShareNatively(): boolean {
+  return useSyncExternalStore(subscribeNever, () => canShareNatively(), () => false);
+}
+
 /**
- * Copies the current page URL — needed in standalone/PWA mode where Safari’s
- * address bar (and share sheet) are not available.
+ * Shares the current page URL: the system share sheet when available (iPhone,
+ * most mobile browsers), copying the link otherwise. Also needed in
+ * standalone/PWA mode where Safari’s address bar is not available.
  */
 export function CopyPageLinkButton({
   albumId,
 }: {
-  /** On an album page, copy that album's short /a/{code} link instead. */
+  /** On an album page, share that album's short /a/{code} link instead. */
   readonly albumId?: string;
 } = {}) {
   const [copied, setCopied] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // The album's short link, fetched ahead of the tap so the share sheet can open
+  // inside the tap's user gesture (iOS refuses it after an await on the network).
+  const albumUrlRef = useRef<string | null>(null);
+  const canShare = useCanShareNatively();
 
   useEffect(() => {
     return () => {
@@ -38,40 +52,55 @@ export function CopyPageLinkButton({
     };
   }, []);
 
-  async function copyCurrentUrl() {
-    const url = await resolveShareUrl(albumId);
-    try {
-      if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(url);
-      } else {
-        const field = document.createElement("textarea");
-        field.value = url;
-        field.setAttribute("readonly", "");
-        field.style.position = "fixed";
-        field.style.opacity = "0";
-        document.body.appendChild(field);
-        field.select();
-        document.execCommand("copy");
-        document.body.removeChild(field);
-      }
+  useEffect(() => {
+    albumUrlRef.current = null;
+    if (!albumId) return;
+    let alive = true;
+    void resolveShareUrl(albumId).then((url) => {
+      if (alive) albumUrlRef.current = url;
+    });
+    return () => {
+      alive = false;
+    };
+  }, [albumId]);
+
+  async function shareCurrentUrl() {
+    const url = albumId
+      ? (albumUrlRef.current ?? (await resolveShareUrl(albumId)))
+      : window.location.href;
+    const result = await shareLink({
+      url,
+      title: albumId ? "Viagem no Moments Forever" : "Moments Forever",
+      text: albumId
+        ? "Veja esta viagem no Moments Forever."
+        : "Veja esta página no Moments Forever.",
+    });
+    if (result === "copied") {
       setCopied(true);
       if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = setTimeout(() => setCopied(false), 2000);
-    } catch {
+    } else if (result === "failed") {
       setCopied(false);
       window.prompt("Copia o link:", url);
     }
+    // "shared" / "cancelled": the system sheet already handled it, nothing to show.
   }
 
   return (
     <button
-      aria-label={copied ? "Link copiado" : "Copiar link desta página"}
+      aria-label={
+        copied
+          ? "Link copiado"
+          : canShare
+            ? "Compartilhar link desta página"
+            : "Copiar link desta página"
+      }
       className="copy-page-link"
       data-copied={copied ? "true" : "false"}
       onClick={() => {
-        void copyCurrentUrl();
+        void shareCurrentUrl();
       }}
-      title={copied ? "Link copiado" : "Copiar link"}
+      title={copied ? "Link copiado" : canShare ? "Compartilhar" : "Copiar link"}
       type="button"
     >
       {copied ? (

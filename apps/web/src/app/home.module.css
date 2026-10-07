@@ -984,14 +984,14 @@ html[data-nav-hidden="true"] .header {
   position: relative;
   z-index: 1;
   display: grid;
-  min-height: 460px;
+  min-height: 424px;
   place-items: center;
 }
 
 .downloadPhone {
   position: relative;
   z-index: 2;
-  width: 200px;
+  width: 178px;
   aspect-ratio: 9 / 19;
   padding: 8px;
   border-radius: 38px;
@@ -1068,8 +1068,8 @@ html[data-nav-hidden="true"] .header {
 .downloadPolaroid {
   position: absolute;
   z-index: 1;
-  width: 104px;
-  padding: 5px 5px 16px;
+  width: 92px;
+  padding: 5px 5px 14px;
   border-radius: 4px;
   background: #f7f2ea;
   box-shadow: 0 14px 28px rgb(0 0 0 / 40%);
@@ -1085,13 +1085,13 @@ html[data-nav-hidden="true"] .header {
 
 .downloadPolaroidLeft {
   bottom: 38px;
-  left: calc(50% - 168px);
+  left: calc(50% - 148px);
   transform: rotate(-9deg);
 }
 
 .downloadPolaroidRight {
   top: 24px;
-  right: calc(50% - 170px);
+  right: calc(50% - 150px);
   transform: rotate(8deg);
 }
 
@@ -1099,18 +1099,48 @@ html[data-nav-hidden="true"] .header {
   display: none;
 }
 
-/* Staging when the section scrolls into view (data-reveal → .is-visible):
-   the card fades in (global rule), then text, phone and finally the button. */
-.download:global(.is-visible) .downloadText {
-  animation: downloadRise 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.06s both;
+/* Entrance when the section scrolls into view (data-reveal → .is-visible).
+   The card fades in (global rule) and then, in order: eyebrow, title, text,
+   button, phone (rises from below), photos (small drift). Everything is
+   transform/opacity only. After the intro the phone and photos keep a very slow,
+   tiny float (the individual `translate` property, so it never fights the
+   `transform: rotate()` that tilts them). */
+.download:global(.is-visible) .downloadEyebrow {
+  animation: downloadRise 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.04s both;
 }
 
-.download:global(.is-visible) .downloadVisual {
-  animation: downloadFade 0.6s ease 0.2s both;
+.download:global(.is-visible) .downloadTitle {
+  animation: downloadRise 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both;
+}
+
+.download:global(.is-visible) .downloadLead {
+  animation: downloadRise 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.2s both;
+}
+
+.download:global(.is-visible) .downloadBody {
+  animation: downloadRise 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.27s both;
 }
 
 .download:global(.is-visible) .downloadAction {
-  animation: downloadPop 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.4s both;
+  animation: downloadPop 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.4s both;
+}
+
+.download:global(.is-visible) .downloadPhone {
+  animation:
+    downloadPhoneIn 1s cubic-bezier(0.22, 1, 0.36, 1) 0.5s both,
+    downloadFloatPhone 7s ease-in-out 1.7s infinite alternate;
+}
+
+.download:global(.is-visible) .downloadPolaroidLeft {
+  animation:
+    downloadPhotoInLeft 0.95s cubic-bezier(0.22, 1, 0.36, 1) 0.64s both,
+    downloadFloatLeft 9s ease-in-out 1.9s infinite alternate;
+}
+
+.download:global(.is-visible) .downloadPolaroidRight {
+  animation:
+    downloadPhotoInRight 0.95s cubic-bezier(0.22, 1, 0.36, 1) 0.72s both,
+    downloadFloatRight 10s ease-in-out 2s infinite alternate;
 }
 
 @keyframes downloadRise {
@@ -1124,21 +1154,10 @@ html[data-nav-hidden="true"] .header {
   }
 }
 
-@keyframes downloadFade {
-  from {
-    opacity: 0;
-    transform: translateY(10px) scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
 @keyframes downloadPop {
   from {
     opacity: 0;
-    transform: translateY(8px) scale(0.96);
+    transform: translateY(8px) scale(0.97);
   }
   to {
     opacity: 1;
@@ -1146,10 +1165,75 @@ html[data-nav-hidden="true"] .header {
   }
 }
 
+@keyframes downloadPhoneIn {
+  from {
+    opacity: 0;
+    translate: 0 56px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+@keyframes downloadPhotoInLeft {
+  from {
+    opacity: 0;
+    translate: -20px 26px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+@keyframes downloadPhotoInRight {
+  from {
+    opacity: 0;
+    translate: 20px -18px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+@keyframes downloadFloatPhone {
+  from {
+    translate: 0 0;
+  }
+  to {
+    translate: 0 -7px;
+  }
+}
+
+@keyframes downloadFloatLeft {
+  from {
+    translate: 0 0;
+  }
+  to {
+    translate: -3px 5px;
+  }
+}
+
+@keyframes downloadFloatRight {
+  from {
+    translate: 0 0;
+  }
+  to {
+    translate: 3px -5px;
+  }
+}
+
+/* Reduced motion: no entrance and no float, everything simply shown. */
 @media (prefers-reduced-motion: reduce) {
-  .download .downloadText,
-  .download .downloadVisual,
-  .download .downloadAction {
+  .download .downloadEyebrow,
+  .download .downloadTitle,
+  .download .downloadLead,
+  .download .downloadBody,
+  .download .downloadAction,
+  .download .downloadPhone,
+  .download .downloadPolaroid {
     animation: none !important;
   }
 

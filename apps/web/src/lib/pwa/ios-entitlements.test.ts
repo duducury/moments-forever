@@ -24,8 +24,15 @@ test("the NFC entitlement is still exactly TAG", () => {
   assert.deepEqual(arrayEntitlement(entitlements, "com.apple.developer.nfc.readersession.formats"), ["TAG"]);
 });
 
+test("entitlements declare the Universal Links domain (and only it)", () => {
+  assert.deepEqual(arrayEntitlement(entitlements, "com.apple.developer.associated-domains"), [
+    "applinks:momentsforever.vercel.app",
+  ]);
+});
+
 test("the Swift package links both the Apple sign-in plugin and the NFC plugin", () => {
   const spm = readFileSync(path.join(IOS_APP, "CapApp-SPM/Package.swift"), "utf8");
   assert.match(spm, /\.product\(name: "CapacitorCommunityAppleSignIn", package: "CapacitorCommunityAppleSignIn"\)/);
   assert.match(spm, /\.product\(name: "ExxiliCapacitorNfc", package: "ExxiliCapacitorNfc"\)/);
+  assert.match(spm, /\.product\(name: "MomentsForeverCapacitorNativeAuth", package: "MomentsForeverCapacitorNativeAuth"\)/);
 });

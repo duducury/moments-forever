@@ -329,6 +329,29 @@ html[data-nav-hidden="true"] .header {
   transform: translateY(-1px);
 }
 
+/* "Baixar o app": web only. The marker is set on <html> by nativeIosAppMarkerScript. */
+.appStore {
+  display: grid;
+  gap: 6px;
+  justify-items: inherit;
+  width: 100%;
+  max-width: 320px;
+}
+
+.appStore :global(.button) {
+  width: 100%;
+}
+
+.appStoreNote {
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 550;
+}
+
+:global(html[data-native-ios-app]) .appStore {
+  display: none;
+}
+
 .heroAside {
   margin: 2px 0 0;
   color: color-mix(in srgb, var(--text-secondary) 88%, var(--accent));
@@ -917,6 +940,16 @@ html[data-nav-hidden="true"] .header {
   }
 
   .ctaRow :global(.button) {
+    width: auto;
+    min-width: 168px;
+  }
+
+  .appStore {
+    width: auto;
+    max-width: none;
+  }
+
+  .appStore :global(.button) {
     width: auto;
     min-width: 168px;
   }

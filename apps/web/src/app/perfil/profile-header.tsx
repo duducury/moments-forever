@@ -6,7 +6,7 @@ import { EditProfileDialog } from "./edit-profile-dialog";
 import { ProfileAvatar } from "./profile-avatar";
 import styles from "./perfil.module.css";
 
-const DEFAULT_BIO = "Nossas viagens e momentos pelo mundo.";
+export const DEFAULT_BIO = "Nossas viagens e momentos pelo mundo.";
 
 function StatIcon({ kind }: { readonly kind: "trip" | "photo" | "country" }) {
   if (kind === "trip") {

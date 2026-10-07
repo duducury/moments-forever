@@ -178,6 +178,9 @@
     transform 120ms ease,
     border-color 160ms ease,
     box-shadow 160ms ease;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
 }
 
 .accountCard:hover {

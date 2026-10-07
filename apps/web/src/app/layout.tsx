@@ -5,6 +5,7 @@ import { AutoHideNavOnScroll } from "@/components/auto-hide-nav";
 import { PwaSplashDismiss } from "@/components/pwa-splash-dismiss";
 import { RevealOnScroll } from "@/components/reveal-on-scroll";
 import { ThemeProvider } from "@/components/theme-provider";
+import { nativeIosAppMarkerScript } from "@/lib/ios/app-store";
 import { bootReadyScript } from "@/lib/pwa/boot-ready";
 import { bootSplashSkipScript } from "@/lib/pwa/boot-splash";
 import {
@@ -135,6 +136,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <style dangerouslySetInnerHTML={{ __html: criticalBootCss }} />
         <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
         <script dangerouslySetInnerHTML={{ __html: bootSplashSkipScript() }} />
+        <script dangerouslySetInnerHTML={{ __html: nativeIosAppMarkerScript() }} />
         {authCookieName ? (
           <script
             dangerouslySetInnerHTML={{

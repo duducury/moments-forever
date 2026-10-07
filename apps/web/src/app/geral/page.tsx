@@ -5,6 +5,7 @@ import { AppWordmark } from "@/components/app-wordmark";
 import { AuthStatus } from "@/components/auth-status";
 import { SignalPwaBootReady } from "@/components/signal-pwa-boot-ready";
 import { displayNameFromUser } from "@/lib/auth/display-name";
+import { isAdminUser } from "@/lib/licensing/require-admin";
 import {
   ensureOwnerProfileSlug,
   lookupOwnerProfileById,
@@ -49,6 +50,9 @@ export default async function GeralPage() {
   );
   const homeHref = publicProfilePath(slug);
   const profile = await lookupOwnerProfileById(supabase, user.id);
+  // Same check the profile menu uses; /admin itself is still guarded by
+  // requireAdminUser() on every admin page and API route.
+  const isAdmin = await isAdminUser(supabase, user.id);
 
   return (
     <main className="page-shell" data-bottom-nav="true">
@@ -62,7 +66,10 @@ export default async function GeralPage() {
         avatarRemoteSrc={
           profile?.hasPermanentAvatar ? profileAvatarPublicPath(slug) : null
         }
-        profileHref={homeHref}
+        isAdmin={isAdmin}
+        ownerId={user.id}
+        profileBio={profile?.bio ?? null}
+        profileName={profile?.displayName?.trim() || slug}
       />
       <AppBottomNav homeHref={homeHref} mapHref="/mapa" showCreate />
     </main>

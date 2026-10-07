@@ -78,6 +78,8 @@ export const config = {
     // `n/<token>` is the NFC tag page: a static splash served straight from the
     // CDN (see next.config.ts), so no function — not even this one — may sit in
     // front of it. The tag is resolved through /api/nfc-link, which does pass here.
-    "/((?!_next/static|_next/image|favicon.ico|n/[^/]+$|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|mp4|ico|woff2?|txt|xml|json|map)$).*)",
+    // `.well-known/` (the Universal Links AASA) is a static JSON that iOS
+    // fetches without cookies and must get untouched.
+    "/((?!_next/static|_next/image|favicon.ico|\\.well-known/|n/[^/]+$|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|mp4|ico|woff2?|txt|xml|json|map)$).*)",
   ],
 };

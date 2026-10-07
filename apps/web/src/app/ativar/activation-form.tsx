@@ -8,6 +8,8 @@ import { useAuth } from "@/components/auth-provider";
 import { OAuthButtons, type OAuthProvider } from "@/components/oauth-buttons";
 import { signalPwaBootReady } from "@/components/pwa-splash-dismiss";
 import { signInWithAppleNative } from "@/lib/auth/apple-sign-in";
+import { isNativeOAuthAvailable, signInWithNativeOAuth } from "@/lib/auth/native-oauth";
+import { getSupabaseConfig } from "@/lib/supabase/config";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 import styles from "./ativar.module.css";
@@ -126,6 +128,18 @@ export function ActivationForm() {
       if (result.status === "signed-in") return; // the session effect redeems the code
       sessionStorage.removeItem(PENDING_CODE_KEY);
       if (result.status === "error") setMessage(result.message);
+      setBusy(false);
+      return;
+    }
+    if (isNativeOAuthAvailable()) {
+      // iOS app: the login runs in the system sheet and ends back in the app.
+      const result = await signInWithNativeOAuth(authClient, provider, {
+        next: "/ativar",
+        supabaseUrl: getSupabaseConfig()?.url,
+      });
+      if (result.status === "redirecting") return;
+      sessionStorage.removeItem(PENDING_CODE_KEY);
+      setMessage(result.message);
       setBusy(false);
       return;
     }

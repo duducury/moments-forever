@@ -6,6 +6,8 @@ import { useEffect, useState, type FormEvent } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { OAuthButtons, type OAuthProvider } from "@/components/oauth-buttons";
 import { signInWithAppleNative } from "@/lib/auth/apple-sign-in";
+import { isNativeOAuthAvailable, signInWithNativeOAuth } from "@/lib/auth/native-oauth";
+import { getSupabaseConfig } from "@/lib/supabase/config";
 
 import { AppBootSplash } from "./app-boot-splash";
 import { useAuth } from "./auth-provider";
@@ -119,6 +121,18 @@ export function AuthForm() {
       const result = await signInWithAppleNative(authClient);
       if (result.status === "error") setMessage(result.message);
       setBusy(false);
+      return;
+    }
+    if (isNativeOAuthAvailable()) {
+      // iOS app: the login runs in the system sheet and ends back in the app.
+      const result = await signInWithNativeOAuth(authClient, provider, {
+        supabaseUrl: getSupabaseConfig()?.url,
+      });
+      // "redirecting": the web view is already opening /auth/callback.
+      if (result.status !== "redirecting") {
+        setMessage(result.message);
+        setBusy(false);
+      }
       return;
     }
     const redirectTo = `${window.location.origin}/auth/callback`;

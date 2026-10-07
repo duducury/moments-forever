@@ -5,7 +5,7 @@ import { SignalPwaBootReady } from "@/components/signal-pwa-boot-ready";
 import { APP_STORE_URL } from "@/lib/ios/app-store";
 import { loadPricingPlans } from "@/lib/pricing/load-pricing-plans";
 import { HomePrimaryCta } from "./home-cta";
-import { HomeAppStoreBadge } from "./home-app-store-badge";
+import { HomeDownloadSection } from "./home-download-section";
 import { HomeFooterNav } from "./home-footer-nav";
 import { HomeHeader } from "./home-header";
 import { JourneySky } from "./journey-sky";
@@ -268,6 +268,9 @@ export default async function Home() {
 
         <PricingSection plans={pricingPlans} />
 
+        {/* Hidden inside the iOS app (see nativeIosAppMarkerScript). */}
+        <HomeDownloadSection />
+
         <section aria-labelledby="home-finale-title" className={styles.finale}>
           <div className={styles.finaleBackdrop} aria-hidden="true">
             <Image
@@ -293,7 +296,6 @@ export default async function Home() {
           <AppCreditFooter />
         </div>
         <HomeFooterNav />
-        <HomeAppStoreBadge />
       </footer>
     </main>
   );

@@ -835,24 +835,109 @@ html[data-nav-hidden="true"] .header {
   color: var(--accent);
 }
 
-/* App Store badge at the very end of the home page. Web only (hidden in the iOS app). */
-.footerStore {
-  display: flex;
-  flex: 1 1 100%;
-  padding-top: 6px;
+/* —— Download section (web only: hidden inside the iOS app) —— */
+
+.download {
+  position: relative;
+  display: grid;
+  gap: 32px;
+  overflow: hidden;
+  padding: 40px 22px 44px;
+  border: 1px solid color-mix(in srgb, #f7f2ea 12%, transparent);
+  border-radius: 24px;
+  background:
+    radial-gradient(
+      80% 60% at 88% 8%,
+      color-mix(in srgb, #d08a6e 22%, transparent),
+      transparent 62%
+    ),
+    radial-gradient(
+      70% 50% at 0% 100%,
+      color-mix(in srgb, #3a5a7a 16%, transparent),
+      transparent 60%
+    ),
+    linear-gradient(160deg, #1d1713, #121110 70%);
+  color: #f7f2ea;
+  box-shadow: 0 22px 48px color-mix(in srgb, #000 34%, transparent);
 }
 
+.downloadRoute {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  color: color-mix(in srgb, #d08a6e 24%, transparent);
+  pointer-events: none;
+}
+
+.downloadCopy {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 26px;
+  justify-items: center;
+  text-align: center;
+}
+
+.downloadText {
+  display: grid;
+  gap: 10px;
+  justify-items: inherit;
+}
+
+.downloadEyebrow {
+  margin: 0;
+  color: #d08a6e;
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.downloadTitle {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.9rem, 7vw, 2.9rem);
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  line-height: 1.08;
+  text-wrap: balance;
+}
+
+.downloadLead {
+  margin: 0;
+  color: rgb(247 242 234 / 92%);
+  font-size: 1.12rem;
+  font-weight: 550;
+}
+
+.downloadBody {
+  max-width: 34ch;
+  margin: 0;
+  color: rgb(247 242 234 / 68%);
+  font-size: 0.98rem;
+  line-height: 1.55;
+}
+
+.downloadAction {
+  display: grid;
+  width: min(100%, 290px);
+}
+
+/* The badge: the section's main call to action. */
 .appStoreBadge {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  min-height: 48px;
-  padding: 6px 18px 6px 14px;
+  justify-content: center;
+  gap: 12px;
+  min-height: 64px;
+  padding: 8px 24px 8px 20px;
   border: 1px solid #a6a6a6;
-  border-radius: 11px;
+  border-radius: 15px;
   background: #000;
   color: #fff;
   text-decoration: none;
+  box-shadow: 0 10px 26px rgb(0 0 0 / 38%);
   transition:
     transform 160ms ease,
     border-color 160ms ease,
@@ -860,20 +945,20 @@ html[data-nav-hidden="true"] .header {
 }
 
 .appStoreBadge:hover {
-  transform: translateY(-1px);
+  transform: translateY(-2px);
   border-color: #fff;
-  box-shadow: 0 8px 20px color-mix(in srgb, var(--shadow) 30%, transparent);
+  box-shadow: 0 14px 30px rgb(0 0 0 / 46%);
 }
 
 .appStoreBadge:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid #d08a6e;
   outline-offset: 3px;
 }
 
 .appStoreBadgeIcon {
   flex: none;
-  width: 26px;
-  height: 26px;
+  width: 34px;
+  height: 34px;
 }
 
 .appStoreBadgeText {
@@ -883,22 +968,191 @@ html[data-nav-hidden="true"] .header {
 }
 
 .appStoreBadgeSmall {
-  font-size: 0.66rem;
+  font-size: 0.78rem;
   font-weight: 500;
   letter-spacing: 0.02em;
 }
 
 .appStoreBadgeLarge {
-  font-size: 1.28rem;
+  font-size: 1.7rem;
   font-weight: 600;
   letter-spacing: -0.01em;
 }
 
-:global(html[data-native-ios-app]) .footerStore {
+/* Phone + two memory cards behind it. */
+.downloadVisual {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  min-height: 460px;
+  place-items: center;
+}
+
+.downloadPhone {
+  position: relative;
+  z-index: 2;
+  width: 200px;
+  aspect-ratio: 9 / 19;
+  padding: 8px;
+  border-radius: 38px;
+  background: #0b0a09;
+  box-shadow:
+    0 0 0 1.5px rgb(255 255 255 / 16%),
+    0 28px 50px rgb(0 0 0 / 55%);
+  transform: rotate(3deg);
+}
+
+.downloadScreen {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 31px;
+  background: #121110;
+}
+
+.downloadScreenImage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: saturate(1.05);
+}
+
+.downloadIsland {
+  position: absolute;
+  top: 9px;
+  left: 50%;
+  width: 62px;
+  height: 18px;
+  border-radius: 999px;
+  background: #000;
+  transform: translateX(-50%);
+}
+
+.downloadScreenCard {
+  position: absolute;
+  right: 10px;
+  bottom: 12px;
+  left: 10px;
+  display: grid;
+  gap: 2px;
+  padding: 12px 13px;
+  border-radius: 16px;
+  background: rgb(18 17 16 / 82%);
+  backdrop-filter: blur(8px);
+}
+
+.downloadScreenKicker {
+  margin: 0;
+  color: #d08a6e;
+  font-size: 0.62rem;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.downloadScreenTitle {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.05rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+.downloadScreenMeta {
+  margin: 0;
+  color: rgb(247 242 234 / 64%);
+  font-size: 0.66rem;
+}
+
+.downloadPolaroid {
+  position: absolute;
+  z-index: 1;
+  width: 104px;
+  padding: 5px 5px 16px;
+  border-radius: 4px;
+  background: #f7f2ea;
+  box-shadow: 0 14px 28px rgb(0 0 0 / 40%);
+}
+
+.downloadPolaroidImage {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  object-fit: cover;
+}
+
+.downloadPolaroidLeft {
+  bottom: 38px;
+  left: calc(50% - 168px);
+  transform: rotate(-9deg);
+}
+
+.downloadPolaroidRight {
+  top: 24px;
+  right: calc(50% - 170px);
+  transform: rotate(8deg);
+}
+
+:global(html[data-native-ios-app]) .download {
   display: none;
 }
 
+/* Staging when the section scrolls into view (data-reveal → .is-visible):
+   the card fades in (global rule), then text, phone and finally the button. */
+.download:global(.is-visible) .downloadText {
+  animation: downloadRise 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.06s both;
+}
+
+.download:global(.is-visible) .downloadVisual {
+  animation: downloadFade 0.6s ease 0.2s both;
+}
+
+.download:global(.is-visible) .downloadAction {
+  animation: downloadPop 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.4s both;
+}
+
+@keyframes downloadRise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes downloadFade {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes downloadPop {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .download .downloadText,
+  .download .downloadVisual,
+  .download .downloadAction {
+    animation: none !important;
+  }
+
   .appStoreBadge {
     transition: none;
   }
@@ -1015,6 +1269,42 @@ html[data-nav-hidden="true"] .header {
   .ctaRow :global(.button) {
     width: auto;
     min-width: 168px;
+  }
+
+  .download {
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+    align-items: center;
+    gap: 24px;
+    padding: 64px 56px;
+  }
+
+  .downloadCopy {
+    justify-items: start;
+    text-align: left;
+  }
+
+  .downloadAction {
+    width: auto;
+  }
+
+  .downloadVisual {
+    min-height: 540px;
+  }
+
+  .downloadPhone {
+    width: 238px;
+  }
+
+  .downloadPolaroid {
+    width: 124px;
+  }
+
+  .downloadPolaroidLeft {
+    left: calc(50% - 206px);
+  }
+
+  .downloadPolaroidRight {
+    right: calc(50% - 208px);
   }
 
   .appStore {

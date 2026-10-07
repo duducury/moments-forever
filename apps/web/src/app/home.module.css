@@ -835,6 +835,79 @@ html[data-nav-hidden="true"] .header {
   color: var(--accent);
 }
 
+/* App Store badge at the very end of the home page. Web only (hidden in the iOS app). */
+.footerStore {
+  display: flex;
+  flex: 1 1 100%;
+  padding-top: 6px;
+}
+
+.appStoreBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 6px 18px 6px 14px;
+  border: 1px solid #a6a6a6;
+  border-radius: 11px;
+  background: #000;
+  color: #fff;
+  text-decoration: none;
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.appStoreBadge:hover {
+  transform: translateY(-1px);
+  border-color: #fff;
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--shadow) 30%, transparent);
+}
+
+.appStoreBadge:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.appStoreBadgeIcon {
+  flex: none;
+  width: 26px;
+  height: 26px;
+}
+
+.appStoreBadgeText {
+  display: grid;
+  line-height: 1.05;
+  text-align: left;
+}
+
+.appStoreBadgeSmall {
+  font-size: 0.66rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.appStoreBadgeLarge {
+  font-size: 1.28rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+:global(html[data-native-ios-app]) .footerStore {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .appStoreBadge {
+    transition: none;
+  }
+
+  .appStoreBadge:hover {
+    transform: none;
+  }
+}
+
 @keyframes homeRise {
   from {
     opacity: 0;

@@ -47,3 +47,23 @@ test("the home page renders the button on the web and CSS hides it in the app", 
   const layout = readFileSync(path.join(web, "src/app/layout.tsx"), "utf8");
   assert.match(layout, /nativeIosAppMarkerScript\(\)/);
 });
+
+test("the bottom of the home page has a second App Store badge, hidden in the app, and the hero button stays", () => {
+  const web = path.resolve(__dirname, "../../..");
+  const page = readFileSync(path.join(web, "src/app/page.tsx"), "utf8");
+  // Hero button kept…
+  assert.match(page, /Baixar o app/);
+  // …and the badge sits inside the footer, after the footer nav.
+  const footer = page.slice(page.indexOf("<footer"), page.indexOf("</footer>"));
+  assert.match(footer, /<HomeFooterNav \/>\s*<HomeAppStoreBadge \/>/);
+
+  const badge = readFileSync(path.join(web, "src/app/home-app-store-badge.tsx"), "utf8");
+  assert.match(badge, /href=\{APP_STORE_URL\}/);
+  assert.match(badge, /Baixar na/);
+  assert.match(badge, /App Store/);
+  assert.match(badge, /<svg[\s\S]*<path d="M12\.152 6\.896/, "Apple logo");
+
+  const css = readFileSync(path.join(web, "src/app/home.module.css"), "utf8");
+  assert.match(css, /:global\(html\[data-native-ios-app\]\) \.footerStore\s*\{\s*display: none;/);
+});
+

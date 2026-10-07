@@ -76,8 +76,34 @@ test("the download section sits right after the plans, the footer has no badge, 
   // Whole section hidden inside the iOS app, with the same marker as the hero button.
   assert.match(css, /:global\(html\[data-native-ios-app\]\) \.download\s*\{\s*display: none;/);
   assert.doesNotMatch(css, /footerStore/);
-  // Staged one-shot entrance (text → phone → button), no loops, reduced motion respected.
-  assert.match(css, /\.download:global\(\.is-visible\) \.downloadAction\s*\{\s*animation:[^;]*both;/);
-  assert.doesNotMatch(css, /animation:[^;]*infinite/);
-  assert.match(css, /prefers-reduced-motion: reduce\)\s*\{\s*\.download \.downloadText/);
+  // Staged entrance in the requested order: eyebrow → title → text → button → phone → photos.
+  const delayOf = (selector: string): number => {
+    const rule = css.match(
+      new RegExp(`\\.download:global\\(\\.is-visible\\) \\.${selector}\\s*\\{\\s*animation:([^;]*);`),
+    )?.[1];
+    assert.ok(rule, `${selector} has an entrance animation`);
+    // The first animation of the list is the entrance: "<name> <duration> cubic-bezier(…) <delay> both".
+    return Number(rule.match(/cubic-bezier\([^)]*\)\s+([\d.]+)s\s+both/)![1]);
+  };
+  const order = [
+    "downloadEyebrow",
+    "downloadTitle",
+    "downloadLead",
+    "downloadAction",
+    "downloadPhone",
+    "downloadPolaroidLeft",
+  ].map(delayOf);
+  assert.deepEqual([...order].sort((x, y) => x - y), order, "entrance delays are increasing");
+  assert.ok(delayOf("downloadBody") < delayOf("downloadAction"), "text before the button");
+  assert.ok(delayOf("downloadPolaroidRight") > delayOf("downloadPhone"), "photos after the phone");
+  // Only the tiny float loops, and only on the phone and the two photos (alternating, slow).
+  const infinite = css.match(/animation:[^;]*infinite[^;]*;/g) ?? [];
+  assert.equal(infinite.length, 3);
+  for (const rule of infinite) assert.match(rule, /downloadFloat\w+ [7-9]s|downloadFloat\w+ 10s/);
+  assert.match(css, /downloadFloatPhone[\s\S]*?translate: 0 -7px/);
+  // Reduced motion removes entrance and float.
+  assert.match(
+    css,
+    /prefers-reduced-motion: reduce\)\s*\{\s*\.download \.downloadEyebrow[\s\S]*?\.download \.downloadPolaroid\s*\{\s*animation: none !important;/,
+  );
 });

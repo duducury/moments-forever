@@ -2,6 +2,7 @@ import Image from "next/image";
 
 import { AppCreditFooter } from "@/components/app-credit-footer";
 import { SignalPwaBootReady } from "@/components/signal-pwa-boot-ready";
+import { APP_STORE_URL } from "@/lib/ios/app-store";
 import { loadPricingPlans } from "@/lib/pricing/load-pricing-plans";
 import { HomePrimaryCta } from "./home-cta";
 import { HomeFooterNav } from "./home-footer-nav";
@@ -107,6 +108,17 @@ export default async function Home() {
               Guarde suas viagens. Reviva seus momentos.
             </p>
             <HomePrimaryCta className={styles.ctaRow} />
+            {/* Hidden inside the iOS app (see nativeIosAppMarkerScript). */}
+            <div className={styles.appStore}>
+              <a
+                className="button secondary"
+                href={APP_STORE_URL}
+                rel="noopener"
+              >
+                Baixar o app
+              </a>
+              <span className={styles.appStoreNote}>Disponível na App Store</span>
+            </div>
             <p className={styles.heroAside}>Viagens · Lugares · Momentos</p>
           </div>
         </section>

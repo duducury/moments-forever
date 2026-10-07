@@ -49,4 +49,5 @@ Registre aqui cada versão preparada. Atualize na mesma alteração que muda a v
 | 1.0 | 2 | rejeitado pela App Review (crash no iPad e Sign in with Apple) |
 | 1.0 | 3 | preparado após a rejeição (o número 2 não foi reutilizado) |
 | 3.1 | 4 | versão final com Sign in with Apple, NFC e correções. Preparada |
-| 3.2 | 5 | preparada (o build 1 não foi reutilizado: segue a sequência depois do 4) |
+| 3.2 | 5 | publicada na App Store (o build 1 não foi reutilizado: segue a sequência depois do 4) |
+| 3.3 | 6 | preparada: login Google/Facebook dentro do app (plugin nativo) e Universal Links |

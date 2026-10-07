@@ -1,0 +1,80 @@
+import AuthenticationServices
+import Capacitor
+import Foundation
+import UIKit
+
+/// Runs an OAuth login (Google / Facebook through Supabase) inside Apple's
+/// ASWebAuthenticationSession sheet. The sheet closes by itself when the
+/// provider redirects to the app's callback scheme, and the callback URL is
+/// handed straight back to the caller through the completion handler. The scheme
+/// is also declared in Info.plist (CFBundleURLTypes) as a safeguard; the app does
+/// nothing with URLs that reach it that way (no JS URL-open listener), and the JS
+/// side only accepts the callback this plugin returns.
+@objc(MomentsNativeAuthPlugin)
+public class MomentsNativeAuthPlugin: CAPPlugin, CAPBridgedPlugin, ASWebAuthenticationPresentationContextProviding {
+    public let identifier = "MomentsNativeAuthPlugin"
+    public let jsName = "MomentsNativeAuth"
+    public let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "start", returnType: CAPPluginReturnPromise)
+    ]
+
+    /// Fixed on purpose: the page cannot choose which scheme the sheet waits for.
+    /// Same value as the bundle id and lib/auth/native-oauth.ts.
+    private static let callbackScheme = "com.momentsforever.app"
+
+    /// Keeps the session alive while the sheet is on screen.
+    private var session: ASWebAuthenticationSession?
+
+    @objc func start(_ call: CAPPluginCall) {
+        guard
+            let raw = call.getString("url"),
+            let url = URL(string: raw),
+            url.scheme?.lowercased() == "https",
+            let host = url.host, !host.isEmpty
+        else {
+            call.reject("The login URL must be a valid https URL.", "INVALID_URL")
+            return
+        }
+
+        DispatchQueue.main.async {
+            self.session?.cancel()
+
+            let session = ASWebAuthenticationSession(
+                url: url,
+                callbackURLScheme: Self.callbackScheme
+            ) { [weak self] callbackURL, error in
+                DispatchQueue.main.async {
+                    self?.session = nil
+                    if let authError = error as? ASWebAuthenticationSessionError,
+                       authError.code == .canceledLogin {
+                        call.reject("Login cancelled.", "CANCELLED")
+                        return
+                    }
+                    if let error = error {
+                        call.reject(error.localizedDescription, "FAILED")
+                        return
+                    }
+                    guard let callbackURL = callbackURL else {
+                        call.reject("The login returned no URL.", "FAILED")
+                        return
+                    }
+                    call.resolve(["url": callbackURL.absoluteString])
+                }
+            }
+            session.presentationContextProvider = self
+            // Shares the Safari login with the person's Google/Facebook session
+            // (the system asks for consent first), like the Safari flow did.
+            session.prefersEphemeralWebBrowserSession = false
+
+            self.session = session
+            if !session.start() {
+                self.session = nil
+                call.reject("Could not open the login sheet.", "FAILED")
+            }
+        }
+    }
+
+    public func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
+        return bridge?.viewController?.view.window ?? ASPresentationAnchor()
+    }
+}

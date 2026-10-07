@@ -1,0 +1,27 @@
+{
+  "name": "@moments-forever/capacitor-native-auth",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Moments Forever: OAuth (Google/Facebook) inside the iOS app through ASWebAuthenticationSession, so the login ends in the app instead of Safari.",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./package.json": "./package.json"
+  },
+  "capacitor": {
+    "ios": {
+      "src": "ios"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "@capacitor/core": "^8.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/core": "^8.5.2"
+  }
+}

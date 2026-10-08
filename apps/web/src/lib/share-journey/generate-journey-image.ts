@@ -15,6 +15,7 @@ import {
   drawJourneyImage,
   planJourneyPins,
   type AdminGeoJson,
+  type BrStatesGeoJson,
   type DrawableImage,
   type JourneyAssets,
   type LandGeoJson,
@@ -75,6 +76,15 @@ async function loadAdmin(): Promise<AdminGeoJson | null> {
   }
 }
 
+async function loadBrStates(): Promise<BrStatesGeoJson | null> {
+  try {
+    const response = await fetch("/geo/br-states-v1.json");
+    return response.ok ? ((await response.json()) as BrStatesGeoJson) : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Runs `task` over `items` with at most `limit` in flight. */
 async function mapLimited<T, R>(items: readonly T[], limit: number, task: (item: T) => Promise<R>): Promise<R[]> {
   const out: R[] = new Array(items.length);
@@ -102,9 +112,10 @@ export async function loadJourneyAssets(
     ...new Set([...summary.countryCodes, ...summary.favorites.map((trip) => trip.countryCode).filter((c): c is string => Boolean(c))]),
   ];
 
-  const [land, admin, avatar, covers, pins, flags] = await Promise.all([
+  const [land, admin, brStates, avatar, covers, pins, flags] = await Promise.all([
     loadLand(),
     summary.region === "world" ? Promise.resolve(null) : loadAdmin(),
+    summary.region === "br" ? loadBrStates() : Promise.resolve(null),
     loadAvatar(ownerId, avatarRemoteSrc),
     mapLimited(coverTrips, 4, async (trip) => [trip.albumId, await loadPhoto(trip.coverPhotoId!)] as const),
     mapLimited(pinPhotoIds, 4, async (id) => [id, await loadPhoto(id)] as const),
@@ -113,7 +124,7 @@ export async function loadJourneyAssets(
 
   const keep = <K, V>(entries: readonly (readonly [K, V | null])[]) =>
     new Map(entries.filter((entry): entry is readonly [K, V] => entry[1] !== null));
-  return { land, admin, avatar, covers: keep(covers), pins: keep(pins), flags: keep(flags) };
+  return { land, admin, brStates, avatar, covers: keep(covers), pins: keep(pins), flags: keep(flags) };
 }
 
 export function renderJourneyCanvas(summary: JourneySummary, assets: JourneyAssets): HTMLCanvasElement {

@@ -548,3 +548,36 @@ test("generation still works for each map: summary, pins and photo list are cons
   const generator = read("src/lib/share-journey/generate-journey-image.ts");
   assert.match(generator, /summary\.region === "world"/, "region outlines are only loaded for country maps");
 });
+
+// ---- zoomed country maps with visible state borders ---------------------------------------------------
+
+test("the Brasil map has all 27 state outlines and the generator loads them only for Brasil", () => {
+  const geo = JSON.parse(read("public/geo/br-states-v1.json")) as { states: { a: string; p: number[][][] }[] };
+  assert.equal(geo.states.length, 27);
+  assert.equal(new Set(geo.states.map((s) => s.a)).size, 27);
+  for (const code of ["SP", "RJ", "BA", "AM", "RS", "DF"]) assert.ok(geo.states.some((s) => s.a === code), code);
+  assert.ok(geo.states.every((s) => s.p.length > 0 && s.p[0]![0]!.length >= 8), "every state has a real outline");
+  const generator = read("src/lib/share-journey/generate-journey-image.ts");
+  assert.match(generator, /br-states-v1\.json/);
+  assert.match(generator, /summary\.region === "br" \? loadBrStates\(\)/);
+  assert.match(read("src/lib/share-journey/render-journey-image.ts"), /brStates\.states/, "state borders are drawn");
+});
+
+test("Brasil and Estados Unidos are zoomed in: the country fills most of the map area", () => {
+  const widthShare = (region: "br" | "us", lonA: number, lonB: number) => {
+    const main = regionMap(region).views.find((v) => !v.inset)!.frame;
+    return (projectFlat(lonB, 0, main).x - projectFlat(lonA, 0, main).x) / 1080;
+  };
+  assert.ok(widthShare("br", -74, -34) >= 0.52, "Brazil spans over half of the width (its height fills the map)");
+  assert.ok(widthShare("us", -125, -67) >= 0.85, "the contiguous US nearly fills the width");
+  const br = regionMap("br").views[0]!.frame;
+  const north = projectFlat(-60, 5, br).y;
+  const south = projectFlat(-52, -33.7, br).y;
+  assert.ok(south - north >= 560, `Brazil is ${Math.round(south - north)}px tall`);
+});
+
+test("the Mundo map keeps its framing", () => {
+  const world = regionMap("world").views[0]!.frame;
+  assert.deepEqual([world.lonMin, world.lonMax, world.latMin, world.latMax, world.yStretch, world.curveRadius], [-180, 180, -58, 84, 1.32, 1500]);
+  assert.equal(regionMap("world").fadeHeight, 150);
+});

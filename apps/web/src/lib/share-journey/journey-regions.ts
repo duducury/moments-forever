@@ -125,6 +125,8 @@ export interface RegionMap {
   readonly views: readonly MapView[];
   /** The caption ("N fotos com localização") goes to this side so it never covers land or insets. */
   readonly captionSide: "left" | "right";
+  /** Height of the fade into the dark background under the map (shorter when the country is zoomed in). */
+  readonly fadeHeight: number;
 }
 
 const WORLD_FRAME: MapFrame = {
@@ -172,11 +174,12 @@ function worldMap(): RegionMap {
   return {
     views: [{ id: "world", frame: WORLD_FRAME, box: [-180, -90, 180, 90], land: "world", inset: false }],
     captionSide: "left",
+    fadeHeight: 150,
   };
 }
 
 function usMap(): RegionMap {
-  const main = fitFrame(-95.5, 23, 50.5, 1.27);
+  const main = fitFrame(-95.5, 23, 50.5, 1.27, 566);
   const scale = MAP_AREA.width / (main.lonMax - main.lonMin);
   const alaskaBox: GeoBox = [-170, 51, -129, 72];
   const hawaiiBox: GeoBox = [-161, 18.5, -154.5, 22.5];
@@ -187,14 +190,17 @@ function usMap(): RegionMap {
       { id: "us-main", frame: main, box: [-130, 23, -61, 52], land: "world", inset: false },
     ],
     captionSide: "right",
+    fadeHeight: 110,
   };
 }
 
 function brazilMap(): RegionMap {
-  const frame = fitFrame(-53, -34.5, 6.5, 1.02);
+  // Brazil is as tall as it is wide: it takes the whole height of the map area (and a bit more).
+  const frame = fitFrame(-53.5, -34, 5.8, 1.02, 596);
   return {
     views: [{ id: "br-main", frame, box: [frame.lonMin, frame.latMin, frame.lonMax, frame.latMax], land: "world", inset: false }],
     captionSide: "left",
+    fadeHeight: 60,
   };
 }
 

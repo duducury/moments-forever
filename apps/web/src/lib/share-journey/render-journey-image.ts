@@ -25,8 +25,15 @@ export interface AdminGeoJson {
   readonly us: readonly { readonly a?: string; readonly p: readonly (readonly (readonly number[])[])[] }[];
 }
 
+/** `public/geo/br-states-v1.json`: the 27 Brazilian states, flat [lon, lat, …] × 100. */
+export interface BrStatesGeoJson {
+  readonly states: readonly { readonly a: string; readonly p: readonly (readonly (readonly number[])[])[] }[];
+}
+
 export interface JourneyAssets {
   readonly land: LandGeoJson | null;
+  /** State borders for the Brasil map; null elsewhere. */
+  readonly brStates: BrStatesGeoJson | null;
   /** Outlines for the country maps (US states, Alaska inset, Brazil border); null on the world map. */
   readonly admin: AdminGeoJson | null;
   readonly avatar: DrawableImage | null;
@@ -393,7 +400,8 @@ function earthPath(ctx: Ctx, bottom: number): void {
 /** Which places get a photo pin (also tells the generator which photos to load). */
 export function planJourneyPins(summary: JourneySummary): MapLayout {
   const views = regionMap(summary.region).views;
-  return layoutMapViews(summary.clusters, views, { skyAllowance: 70 });
+  // Country maps are zoomed in: room for more distinct places.
+  return layoutMapViews(summary.clusters, views, { skyAllowance: 70, maxPins: summary.region === "world" ? 18 : 24 });
 }
 
 function drawWorldMap(ctx: Ctx, summary: JourneySummary, assets: JourneyAssets): void {
@@ -431,7 +439,7 @@ function drawWorldMap(ctx: Ctx, summary: JourneySummary, assets: JourneyAssets):
   if (assets.land) {
     for (const view of [...map.views].reverse()) drawLand(ctx, assets, view);
   }
-  if (assets.admin) drawOutlines(ctx, assets.admin, map.views, summary.region);
+  drawOutlines(ctx, assets, map.views, summary.region);
 
   // Sunlight flaring over the horizon on the right, shadow on the left.
   const flare = ctx.createRadialGradient(1010, MAP.y + 90, 10, 1010, MAP.y + 90, 360);
@@ -463,7 +471,7 @@ function drawWorldMap(ctx: Ctx, summary: JourneySummary, assets: JourneyAssets):
   ctx.restore();
 
   // The Earth melts into the dark background below.
-  const fadeTop = MAP.y + MAP.height - 150;
+  const fadeTop = MAP.y + MAP.height - map.fadeHeight;
   const fade = ctx.createLinearGradient(0, fadeTop, 0, bottom);
   fade.addColorStop(0, "rgba(7,10,17,0)");
   fade.addColorStop(1, "rgba(7,10,17,0.97)");
@@ -518,7 +526,8 @@ function paintLand(ctx: Ctx, polygons: readonly number[][][][], frame: MapFrame)
 }
 
 /** Thin outlines: US states on the US map, the national border on the Brazil map. */
-function drawOutlines(ctx: Ctx, admin: AdminGeoJson, views: readonly MapView[], region: JourneyRegion): void {
+function drawOutlines(ctx: Ctx, assets: JourneyAssets, views: readonly MapView[], region: JourneyRegion): void {
+  const { admin, brStates } = assets;
   const stroke = (rings: readonly (readonly number[])[], frame: MapFrame, clip: boolean) => {
     for (const ring of rings) {
       ctx.save();
@@ -538,18 +547,27 @@ function drawOutlines(ctx: Ctx, admin: AdminGeoJson, views: readonly MapView[], 
       ctx.restore();
     }
   };
-  if (region === "us") {
-    ctx.strokeStyle = "rgba(255,244,214,0.34)";
-    ctx.lineWidth = 1.2;
+  if (region === "us" && admin) {
+    // State borders: light, clearly readable lines.
+    ctx.lineJoin = "round";
+    ctx.strokeStyle = "rgba(255,248,226,0.66)";
+    ctx.lineWidth = 2;
     for (const view of views) {
-      if (view.land === "us" ) continue;
+      if (view.land === "us") continue;
       for (const state of admin.us) for (const polygon of state.p) stroke(polygon.slice(0, 1), view.frame, view.inset);
     }
-  } else if (region === "br") {
-    ctx.strokeStyle = "rgba(255,244,214,0.6)";
+  } else if (region === "br" && brStates) {
+    ctx.lineJoin = "round";
+    ctx.strokeStyle = "rgba(255,248,226,0.7)";
     ctx.lineWidth = 2;
-    const brazil = admin.countries.find((country) => country.c === "BR");
-    if (brazil) for (const polygon of brazil.p) stroke(polygon.slice(0, 1), views[0]!.frame, false);
+    for (const state of brStates.states) for (const polygon of state.p) stroke(polygon.slice(0, 1), views[0]!.frame, false);
+    // The national border a little stronger than the states.
+    const brazil = admin?.countries.find((country) => country.c === "BR");
+    if (brazil) {
+      ctx.strokeStyle = "rgba(255,252,238,0.95)";
+      ctx.lineWidth = 3;
+      for (const polygon of brazil.p) stroke(polygon.slice(0, 1), views[0]!.frame, false);
+    }
   }
 }
 

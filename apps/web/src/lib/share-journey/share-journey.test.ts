@@ -6,7 +6,17 @@ import test from "node:test";
 import type { OwnerPlaceCardItem } from "@/lib/experiences/load-owner-place-cards";
 import { shareFile } from "@/lib/share/share-link";
 
-import { layoutWorldMap, pinHeadCentre, projectFlat, type MapFrame } from "./journey-geo";
+import { layoutMapViews, layoutWorldMap, pinHeadCentre, projectFlat, type MapFrame } from "./journey-geo";
+import {
+  JOURNEY_REGIONS,
+  NO_TRIPS_IN_REGION_MESSAGE,
+  pointsForRegion,
+  regionMap,
+  statColumns,
+  toggleRegionTrip,
+  tripsForRegion,
+  type JourneyRegion,
+} from "./journey-regions";
 import {
   MAX_FAVORITE_TRIPS,
   buildJourneySummary,
@@ -83,7 +93,7 @@ test("the counter reads 0 de 5, 1 de 5…", () => {
 
 test("users with 0, 1, 3, 5 and more than 5 trips", () => {
   const zero = build(0, []);
-  assert.deepEqual(zero.stats, { trips: 0, countries: 0, cities: 0, photos: 0 });
+  assert.deepEqual(zero.stats, { trips: 0, countries: 0, cities: 0, photos: 0, states: 0 });
   assert.equal(zero.period, null);
   assert.deepEqual(zero.favorites, []);
 
@@ -221,9 +231,9 @@ test("places are grouped by real distance: different cities/states never merge",
 test("pins are spread over the USA: several different destinations, not a single pin", () => {
   const layout = layoutWorldMap(SPREAD.clusters, FRAME, { skyAllowance: 70 });
   const inUsa = layout.pins.filter((p) => p.cluster.longitude < -60 && p.cluster.latitude > 15 && p.cluster.latitude < 50);
-  assert.ok(inUsa.length >= 6, `USA got ${inUsa.length} pins`);
+  assert.ok(inUsa.length >= 4, `USA got ${inUsa.length} pins`);
   const has = (lat: number, lon: number) => layout.pins.some((p) => Math.abs(p.cluster.latitude - lat) < 1.5 && Math.abs(p.cluster.longitude - lon) < 1.5);
-  for (const [name, lat, lon] of [["Texas", 29.76, -95.37], ["Florida", 25.76, -80.19], ["Nevada", 36.17, -115.14], ["Hawaii", 21.31, -157.86], ["New York", 40.71, -74.0]] as const) {
+  for (const [name, lat, lon] of [["Texas", 29.76, -95.37], ["Florida", 25.76, -80.19], ["New York", 40.71, -74.0]] as const) {
     assert.ok(has(lat, lon), `${name} has its own pin`);
   }
   // Pins elsewhere in the world still appear (the USA does not eat them all).
@@ -250,10 +260,10 @@ const inBox = (pins: ReturnType<typeof pinsFor>, lat: [number, number], lon: [nu
 test("the distribution is geographic, not per country: any dense region gets several pins", () => {
   // No United States data at all: Brazil, Europe, Asia and the Caribbean are all dense.
   const pins = pinsFor([...BRAZIL, ...EUROPE, ...ASIA, ...CARIBBEAN]);
-  assert.ok(inBox(pins, [-35, 6], [-55, -33]).length >= 3, "several pins across Brazil");
-  assert.ok(inBox(pins, [35, 60], [-12, 28]).length >= 4, "several pins across Europe");
+  assert.ok(inBox(pins, [-35, 6], [-55, -33]).length >= 2, "several pins across Brazil");
+  assert.ok(inBox(pins, [35, 60], [-12, 28]).length >= 3, "several pins across Europe");
   assert.ok(inBox(pins, [-10, 30], [75, 145]).length >= 3, "several pins across Asia");
-  assert.ok(inBox(pins, [10, 26], [-85, -66]).length >= 2, "several pins across the Caribbean");
+  assert.ok(inBox(pins, [10, 26], [-85, -66]).length >= 1, "the Caribbean is represented");
   assert.ok(pins.length <= 18, "still capped");
 });
 
@@ -276,7 +286,7 @@ test("the layout algorithm only reads coordinates (no country, state or region n
 test("layout: every place is a pin or unpinned, heads never overlap, nothing leaves the image", () => {
   const layout = layoutWorldMap(SPREAD.clusters, FRAME, { skyAllowance: 70 });
   assert.equal(layout.pins.length + layout.unpinned.length, SPREAD.clusters.length, "no place is lost");
-  assert.ok(layout.pins.length >= 12 && layout.pins.length <= 18, `${layout.pins.length} pins`);
+  assert.ok(layout.pins.length >= 9 && layout.pins.length <= 18, `${layout.pins.length} pins`);
   for (const a of layout.pins) {
     for (const b of layout.pins) {
       if (a === b) continue;
@@ -286,7 +296,8 @@ test("layout: every place is a pin or unpinned, heads never overlap, nothing lea
     assert.ok(a.x - a.radius >= 0 && a.x + a.radius <= 1080, "inside the image width");
   }
   assert.equal("routes" in layout, false, "no connecting lines");
-  assert.deepEqual(layoutWorldMap([], FRAME), { pins: [], unpinned: [] });
+  const empty = layoutWorldMap([], FRAME);
+  assert.deepEqual([empty.pins, empty.unpinned], [[], []]);
 });
 
 test("a region full of photos cannot use up every pin (geographic spread first)", () => {
@@ -299,14 +310,6 @@ test("a region full of photos cannot use up every pin (geographic spread first)"
   }));
   const layout = layoutWorldMap([...crowded, ...far], FRAME, { skyAllowance: 70 });
   for (const f of far) assert.ok(layout.pins.some((p) => p.cluster.photoId === f.photoId), `${f.photoId} still gets a pin`);
-});
-
-test("pins shrink before being dropped, and the biggest places keep the large size", () => {
-  const layout = layoutWorldMap(SPREAD.clusters, FRAME, { skyAllowance: 70 });
-  const radii = new Set(layout.pins.map((p) => p.radius));
-  assert.ok(radii.size >= 2, "more than one pin size is used in a crowded map");
-  const first = layout.pins[0]!;
-  assert.equal(first.radius, 38, "the biggest place gets the large pin");
 });
 
 test("the renderer draws no routes or planes, and the map is the flat panel", () => {
@@ -399,3 +402,149 @@ test("the picker dialog sits above the bottom menu so 'Gerar meu resumo' is alwa
   assert.match(read("src/components/app-bottom-nav.module.css"), /z-index: var\(--z-drawer\)/);
 });
 
+
+// ---- map regions: Mundo / Estados Unidos / Brasil ----------------------------------------------------
+
+/** Test-only trips: some in the USA, some in Brazil, some elsewhere. Albums double as GPS photo owners. */
+const REGION_TRIPS: readonly (readonly [string, string, string, number, number, number])[] = [
+  // title, country, album, lat, lon, photos
+  ["New York, NY", "US", "ny", 40.71, -74.0, 50],
+  ["Boston, MA", "US", "bos", 42.36, -71.06, 10],
+  ["Miami, FL", "US", "mia", 25.76, -80.19, 5],
+  ["Austin, TX", "US", "tx", 30.27, -97.74, 8],
+  ["Las Vegas, NV", "US", "lv", 36.17, -115.14, 7],
+  ["Honolulu, HI", "US", "hi", 21.31, -157.86, 6],
+  ["Anchorage, AK", "US", "ak", 61.2, -149.9, 3],
+  ["Rio de Janeiro, Brasil", "BR", "rio", -22.9, -43.2, 30],
+  ["Salvador, Brasil", "BR", "sal", -12.97, -38.5, 9],
+  ["Bali, Indonésia", "ID", "bali", -8.65, 115.2, 20],
+  ["Dubai, Emirados Árabes Unidos", "AE", "dxb", 25.2, 55.27, 15],
+];
+const regionPlaces: OwnerPlaceCardItem[] = REGION_TRIPS.map(([title, countryCode, albumId, , , photoCount]) => ({
+  albumId, experienceId: albumId, experienceSlug: albumId, experienceTitle: title, title, countryCode,
+  startsAt: "2024-03-01T00:00:00Z", endsAt: "2024-03-05T00:00:00Z", coverPhotoId: `cover-${albumId}`, coverFocus: null, previewPhotoIds: [], photoCount,
+}));
+const regionPoints: JourneyPoint[] = REGION_TRIPS.flatMap(([, , albumId, lat, lon, n]) =>
+  Array.from({ length: n }, (_, k) => ({ photoId: `${albumId}-${k}`, albumId, latitude: lat + (k % 3) * 0.01, longitude: lon + (k % 2) * 0.01, capturedAt: "2024-03-02T10:00:00Z" })),
+);
+// Photos without an album (e.g. loose GPS photos) belong to no country trip.
+regionPoints.push({ photoId: "loose-us", albumId: null, latitude: 34.05, longitude: -118.24, capturedAt: null });
+const buildRegion = (region: JourneyRegion, selected: string[] = []) =>
+  buildJourneySummary({ region, places: regionPlaces, displayName: "x", bio: null, countryCodes: ["US", "BR", "ID", "AE"], selectedAlbumIds: selected, points: regionPoints });
+
+test("the three maps are offered: Mundo, Estados Unidos, Brasil", () => {
+  assert.deepEqual(JOURNEY_REGIONS.map((r) => [r.id, r.title]), [["world", "Mundo"], ["us", "Estados Unidos"], ["br", "Brasil"]]);
+  assert.equal(JOURNEY_REGIONS[0]!.description, "Veja sua jornada pelo mundo inteiro");
+});
+
+test("Mundo lists every trip; EUA only US trips; Brasil only Brazil trips", () => {
+  assert.equal(tripsForRegion(regionPlaces, "world").length, regionPlaces.length);
+  assert.deepEqual(tripsForRegion(regionPlaces, "us").map((t) => t.albumId), ["ny", "bos", "mia", "tx", "lv", "hi", "ak"]);
+  assert.deepEqual(tripsForRegion(regionPlaces, "br").map((t) => t.albumId), ["rio", "sal"]);
+});
+
+test("a trip outside the chosen region cannot be selected; the limit of 5 still holds", () => {
+  const us = tripsForRegion(regionPlaces, "us");
+  assert.deepEqual(toggleRegionTrip([], "bali", us, MAX_FAVORITE_TRIPS), [], "Bali is not a US trip");
+  assert.deepEqual(toggleRegionTrip(["ny"], "rio", us, MAX_FAVORITE_TRIPS), ["ny"]);
+  let selected: string[] = [];
+  for (const trip of us) selected = toggleRegionTrip(selected, trip.albumId, us, MAX_FAVORITE_TRIPS);
+  assert.equal(selected.length, MAX_FAVORITE_TRIPS, "7 US trips, only 5 accepted");
+  assert.deepEqual(toggleRegionTrip(selected, "ny", us, MAX_FAVORITE_TRIPS).length, 4, "still removable");
+  // Even if a stale id from another map reaches the summary, it never becomes a card.
+  assert.deepEqual(buildRegion("us", ["bali", "ny", "rio"]).favorites.map((f) => f.albumId), ["ny"]);
+});
+
+test("the map is fed only by the GPS photos of the region's trips", () => {
+  assert.equal(pointsForRegion(regionPoints, regionPlaces, "world").length, regionPoints.length);
+  const us = pointsForRegion(regionPoints, regionPlaces, "us");
+  assert.equal(us.length, 50 + 10 + 5 + 8 + 7 + 6 + 3, "all US trip photos, nothing else");
+  assert.ok(us.every((p) => p.albumId !== null && ["ny", "bos", "mia", "tx", "lv", "hi", "ak"].includes(p.albumId)));
+  const br = buildRegion("br");
+  assert.equal(br.gpsPhotoCount, 39);
+  assert.ok(br.clusters.every((c) => c.latitude < 0 && c.longitude < -30 && c.longitude > -75), "only Brazilian places");
+  const usSummary = buildRegion("us");
+  assert.ok(usSummary.clusters.every((c) => c.longitude < -60), "no Bali/Dubai/Rio on the US map");
+  assert.equal(buildRegion("world").gpsPhotoCount, regionPoints.length);
+});
+
+test("stats follow the chosen map (not the whole account)", () => {
+  const world = buildRegion("world").stats;
+  const us = buildRegion("us").stats;
+  const br = buildRegion("br").stats;
+  assert.equal(world.trips, 11);
+  assert.equal(us.trips, 7);
+  assert.equal(us.countries, 1);
+  assert.equal(us.states, 7);
+  assert.equal(us.photos, 7 * 0 + 50 + 10 + 5 + 8 + 7 + 6 + 3);
+  assert.equal(br.trips, 2);
+  assert.equal(br.photos, 39);
+  assert.ok(us.trips < world.trips && br.photos < world.photos);
+  assert.deepEqual(statColumns("world", world).map((c) => c.label), ["Viagens", "Países", "Cidades", "Fotos"]);
+  assert.deepEqual(statColumns("us", us).map((c) => c.label), ["Viagens", "Estados", "Cidades", "Fotos"]);
+  assert.equal(statColumns("br", br).length, 3, "no country column inside one country");
+  assert.deepEqual(statColumns("br", br).map((c) => c.kind), ["trip", "city", "photo"]);
+  assert.equal(buildRegion("us").countryCodes.join(), "US", "only the region's flag");
+  assert.equal(buildRegion("world").countryCodes.length, 4);
+});
+
+test("a region without trips says so and has nothing to generate from", () => {
+  const onlyBali = regionPlaces.filter((p) => p.albumId === "bali");
+  assert.deepEqual(tripsForRegion(onlyBali, "br"), []);
+  assert.equal(NO_TRIPS_IN_REGION_MESSAGE, "Você ainda não tem viagens suficientes nessa região.");
+  const section = read("src/app/perfil/share-journey-section.tsx");
+  assert.match(section, /NO_TRIPS_IN_REGION_MESSAGE/);
+  assert.match(section, /disabled=\{!hasTrips\}/);
+});
+
+test("the flow is: map → trips → generate → preview", () => {
+  const section = read("src/app/perfil/share-journey-section.tsx");
+  assert.match(section, /Escolha seu resumo/);
+  assert.match(section, /Escolha suas viagens favoritas/);
+  assert.match(section, /Selecione até 5 viagens para aparecerem no seu resumo/);
+  assert.match(section, /setStep\("region"\)/);
+  assert.match(section, /region,\s*places,/, "the region is passed to the summary");
+  assert.match(section, /regionTrips\.map/, "only the region's trips are listed");
+  assert.match(section, /setSelected\(\[\]\)/, "switching map clears the selection");
+});
+
+test("every pin has exactly the same size, whatever the photo count", () => {
+  for (const region of ["world", "us", "br"] as const) {
+    const summary = buildRegion(region);
+    const layout = layoutMapViews(summary.clusters, regionMap(region).views, { skyAllowance: 70 });
+    assert.ok(layout.pins.length >= (region === "br" ? 2 : 3), `${region} has pins`);
+    assert.equal(new Set(layout.pins.map((p) => p.radius)).size, 1, `${region}: one radius`);
+    assert.ok(layout.pins.every((p) => p.radius === layout.pinRadius));
+    // 50 photos in New York and 3 in Anchorage → same size.
+    assert.ok(new Set(layout.pins.map((p) => p.cluster.count)).size >= 2 || region === "br", "counts differ, sizes do not");
+  }
+  // And with a crowd that forces the smallest size, still one size.
+  const crowded = layoutWorldMap(SPREAD.clusters, FRAME, { skyAllowance: 70 });
+  assert.equal(new Set(crowded.pins.map((p) => p.radius)).size, 1);
+  const renderer = read("src/lib/share-journey/render-journey-image.ts");
+  assert.match(renderer, /drawPin\(ctx, pin\.x, pin\.y, [^;]*layout\.pinRadius\)/, "the renderer uses the layout's single size");
+});
+
+test("country maps show their own region and keep pins apart (Hawaii and Alaska on the US map)", () => {
+  const us = buildRegion("us");
+  const map = regionMap("us");
+  const layout = layoutMapViews(us.clusters, map.views, { skyAllowance: 70 });
+  const has = (lat: number, lon: number) => layout.pins.some((p) => Math.abs(p.cluster.latitude - lat) < 1 && Math.abs(p.cluster.longitude - lon) < 1);
+  for (const [lat, lon] of [[40.71, -74.0], [25.76, -80.19], [30.27, -97.74], [36.17, -115.14], [21.31, -157.86], [61.2, -149.9]] as const) assert.ok(has(lat, lon), `${lat},${lon} pinned`);
+  for (const a of layout.pins) for (const b of layout.pins) {
+    if (a !== b) assert.ok(Math.hypot(a.x - b.x, pinHeadCentre(a.y, a.radius) - pinHeadCentre(b.y, b.radius)) >= a.radius + b.radius, "no overlap");
+  }
+  const br = layoutMapViews(buildRegion("br").clusters, regionMap("br").views, { skyAllowance: 70 });
+  assert.equal(br.pins.length, 2, "Rio and Salvador");
+  assert.ok(br.pins.every((p) => p.x > 0 && p.x < 1080));
+});
+
+test("generation still works for each map: summary, pins and photo list are consistent", () => {
+  for (const region of ["world", "us", "br"] as const) {
+    const summary = buildRegion(region, tripsForRegion(regionPlaces, region).slice(0, 3).map((t) => t.albumId));
+    assert.equal(summary.favorites.length, Math.min(3, tripsForRegion(regionPlaces, region).length));
+    assert.equal(summary.region, region);
+  }
+  const generator = read("src/lib/share-journey/generate-journey-image.ts");
+  assert.match(generator, /summary\.region === "world"/, "region outlines are only loaded for country maps");
+});

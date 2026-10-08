@@ -4,7 +4,8 @@
  * point comes from the `JourneySummary` / `JourneyAssets` it is given.
  */
 
-import { horizonDrop, layoutWorldMap, projectFlat, type MapFrame, type MapLayout } from "./journey-geo";
+import { horizonDrop, layoutMapViews, projectFlat, type MapFrame, type MapLayout } from "./journey-geo";
+import { MAP_AREA, regionMap, statColumns, type JourneyRegion, type MapView } from "./journey-regions";
 import { MAX_FAVORITE_TRIPS, type JourneySummary } from "./journey-summary";
 
 export const JOURNEY_IMAGE_WIDTH = 1080;
@@ -18,8 +19,16 @@ export interface LandGeoJson {
   }[];
 }
 
+/** `public/geo/admin-v1.json`: country and US-state outlines, flat [lon, lat, …] × 100. */
+export interface AdminGeoJson {
+  readonly countries: readonly { readonly c?: string; readonly p: readonly (readonly (readonly number[])[])[] }[];
+  readonly us: readonly { readonly a?: string; readonly p: readonly (readonly (readonly number[])[])[] }[];
+}
+
 export interface JourneyAssets {
   readonly land: LandGeoJson | null;
+  /** Outlines for the country maps (US states, Alaska inset, Brazil border); null on the world map. */
+  readonly admin: AdminGeoJson | null;
   readonly avatar: DrawableImage | null;
   /** Trip cover photos by albumId. */
   readonly covers: ReadonlyMap<string, DrawableImage>;
@@ -35,8 +44,11 @@ const CORAL = "#e8825f";
 const OFFWHITE = "#f4efe6";
 const MUTED = "#b9b2a7";
 
-/** The world map: the Earth seen from space, part of the background (no box). */
-const MAP: MapFrame = { x: 0, y: 646, width: 1080, height: 564, lonMin: -180, lonMax: 180, latMin: -58, latMax: 84, yStretch: 1.32, curveRadius: 1500 };
+/**
+ * The map area: the Earth seen from space, part of the background (no box).
+ * Its horizon curve is the same for the world and the country maps.
+ */
+const MAP: MapFrame = { ...MAP_AREA, lonMin: -180, lonMax: 180, latMin: -58, latMax: 84, yStretch: 1.32, curveRadius: 1500 };
 
 type Ctx = CanvasRenderingContext2D;
 
@@ -341,12 +353,7 @@ function drawStats(ctx: Ctx, summary: JourneySummary): void {
   ctx.lineWidth = 2;
   ctx.stroke();
 
-  const items = [
-    { kind: "trip" as const, value: summary.stats.trips, label: summary.stats.trips === 1 ? "Viagem" : "Viagens" },
-    { kind: "country" as const, value: summary.stats.countries, label: summary.stats.countries === 1 ? "País" : "Países" },
-    { kind: "city" as const, value: summary.stats.cities, label: summary.stats.cities === 1 ? "Cidade" : "Cidades" },
-    { kind: "photo" as const, value: summary.stats.photos, label: summary.stats.photos === 1 ? "Foto" : "Fotos" },
-  ];
+  const items = statColumns(summary.region, summary.stats);
   const colW = w / items.length;
   items.forEach((item, i) => {
     const cx = x + colW * i + colW / 2;
@@ -385,7 +392,8 @@ function earthPath(ctx: Ctx, bottom: number): void {
 
 /** Which places get a photo pin (also tells the generator which photos to load). */
 export function planJourneyPins(summary: JourneySummary): MapLayout {
-  return layoutWorldMap(summary.clusters, MAP, { skyAllowance: 70 });
+  const views = regionMap(summary.region).views;
+  return layoutMapViews(summary.clusters, views, { skyAllowance: 70 });
 }
 
 function drawWorldMap(ctx: Ctx, summary: JourneySummary, assets: JourneyAssets): void {
@@ -419,7 +427,11 @@ function drawWorldMap(ctx: Ctx, summary: JourneySummary, assets: JourneyAssets):
   ctx.fillStyle = ocean;
   ctx.fillRect(MAP.x, MAP.y, MAP.width, bottom - MAP.y);
 
-  if (assets.land) drawLand(ctx, assets.land);
+  const map = regionMap(summary.region);
+  if (assets.land) {
+    for (const view of [...map.views].reverse()) drawLand(ctx, assets, view);
+  }
+  if (assets.admin) drawOutlines(ctx, assets.admin, map.views, summary.region);
 
   // Sunlight flaring over the horizon on the right, shadow on the left.
   const flare = ctx.createRadialGradient(1010, MAP.y + 90, 10, 1010, MAP.y + 90, 360);
@@ -460,35 +472,127 @@ function drawWorldMap(ctx: Ctx, summary: JourneySummary, assets: JourneyAssets):
 
   // Photo pins on the main places. No glowing dots, no lines.
   const layout = planJourneyPins(summary);
-  [...layout.pins].sort((a, b) => a.y - b.y).forEach((pin) => drawPin(ctx, pin.x, pin.y, assets.pins.get(pin.cluster.photoId) ?? null, pin.radius));
+  [...layout.pins].sort((a, b) => a.y - b.y).forEach((pin) => drawPin(ctx, pin.x, pin.y, assets.pins.get(pin.cluster.photoId) ?? null, layout.pinRadius));
 
   // Caption: what the map is made of (real counts).
   if (summary.gpsPhotoCount > 0) {
+    const right = map.captionSide === "right";
+    const x = right ? 1026 : 54;
+    const align = right ? "right" : "left";
     ctx.fillStyle = "rgba(244,239,230,0.85)";
     ctx.font = `500 20px ${SANS}`;
     ctx.textAlign = "left";
-    spacedText(ctx, `${summary.gpsPhotoCount.toLocaleString("pt-BR")} ${summary.gpsPhotoCount === 1 ? "foto" : "fotos"} com`.toUpperCase(), 54, 1120, 2);
-    spacedText(ctx, "LOCALIZAÇÃO", 54, 1150, 2);
-    spacedText(ctx, `${summary.clusters.length.toLocaleString("pt-BR")} ${summary.clusters.length === 1 ? "lugar" : "lugares"}`.toUpperCase(), 54, 1180, 2);
+    spacedText(ctx, `${summary.gpsPhotoCount.toLocaleString("pt-BR")} ${summary.gpsPhotoCount === 1 ? "foto" : "fotos"} com`.toUpperCase(), x, 1120, 2, align);
+    spacedText(ctx, "LOCALIZAÇÃO", x, 1150, 2, align);
+    spacedText(ctx, `${summary.clusters.length.toLocaleString("pt-BR")} ${summary.clusters.length === 1 ? "lugar" : "lugares"}`.toUpperCase(), x, 1180, 2, align);
   }
 }
 
-function drawLand(ctx: Ctx, land: LandGeoJson): void {
+/** Land of one view. Insets (Alaska, Hawaii) only paint inside their own rectangle. */
+function drawLand(ctx: Ctx, assets: JourneyAssets, view: MapView): void {
+  const frame = view.frame;
+  ctx.save();
+  if (view.inset) {
+    ctx.beginPath();
+    ctx.rect(frame.x, frame.y, frame.width, frame.height);
+    ctx.clip();
+  }
+  if (view.land === "us" && assets.admin) {
+    const us = assets.admin.countries.find((country) => country.c === "US");
+    if (us) paintLand(ctx, us.p.map((rings) => rings.map((ring) => flatRing(ring))), frame);
+  } else if (assets.land) {
+    paintLandGeoJson(ctx, assets.land, frame);
+  }
+  ctx.restore();
+}
+
+/** [lon, lat, lon, lat …] × 100 → [[lon, lat], …]. */
+function flatRing(ring: readonly number[]): number[][] {
+  const out: number[][] = [];
+  for (let i = 0; i + 1 < ring.length; i += 2) out.push([ring[i]! / 100, ring[i + 1]! / 100]);
+  return out;
+}
+
+function paintLand(ctx: Ctx, polygons: readonly number[][][][], frame: MapFrame): void {
+  paintLandGeoJson(ctx, { features: [{ geometry: { type: "MultiPolygon", coordinates: polygons as number[][][][] } }] }, frame);
+}
+
+/** Thin outlines: US states on the US map, the national border on the Brazil map. */
+function drawOutlines(ctx: Ctx, admin: AdminGeoJson, views: readonly MapView[], region: JourneyRegion): void {
+  const stroke = (rings: readonly (readonly number[])[], frame: MapFrame, clip: boolean) => {
+    for (const ring of rings) {
+      ctx.save();
+      if (clip) {
+        ctx.beginPath();
+        ctx.rect(frame.x, frame.y, frame.width, frame.height);
+        ctx.clip();
+      }
+      ctx.beginPath();
+      for (let i = 0; i + 1 < ring.length; i += 2) {
+        const p = projectFlat(ring[i]! / 100, ring[i + 1]! / 100, frame);
+        if (i === 0) ctx.moveTo(p.x, p.y);
+        else ctx.lineTo(p.x, p.y);
+      }
+      ctx.closePath();
+      ctx.stroke();
+      ctx.restore();
+    }
+  };
+  if (region === "us") {
+    ctx.strokeStyle = "rgba(255,244,214,0.34)";
+    ctx.lineWidth = 1.2;
+    for (const view of views) {
+      if (view.land === "us" ) continue;
+      for (const state of admin.us) for (const polygon of state.p) stroke(polygon.slice(0, 1), view.frame, view.inset);
+    }
+  } else if (region === "br") {
+    ctx.strokeStyle = "rgba(255,244,214,0.6)";
+    ctx.lineWidth = 2;
+    const brazil = admin.countries.find((country) => country.c === "BR");
+    if (brazil) for (const polygon of brazil.p) stroke(polygon.slice(0, 1), views[0]!.frame, false);
+  }
+}
+
+const LAND_TINTS: readonly (readonly [number, string])[] = [
+  [80, "#dfe8ec"],
+  [66, "#9fb08f"],
+  [48, "#4c7a43"],
+  [33, "#a38d5a"],
+  [18, "#6d8c48"],
+  [3, "#2c6b38"],
+  [-12, "#5c8a47"],
+  [-28, "#a08c58"],
+  [-45, "#4c7a43"],
+  [-58, "#dfe8ec"],
+];
+
+/** Land colour at a latitude (linear blend between the tints above). */
+function landTint(lat: number): string {
+  const clamped = Math.min(80, Math.max(-58, lat));
+  for (let i = 0; i < LAND_TINTS.length - 1; i += 1) {
+    const [hiLat, hiColor] = LAND_TINTS[i]!;
+    const [loLat, loColor] = LAND_TINTS[i + 1]!;
+    if (clamped <= hiLat && clamped >= loLat) {
+      const t = (hiLat - clamped) / (hiLat - loLat);
+      const rgb = (hex: string) => [1, 3, 5].map((k) => parseInt(hex.slice(k, k + 2), 16));
+      const [a, b] = [rgb(hiColor), rgb(loColor)];
+      return `rgb(${a.map((v, k) => Math.round(v + (b[k]! - v) * t)).join(",")})`;
+    }
+  }
+  return LAND_TINTS[0]![1];
+}
+
+function paintLandGeoJson(ctx: Ctx, land: LandGeoJson, frame: MapFrame): void {
+  const MAP = frame;
   // Natural-looking tints by latitude: ice at the poles, forest, deserts, rainforest.
+  // Sampled only over the latitudes this frame shows, so a country map never gets polar ice.
   const top = projectFlat(0, MAP.latMax, MAP).y - horizonDrop(540, MAP);
   const bottomY = projectFlat(0, MAP.latMin, MAP).y - horizonDrop(540, MAP);
-  const at = (lat: number) => Math.min(1, Math.max(0, (projectFlat(0, lat, MAP).y - horizonDrop(540, MAP) - top) / (bottomY - top)));
   const fill = ctx.createLinearGradient(0, top, 0, bottomY);
-  fill.addColorStop(at(80), "#dfe8ec");
-  fill.addColorStop(at(66), "#9fb08f");
-  fill.addColorStop(at(48), "#4c7a43");
-  fill.addColorStop(at(33), "#a38d5a");
-  fill.addColorStop(at(18), "#6d8c48");
-  fill.addColorStop(at(3), "#2c6b38");
-  fill.addColorStop(at(-12), "#5c8a47");
-  fill.addColorStop(at(-28), "#a08c58");
-  fill.addColorStop(at(-45), "#4c7a43");
-  fill.addColorStop(at(-58), "#dfe8ec");
+  const steps = 14;
+  for (let i = 0; i <= steps; i += 1) {
+    fill.addColorStop(i / steps, landTint(MAP.latMax - ((MAP.latMax - MAP.latMin) * i) / steps));
+  }
   ctx.beginPath();
   for (const feature of land.features) {
     const polygons = feature.geometry.type === "MultiPolygon" ? feature.geometry.coordinates : [feature.geometry.coordinates as unknown as number[][][]];

@@ -113,6 +113,45 @@
   cursor: pointer;
 }
 
+.regions {
+  display: grid;
+  gap: 10px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.regionCard {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 16px;
+  border: 1.5px solid var(--border);
+  border-radius: 18px;
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.regionCard[data-selected="true"] {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+}
+
+.regionCard[data-selected="true"] .check {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.regionEmoji {
+  flex: none;
+  font-size: 2rem;
+  line-height: 1;
+}
+
 .item[data-selected="true"] {
   border-color: var(--accent);
   background: color-mix(in srgb, var(--accent) 12%, var(--surface));

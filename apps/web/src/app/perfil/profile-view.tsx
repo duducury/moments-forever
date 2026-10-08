@@ -178,7 +178,6 @@ export function ProfileView({
             displayName={displayName}
             ownerId={ownerId}
             places={places}
-            profilePath={homeHref}
           />
         ) : null}
       </section>

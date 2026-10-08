@@ -4,10 +4,19 @@
  * and GPS photos — no fixtures, no hard-coded names or numbers.
  */
 
-import { countryNameFromCode } from "@moments-forever/shared";
+import { countryNameFromCode, usStateCodeFromPlaceLabel } from "@moments-forever/shared";
 
 import type { OwnerPlaceCardItem } from "@/lib/experiences/load-owner-place-cards";
 import { buildPassport } from "@/lib/passport/build-passport";
+
+import {
+  countryCodesForRegion,
+  pointsForRegion,
+  regionMap,
+  tripsForRegion,
+  viewForPoint,
+  type JourneyRegion,
+} from "./journey-regions";
 
 /** The summary shows at most this many favourite trips. */
 export const MAX_FAVORITE_TRIPS = 5;
@@ -32,6 +41,8 @@ export interface JourneyStats {
   readonly countries: number;
   readonly cities: number;
   readonly photos: number;
+  /** Distinct US states among the trips (shown instead of countries on the US map). */
+  readonly states: number;
 }
 
 /** Same numbers the profile and the passport show. */
@@ -42,6 +53,7 @@ export function journeyStats(places: readonly OwnerPlaceCardItem[]): JourneyStat
     countries: passport.countryCount,
     cities: passport.cityCount,
     photos: passport.photoCount,
+    states: new Set(places.map((place) => usStateCodeFromPlaceLabel(place.title)).filter(Boolean)).size,
   };
 }
 
@@ -215,19 +227,25 @@ export function clusterJourneyPoints(
 }
 
 export interface JourneySummary {
+  readonly region: JourneyRegion;
   readonly displayName: string;
   readonly bio: string | null;
   readonly countryCodes: readonly string[];
   readonly period: string | null;
   readonly stats: JourneyStats;
   readonly favorites: readonly FavoriteTrip[];
-  /** EVERY place with GPS photos — the map. Independent of the favourite trips. */
+  /** EVERY place with GPS photos of the region — the map. Independent of the favourite trips. */
   readonly clusters: readonly JourneyCluster[];
   /** How many GPS photos fed the map. */
   readonly gpsPhotoCount: number;
 }
 
+/**
+ * Everything is filtered by the region FIRST: trips, favourites, stats, period,
+ * flags and map photos all come from the same set of trips.
+ */
 export function buildJourneySummary(input: {
+  readonly region?: JourneyRegion;
   readonly places: readonly OwnerPlaceCardItem[];
   readonly displayName: string;
   readonly bio: string | null;
@@ -235,16 +253,26 @@ export function buildJourneySummary(input: {
   readonly selectedAlbumIds: readonly string[];
   readonly points: readonly JourneyPoint[];
 }): JourneySummary {
+  const region = input.region ?? "world";
+  const trips = tripsForRegion(input.places, region);
+  const map = regionMap(region);
+  const mapPoints = pointsForRegion(input.points, input.places, region).filter(
+    (p) =>
+      Number.isFinite(p.latitude) &&
+      Number.isFinite(p.longitude) &&
+      Math.abs(p.latitude) <= 90 &&
+      Math.abs(p.longitude) <= 180 &&
+      viewForPoint(map, p.latitude, p.longitude) !== null,
+  );
   return {
+    region,
     displayName: input.displayName,
     bio: input.bio?.trim() || null,
-    countryCodes: input.countryCodes,
-    period: journeyPeriodLabel(input.places),
-    stats: journeyStats(input.places),
-    favorites: selectFavoriteTrips(input.places, input.selectedAlbumIds),
-    clusters: clusterJourneyPoints(input.points),
-    gpsPhotoCount: input.points.filter(
-      (p) => Number.isFinite(p.latitude) && Number.isFinite(p.longitude) && Math.abs(p.latitude) <= 90 && Math.abs(p.longitude) <= 180,
-    ).length,
+    countryCodes: countryCodesForRegion(input.countryCodes, region),
+    period: journeyPeriodLabel(trips),
+    stats: journeyStats(trips),
+    favorites: selectFavoriteTrips(trips, input.selectedAlbumIds),
+    clusters: clusterJourneyPoints(mapPoints),
+    gpsPhotoCount: mapPoints.length,
   };
 }

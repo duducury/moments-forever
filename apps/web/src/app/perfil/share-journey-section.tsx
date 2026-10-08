@@ -13,15 +13,21 @@ import {
   MAX_FAVORITE_TRIPS,
   buildJourneySummary,
   selectionCounterLabel,
-  toggleTripSelection,
   tripDisplayName,
   type JourneyPoint,
 } from "@/lib/share-journey/journey-summary";
+import {
+  JOURNEY_REGIONS,
+  NO_TRIPS_IN_REGION_MESSAGE,
+  toggleRegionTrip,
+  tripsForRegion,
+  type JourneyRegion,
+} from "@/lib/share-journey/journey-regions";
 import { shareFile } from "@/lib/share/share-link";
 
 import styles from "./share-journey.module.css";
 
-type Step = "closed" | "select" | "generating" | "preview";
+type Step = "closed" | "region" | "select" | "generating" | "preview";
 
 const FILE_NAME = "meu-resumo-de-viagens-moments-forever.jpg";
 
@@ -48,7 +54,6 @@ export function ShareJourneySection({
   bio,
   countryCodes,
   avatarRemoteSrc,
-  profilePath,
 }: {
   readonly places: readonly OwnerPlaceCardItem[];
   readonly ownerId: string;
@@ -56,10 +61,9 @@ export function ShareJourneySection({
   readonly bio: string | null;
   readonly countryCodes: readonly string[];
   readonly avatarRemoteSrc: string | null;
-  /** Public profile path, used as the link text when sharing. */
-  readonly profilePath: string;
 }) {
   const [step, setStep] = useState<Step>("closed");
+  const [region, setRegion] = useState<JourneyRegion>("world");
   const [selected, setSelected] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -99,6 +103,7 @@ export function ShareJourneySection({
     try {
       const points = await fetchJourneyPoints();
       const summary = buildJourneySummary({
+        region,
         places,
         displayName,
         bio,
@@ -118,14 +123,11 @@ export function ShareJourneySection({
     }
   }
 
-  async function share(withLink: boolean) {
+  async function share() {
     if (!blob) return;
     setNotice(null);
     const file = new File([blob], FILE_NAME, { type: blob.type || "image/jpeg" });
-    const text = withLink
-      ? `Minha jornada no Moments Forever ${window.location.origin}${profilePath}`
-      : undefined;
-    const result = await shareFile(file, { title: "Minha jornada no Moments Forever", text });
+    const result = await shareFile(file, { title: "Minha jornada no Moments Forever" });
     if (result === "unsupported") {
       setNotice(
         "Este navegador não abre a folha de compartilhamento para imagens. Use “Salvar imagem” ou segure a imagem para salvá-la.",
@@ -154,6 +156,15 @@ export function ShareJourneySection({
   }
 
   const atLimit = selected.length >= MAX_FAVORITE_TRIPS;
+  const regionTrips = tripsForRegion(places, region);
+  const hasTrips = regionTrips.length > 0;
+
+  function chooseRegion(next: JourneyRegion) {
+    if (next === region) return;
+    setRegion(next);
+    // Trips of another map are not valid here.
+    setSelected([]);
+  }
 
   return (
     <section aria-labelledby="share-journey-title" className={styles.section} data-reveal>
@@ -161,7 +172,7 @@ export function ShareJourneySection({
         Compartilhe sua jornada
       </h2>
       <p className={styles.lead}>Mostre ao mundo os lugares que fizeram parte da sua história.</p>
-      <button className="button primary" onClick={() => setStep("select")} type="button">
+      <button className="button primary" onClick={() => setStep("region")} type="button">
         Compartilhar minha jornada no Instagram
       </button>
 
@@ -176,15 +187,59 @@ export function ShareJourneySection({
               </button>
             </header>
 
+            {step === "region" ? (
+              <>
+                <h3 className={styles.sheetTitle}>Escolha seu resumo</h3>
+                <p className={styles.sheetLead}>Escolha o mapa que vai aparecer na sua imagem.</p>
+                <ul className={styles.regions}>
+                  {JOURNEY_REGIONS.map((option) => (
+                    <li key={option.id}>
+                      <button
+                        aria-pressed={region === option.id}
+                        className={styles.regionCard}
+                        data-selected={region === option.id ? "true" : "false"}
+                        onClick={() => chooseRegion(option.id)}
+                        type="button"
+                      >
+                        <span aria-hidden="true" className={styles.regionEmoji}>
+                          {option.emoji}
+                        </span>
+                        <span className={styles.itemText}>
+                          <strong>{option.title}</strong>
+                          <small>{option.description}</small>
+                        </span>
+                        <span aria-hidden="true" className={styles.check}>
+                          {region === option.id ? "✓" : ""}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+                {!hasTrips ? (
+                  <p className={styles.error} role="alert">
+                    {NO_TRIPS_IN_REGION_MESSAGE}
+                  </p>
+                ) : null}
+                <div className={styles.footer}>
+                  <button className="button primary" disabled={!hasTrips} onClick={() => setStep("select")} type="button">
+                    Continuar
+                  </button>
+                </div>
+              </>
+            ) : null}
+
             {step === "select" ? (
               <>
+                <button className={styles.back} onClick={() => setStep("region")} type="button">
+                  ‹ Trocar mapa
+                </button>
                 <h3 className={styles.sheetTitle}>Escolha suas viagens favoritas</h3>
                 <p className={styles.sheetLead}>Selecione até 5 viagens para aparecerem no seu resumo.</p>
                 <p aria-live="polite" className={styles.counter}>
                   {selectionCounterLabel(selected.length)}
                 </p>
                 <ul className={styles.list}>
-                  {places.map((place) => {
+                  {regionTrips.map((place) => {
                     const isSelected = selected.includes(place.albumId);
                     const blocked = atLimit && !isSelected;
                     const country = place.countryCode ? countryNameFromCode(place.countryCode) : null;
@@ -195,7 +250,7 @@ export function ShareJourneySection({
                           className={styles.item}
                           data-selected={isSelected ? "true" : "false"}
                           disabled={blocked}
-                          onClick={() => setSelected((current) => toggleTripSelection(current, place.albumId))}
+                          onClick={() => setSelected((current) => toggleRegionTrip(current, place.albumId, regionTrips, MAX_FAVORITE_TRIPS))}
                           type="button"
                         >
                           <span className={styles.thumb}>
@@ -221,8 +276,13 @@ export function ShareJourneySection({
                     {error}
                   </p>
                 ) : null}
+                {!hasTrips ? (
+                  <p className={styles.error} role="alert">
+                    {NO_TRIPS_IN_REGION_MESSAGE}
+                  </p>
+                ) : null}
                 <div className={styles.footer}>
-                  <button className="button primary" onClick={() => void generate()} type="button">
+                  <button className="button primary" disabled={!hasTrips} onClick={() => void generate()} type="button">
                     Gerar meu resumo
                   </button>
                 </div>
@@ -247,17 +307,17 @@ export function ShareJourneySection({
                   </p>
                 ) : null}
                 <div className={styles.actions}>
-                  <button className="button primary" onClick={() => void share(false)} type="button">
+                  <button className="button primary" onClick={() => void share()} type="button">
                     Compartilhar no Instagram
                   </button>
                   <button className="button secondary" onClick={() => void save()} type="button">
                     Salvar imagem
                   </button>
-                  <button className="button secondary" onClick={() => void share(true)} type="button">
-                    Compartilhar
-                  </button>
                   <button className={styles.back} onClick={() => setStep("select")} type="button">
                     Escolher outras viagens
+                  </button>
+                  <button className={styles.back} onClick={() => setStep("region")} type="button">
+                    Trocar mapa
                   </button>
                 </div>
               </>

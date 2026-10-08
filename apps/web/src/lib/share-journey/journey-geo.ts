@@ -1,97 +1,83 @@
-/** Orthographic globe projection helpers for the share image (pure, no DOM). */
+/**
+ * Flat world map (equirectangular) helpers for the share image. Pure, no DOM.
+ * The map is fed by ALL the owner's GPS photos; nothing here knows about the
+ * favourite trips. Places are drawn on their own (dots and photo pins): there
+ * are no routes or lines connecting them.
+ */
 
-const RAD = Math.PI / 180;
+import type { JourneyCluster } from "./journey-summary";
 
-export interface GlobeView {
-  readonly centerLon: number;
-  readonly centerLat: number;
-}
-
-export interface Projected {
-  /** -1..1 on the unit disc. */
+export interface MapFrame {
+  /** Map rectangle on the image (the ocean panel). */
   readonly x: number;
   readonly y: number;
-  /** False for the far side of the globe (x/y are pushed onto the limb). */
-  readonly visible: boolean;
+  readonly width: number;
+  readonly height: number;
+  /** Visible longitude / latitude window. */
+  readonly lonMin: number;
+  readonly lonMax: number;
+  readonly latMin: number;
+  readonly latMax: number;
+  /** Vertical stretch of the map relative to its horizontal scale (default 1). */
+  readonly yStretch?: number;
+  /** Radius of the planet's horizon curve; the map bends down towards the sides (0 = flat). */
+  readonly curveRadius?: number;
 }
 
-export function projectOrthographic(lon: number, lat: number, view: GlobeView): Projected {
-  const phi = lat * RAD;
-  const phi0 = view.centerLat * RAD;
-  const dLon = (lon - view.centerLon) * RAD;
-  const cosC = Math.sin(phi0) * Math.sin(phi) + Math.cos(phi0) * Math.cos(phi) * Math.cos(dLon);
-  const x = Math.cos(phi) * Math.sin(dLon);
-  const y = Math.cos(phi0) * Math.sin(phi) - Math.sin(phi0) * Math.cos(phi) * Math.cos(dLon);
-  if (cosC >= 0) return { x, y: -y, visible: true };
-  const length = Math.hypot(x, y) || 1;
-  return { x: x / length, y: -y / length, visible: false };
+/** How far the horizon drops at `x` (0 in the middle of the frame). */
+export function horizonDrop(x: number, frame: MapFrame): number {
+  const radius = frame.curveRadius ?? 0;
+  if (radius <= 0) return 0;
+  const dx = Math.min(Math.abs(x - (frame.x + frame.width / 2)), radius * 0.99);
+  return radius - Math.sqrt(radius * radius - dx * dx);
 }
 
-function wrapLon(lon: number): number {
-  return ((((lon + 180) % 360) + 360) % 360) - 180;
+export function projectFlat(lon: number, lat: number, frame: MapFrame): { x: number; y: number } {
+  const scale = frame.width / (frame.lonMax - frame.lonMin);
+  const vertical = scale * (frame.yStretch ?? 1);
+  const used = (frame.latMax - frame.latMin) * vertical;
+  const top = frame.y + (frame.height - used) / 2;
+  const x = frame.x + (lon - frame.lonMin) * scale;
+  return { x, y: top + (frame.latMax - lat) * vertical + horizonDrop(x, frame) };
+}
+
+export interface PlacedCluster {
+  readonly cluster: JourneyCluster;
+  readonly x: number;
+  readonly y: number;
+}
+
+export interface MapLayout {
+  /** Biggest places that fit without overlapping: drawn as photo pins. */
+  readonly pins: readonly PlacedCluster[];
+  /** Every other place (positioned, not drawn as a picture). */
+  readonly unpinned: readonly PlacedCluster[];
 }
 
 /**
- * Picks the globe orientation that shows the most photos of the journey
- * (ties: the one closest to the overall centre). Data-driven, deterministic.
+ * Places every cluster on the map. Nothing is dropped: a place is either a
+ * photo pin or "unpinned" (no marker is drawn for those: no dots, no lines). Clusters must arrive biggest first.
  */
-export function bestGlobeView(
-  clusters: readonly { latitude: number; longitude: number; count: number }[],
-  /** Part of the unit disc that is actually on screen (y grows downwards). */
-  bounds: { readonly yMin: number; readonly yMax: number; readonly xAbsMax?: number } = { yMin: -0.93, yMax: 0.93 },
-): GlobeView {
-  if (clusters.length === 0) return { centerLon: -30, centerLat: 15 };
-  const meanLat = clusters.reduce((s, c) => s + c.latitude * c.count, 0) / clusters.reduce((s, c) => s + c.count, 0);
-  const centerLat = Math.max(-25, Math.min(40, meanLat));
-  let best: GlobeView = { centerLon: 0, centerLat };
-  let bestScore = -Infinity;
-  for (let lon = -180; lon < 180; lon += 10) {
-    const view = { centerLon: lon, centerLat };
-    let score = 0;
-    let offCentre = 0;
-    for (const cluster of clusters) {
-      const p = projectOrthographic(cluster.longitude, cluster.latitude, view);
-      // Only the inner part of the disc counts: pins near the limb get squashed.
-      if (p.visible && Math.hypot(p.x, p.y) < 0.93 && p.y >= bounds.yMin && p.y <= bounds.yMax && Math.abs(p.x) <= (bounds.xAbsMax ?? 0.93)) {
-        score += cluster.count;
-        offCentre += cluster.count * Math.hypot(p.x, p.y);
-      }
-    }
-    // Most photos on screen first; among equals, the view that centres them best.
-    const total = score * 1000 - offCentre;
-    if (total > bestScore) {
-      bestScore = total;
-      best = view;
-    }
-  }
-  return { centerLon: wrapLon(best.centerLon), centerLat };
-}
+export function layoutWorldMap(
+  clusters: readonly JourneyCluster[],
+  frame: MapFrame,
+  options: { readonly maxPins?: number; readonly minPinDistance?: number; readonly pinHeadroom?: number; readonly skyAllowance?: number } = {},
+): MapLayout {
+  const maxPins = options.maxPins ?? 9;
+  const minDist = options.minPinDistance ?? 105;
+  // The map is part of the sky now (no box): a pin head may rise a bit above the horizon.
+  const sky = options.skyAllowance ?? 0;
+  // A pin's round head sits above its tip: keep it inside the map panel.
+  const headroom = options.pinHeadroom ?? 112;
 
-/** Great-circle samples between two places (for the dotted flight routes). */
-export function greatCircle(
-  a: { latitude: number; longitude: number },
-  b: { latitude: number; longitude: number },
-  steps = 48,
-): { latitude: number; longitude: number }[] {
-  const toVec = (lat: number, lon: number) => [
-    Math.cos(lat * RAD) * Math.cos(lon * RAD),
-    Math.cos(lat * RAD) * Math.sin(lon * RAD),
-    Math.sin(lat * RAD),
-  ] as const;
-  const va = toVec(a.latitude, a.longitude);
-  const vb = toVec(b.latitude, b.longitude);
-  const dot = Math.max(-1, Math.min(1, va[0] * vb[0] + va[1] * vb[1] + va[2] * vb[2]));
-  const omega = Math.acos(dot);
-  if (omega < 1e-6) return [{ ...a }];
-  const out: { latitude: number; longitude: number }[] = [];
-  for (let i = 0; i <= steps; i += 1) {
-    const t = i / steps;
-    const s1 = Math.sin((1 - t) * omega) / Math.sin(omega);
-    const s2 = Math.sin(t * omega) / Math.sin(omega);
-    const x = s1 * va[0] + s2 * vb[0];
-    const y = s1 * va[1] + s2 * vb[1];
-    const z = s1 * va[2] + s2 * vb[2];
-    out.push({ latitude: Math.asin(z) / RAD, longitude: Math.atan2(y, x) / RAD });
+  const pins: PlacedCluster[] = [];
+  const unpinned: PlacedCluster[] = [];
+  for (const cluster of clusters) {
+    const item = { cluster, ...projectFlat(cluster.longitude, cluster.latitude, frame) };
+    const clear = pins.every((pin) => Math.hypot(pin.x - item.x, pin.y - item.y) >= minDist);
+    const fits = item.y - headroom >= frame.y - sky && item.x >= frame.x + 50 && item.x <= frame.x + frame.width - 50;
+    if (pins.length < maxPins && clear && fits) pins.push(item);
+    else unpinned.push(item);
   }
-  return out;
+  return { pins, unpinned };
 }

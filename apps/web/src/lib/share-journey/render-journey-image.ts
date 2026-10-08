@@ -4,8 +4,7 @@
  * point comes from the `JourneySummary` / `JourneyAssets` it is given.
  */
 
-import { bestGlobeView, projectOrthographic } from "./journey-geo";
-import { layoutGlobe, type GlobeFrame } from "./journey-layout";
+import { horizonDrop, layoutWorldMap, projectFlat, type MapFrame } from "./journey-geo";
 import { MAX_FAVORITE_TRIPS, type JourneySummary } from "./journey-summary";
 
 export const JOURNEY_IMAGE_WIDTH = 1080;
@@ -36,7 +35,8 @@ const CORAL = "#e8825f";
 const OFFWHITE = "#f4efe6";
 const MUTED = "#b9b2a7";
 
-const GLOBE: GlobeFrame = { cx: 540, cy: 1130, radius: 540, yMin: 730, yMax: 1190, xInset: 90 };
+/** The world map: the Earth seen from space, part of the background (no box). */
+const MAP: MapFrame = { x: 0, y: 646, width: 1080, height: 564, lonMin: -180, lonMax: 180, latMin: -58, latMax: 84, yStretch: 1.32, curveRadius: 1500 };
 
 type Ctx = CanvasRenderingContext2D;
 
@@ -370,160 +370,167 @@ function drawStats(ctx: Ctx, summary: JourneySummary): void {
   });
 }
 
-// ---- globe ------------------------------------------------------------------
+// ---- world map ----------------------------------------------------------------
 
-function drawGlobe(ctx: Ctx, summary: JourneySummary, assets: JourneyAssets): void {
-  const { cx, cy, radius } = GLOBE;
-  const view = bestGlobeView(summary.clusters, {
-    yMin: (GLOBE.yMin - cy) / radius,
-    yMax: (GLOBE.yMax - cy) / radius,
-    xAbsMax: (JOURNEY_IMAGE_WIDTH / 2 - (GLOBE.xInset ?? 0)) / radius,
-  });
-
-  // Atmosphere halo.
-  const halo = ctx.createRadialGradient(cx, cy, radius * 0.96, cx, cy, radius * 1.08);
-  halo.addColorStop(0, "rgba(120,170,255,0.45)");
-  halo.addColorStop(0.5, "rgba(232,130,95,0.18)");
-  halo.addColorStop(1, "rgba(0,0,0,0)");
-  ctx.fillStyle = halo;
+/** The horizon of the planet as a path (curving down to the sides) closed at `bottom`. */
+function earthPath(ctx: Ctx, bottom: number): void {
   ctx.beginPath();
-  ctx.arc(cx, cy, radius * 1.08, 0, Math.PI * 2);
-  ctx.fill();
+  ctx.moveTo(MAP.x, MAP.y + horizonDrop(MAP.x, MAP));
+  for (let x = MAP.x; x <= MAP.x + MAP.width; x += 12) ctx.lineTo(x, MAP.y + horizonDrop(x, MAP));
+  ctx.lineTo(MAP.x + MAP.width, MAP.y + horizonDrop(MAP.x + MAP.width, MAP));
+  ctx.lineTo(MAP.x + MAP.width, bottom);
+  ctx.lineTo(MAP.x, bottom);
+  ctx.closePath();
+}
 
+function drawWorldMap(ctx: Ctx, summary: JourneySummary, assets: JourneyAssets): void {
+  const bottom = MAP.y + MAP.height + 40;
+
+  // Atmosphere above the horizon: soft light blue fading into space.
   ctx.save();
-  ctx.beginPath();
-  ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-  ctx.clip();
-
-  const ocean = ctx.createRadialGradient(cx - radius * 0.25, cy - radius * 0.2, radius * 0.1, cx, cy, radius);
-  ocean.addColorStop(0, "#14508a");
-  ocean.addColorStop(0.6, "#0a2c52");
-  ocean.addColorStop(1, "#040f20");
-  ctx.fillStyle = ocean;
-  ctx.fillRect(cx - radius, cy - radius, radius * 2, radius * 2);
-
-  if (assets.land) drawLand(ctx, assets.land, view);
-
-  // Light from the right, shadow at the left limb.
-  const shade = ctx.createLinearGradient(cx - radius, cy, cx + radius, cy);
-  shade.addColorStop(0, "rgba(0,0,0,0.55)");
-  shade.addColorStop(0.4, "rgba(0,0,0,0)");
-  shade.addColorStop(0.85, "rgba(255,170,110,0.10)");
-  shade.addColorStop(1, "rgba(255,170,110,0.32)");
-  ctx.fillStyle = shade;
-  ctx.fillRect(cx - radius, cy - radius, radius * 2, radius * 2);
-  ctx.restore();
-
-  const layout = layoutGlobe(summary.clusters, view, GLOBE);
-
-  // Dotted flight routes.
-  ctx.save();
-  ctx.setLineDash([3, 14]);
-  ctx.lineCap = "round";
-  ctx.strokeStyle = "rgba(255,255,255,0.9)";
-  ctx.lineWidth = 4;
-  for (const run of layout.routes) {
+  ctx.lineWidth = 6;
+  for (let i = 1; i <= 9; i += 1) {
+    ctx.strokeStyle = `rgba(110,170,255,${0.22 - i * 0.022})`;
     ctx.beginPath();
-    run.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
+    for (let x = MAP.x; x <= MAP.x + MAP.width; x += 12) {
+      const y = MAP.y + horizonDrop(x, MAP) - i * 5;
+      if (x === MAP.x) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
     ctx.stroke();
   }
   ctx.restore();
-  for (const run of layout.routes) {
-    if (run.length < 8) continue;
-    const mid = Math.floor(run.length / 2);
-    const a = run[mid - 1]!;
-    const b = run[mid + 1] ?? run[mid]!;
-    drawPlane(ctx, run[mid]!.x, run[mid]!.y, Math.atan2(b.y - a.y, b.x - a.x));
-  }
 
-  // Dots for the places that did not get a pin.
-  for (const dot of layout.dots) {
-    const glow = ctx.createRadialGradient(dot.x, dot.y, 0, dot.x, dot.y, 26);
-    glow.addColorStop(0, "rgba(255,200,140,0.9)");
-    glow.addColorStop(1, "rgba(255,160,90,0)");
-    ctx.fillStyle = glow;
-    ctx.beginPath();
-    ctx.arc(dot.x, dot.y, 26, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "#fff6e6";
-    ctx.beginPath();
-    ctx.arc(dot.x, dot.y, 5, 0, Math.PI * 2);
-    ctx.fill();
-  }
+  ctx.save();
+  earthPath(ctx, bottom);
+  ctx.clip();
 
-  // Photo pins, bottom ones last so they overlap upwards.
+  // Oceans: bright at the horizon, deep blue below.
+  const ocean = ctx.createLinearGradient(0, MAP.y, 0, bottom);
+  ocean.addColorStop(0, "#2d78c4");
+  ocean.addColorStop(0.25, "#1a5aa0");
+  ocean.addColorStop(0.65, "#0b3266");
+  ocean.addColorStop(1, "#061a38");
+  ctx.fillStyle = ocean;
+  ctx.fillRect(MAP.x, MAP.y, MAP.width, bottom - MAP.y);
+
+  if (assets.land) drawLand(ctx, assets.land);
+
+  // Sunlight flaring over the horizon on the right, shadow on the left.
+  const flare = ctx.createRadialGradient(1010, MAP.y + 90, 10, 1010, MAP.y + 90, 360);
+  flare.addColorStop(0, "rgba(255,226,170,0.95)");
+  flare.addColorStop(0.2, "rgba(255,170,100,0.5)");
+  flare.addColorStop(1, "rgba(255,140,80,0)");
+  ctx.fillStyle = flare;
+  ctx.fillRect(MAP.x, MAP.y, MAP.width, bottom - MAP.y);
+  const shade = ctx.createLinearGradient(0, 0, MAP.width, 0);
+  shade.addColorStop(0, "rgba(0,8,20,0.45)");
+  shade.addColorStop(0.5, "rgba(0,8,20,0)");
+  ctx.fillStyle = shade;
+  ctx.fillRect(MAP.x, MAP.y, MAP.width, bottom - MAP.y);
+  ctx.restore();
+
+  // Bright limb along the horizon.
+  ctx.save();
+  ctx.strokeStyle = "rgba(150,205,255,0.9)";
+  ctx.lineWidth = 3;
+  ctx.shadowColor = "rgba(110,175,255,0.9)";
+  ctx.shadowBlur = 18;
+  ctx.beginPath();
+  for (let x = MAP.x; x <= MAP.x + MAP.width; x += 12) {
+    const y = MAP.y + horizonDrop(x, MAP);
+    if (x === MAP.x) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  ctx.restore();
+
+  // The Earth melts into the dark background below.
+  const fadeTop = MAP.y + MAP.height - 150;
+  const fade = ctx.createLinearGradient(0, fadeTop, 0, bottom);
+  fade.addColorStop(0, "rgba(7,10,17,0)");
+  fade.addColorStop(1, "rgba(7,10,17,0.97)");
+  ctx.fillStyle = fade;
+  ctx.fillRect(0, fadeTop, JOURNEY_IMAGE_WIDTH, bottom - fadeTop);
+
+  // Photo pins on the main places. No glowing dots, no lines.
+  const layout = layoutWorldMap(summary.clusters, MAP, { skyAllowance: 70 });
   [...layout.pins].sort((a, b) => a.y - b.y).forEach((pin) => drawPin(ctx, pin.x, pin.y, assets.pins.get(pin.cluster.photoId) ?? null));
+
+  // Caption: what the map is made of (real counts).
+  if (summary.gpsPhotoCount > 0) {
+    ctx.fillStyle = "rgba(244,239,230,0.85)";
+    ctx.font = `500 20px ${SANS}`;
+    ctx.textAlign = "left";
+    spacedText(ctx, `${summary.gpsPhotoCount.toLocaleString("pt-BR")} ${summary.gpsPhotoCount === 1 ? "foto" : "fotos"} com`.toUpperCase(), 54, 1120, 2);
+    spacedText(ctx, "LOCALIZAÇÃO", 54, 1150, 2);
+    spacedText(ctx, `${summary.clusters.length.toLocaleString("pt-BR")} ${summary.clusters.length === 1 ? "lugar" : "lugares"}`.toUpperCase(), 54, 1180, 2);
+  }
 }
 
-function drawLand(ctx: Ctx, land: LandGeoJson, view: { centerLon: number; centerLat: number }): void {
-  const { cx, cy, radius } = GLOBE;
-  const fill = ctx.createLinearGradient(cx - radius, cy - radius, cx + radius, cy + radius);
-  fill.addColorStop(0, "#2f5b3f");
-  fill.addColorStop(0.5, "#3c6a45");
-  fill.addColorStop(1, "#6b7a4a");
+function drawLand(ctx: Ctx, land: LandGeoJson): void {
+  // Natural-looking tints by latitude: ice at the poles, forest, deserts, rainforest.
+  const top = projectFlat(0, MAP.latMax, MAP).y - horizonDrop(540, MAP);
+  const bottomY = projectFlat(0, MAP.latMin, MAP).y - horizonDrop(540, MAP);
+  const at = (lat: number) => Math.min(1, Math.max(0, (projectFlat(0, lat, MAP).y - horizonDrop(540, MAP) - top) / (bottomY - top)));
+  const fill = ctx.createLinearGradient(0, top, 0, bottomY);
+  fill.addColorStop(at(80), "#dfe8ec");
+  fill.addColorStop(at(66), "#9fb08f");
+  fill.addColorStop(at(48), "#4c7a43");
+  fill.addColorStop(at(33), "#a38d5a");
+  fill.addColorStop(at(18), "#6d8c48");
+  fill.addColorStop(at(3), "#2c6b38");
+  fill.addColorStop(at(-12), "#5c8a47");
+  fill.addColorStop(at(-28), "#a08c58");
+  fill.addColorStop(at(-45), "#4c7a43");
+  fill.addColorStop(at(-58), "#dfe8ec");
   ctx.beginPath();
   for (const feature of land.features) {
     const polygons = feature.geometry.type === "MultiPolygon" ? feature.geometry.coordinates : [feature.geometry.coordinates as unknown as number[][][]];
     for (const polygon of polygons as number[][][][]) {
       for (const ring of polygon) {
-        const pts: number[] = [];
-        let anyVisible = false;
-        let minX = Infinity;
-        let maxX = -Infinity;
-        let minY = Infinity;
-        let maxY = -Infinity;
-        for (const [lon, lat] of ring) {
-          const p = projectOrthographic(lon!, lat!, view);
-          if (p.visible) anyVisible = true;
-          const x = cx + p.x * radius;
-          const y = cy + p.y * radius;
-          pts.push(x, y);
-          if (x < minX) minX = x;
-          if (x > maxX) maxX = x;
-          if (y < minY) minY = y;
-          if (y > maxY) maxY = y;
+        // Walk the ring with continuous longitudes so shapes crossing ±180° stay in one piece.
+        const lons: number[] = [];
+        let offset = 0;
+        let previous = ring[0]![0]!;
+        for (const [lon] of ring) {
+          if (lon! - previous > 180) offset -= 360;
+          else if (lon! - previous < -180) offset += 360;
+          previous = lon!;
+          lons.push(lon! + offset);
         }
-        if (!anyVisible || (maxX - minX < 1.2 && maxY - minY < 1.2)) continue;
-        ctx.moveTo(pts[0]!, pts[1]!);
-        for (let i = 2; i < pts.length; i += 2) ctx.lineTo(pts[i]!, pts[i + 1]!);
-        ctx.closePath();
+        for (const shift of [-360, 0, 360]) {
+          let started = false;
+          let minX = Infinity;
+          let maxX = -Infinity;
+          let minY = Infinity;
+          let maxY = -Infinity;
+          const pts: number[] = [];
+          ring.forEach(([, lat], i) => {
+            const p = projectFlat(lons[i]! + shift, lat!, MAP);
+            pts.push(p.x, p.y);
+            if (p.x < minX) minX = p.x;
+            if (p.x > maxX) maxX = p.x;
+            if (p.y < minY) minY = p.y;
+            if (p.y > maxY) maxY = p.y;
+          });
+          if (maxX < MAP.x || minX > MAP.x + MAP.width || (maxX - minX < 0.8 && maxY - minY < 0.8)) continue;
+          for (let i = 0; i < pts.length; i += 2) {
+            if (!started) {
+              ctx.moveTo(pts[i]!, pts[i + 1]!);
+              started = true;
+            } else ctx.lineTo(pts[i]!, pts[i + 1]!);
+          }
+          ctx.closePath();
+        }
       }
     }
   }
   ctx.fillStyle = fill;
   ctx.fill("evenodd");
-  ctx.strokeStyle = "rgba(255,226,170,0.22)";
-  ctx.lineWidth = 1.2;
+  ctx.strokeStyle = "rgba(255,240,200,0.28)";
+  ctx.lineWidth = 1;
   ctx.stroke();
-}
-
-function drawPlane(ctx: Ctx, x: number, y: number, angle: number): void {
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.rotate(angle);
-  ctx.fillStyle = "#ffffff";
-  ctx.shadowColor = "rgba(0,0,0,0.5)";
-  ctx.shadowBlur = 6;
-  ctx.beginPath();
-  ctx.moveTo(24, 0);
-  ctx.lineTo(4, -5);
-  ctx.lineTo(-6, -22);
-  ctx.lineTo(-12, -22);
-  ctx.lineTo(-7, -4);
-  ctx.lineTo(-18, -3);
-  ctx.lineTo(-22, -9);
-  ctx.lineTo(-26, -9);
-  ctx.lineTo(-22, 0);
-  ctx.lineTo(-26, 9);
-  ctx.lineTo(-22, 9);
-  ctx.lineTo(-18, 3);
-  ctx.lineTo(-7, 4);
-  ctx.lineTo(-12, 22);
-  ctx.lineTo(-6, 22);
-  ctx.lineTo(4, 5);
-  ctx.closePath();
-  ctx.fill();
-  ctx.restore();
 }
 
 function drawPin(ctx: Ctx, x: number, y: number, image: DrawableImage | null): void {
@@ -560,13 +567,13 @@ function drawPin(ctx: Ctx, x: number, y: number, image: DrawableImage | null): v
 function drawFavorites(ctx: Ctx, summary: JourneySummary, assets: JourneyAssets): void {
   const W = JOURNEY_IMAGE_WIDTH;
   // Dark base so the lower part of the globe fades under the cards.
-  const fade = ctx.createLinearGradient(0, 1150, 0, 1250);
+  const fade = ctx.createLinearGradient(0, 1186, 0, 1240);
   fade.addColorStop(0, "rgba(7,10,17,0)");
   fade.addColorStop(1, "rgba(7,10,17,0.96)");
   ctx.fillStyle = fade;
-  ctx.fillRect(0, 1150, W, 100);
+  ctx.fillRect(0, 1186, W, 54);
   ctx.fillStyle = "rgba(7,10,17,0.96)";
-  ctx.fillRect(0, 1250, W, 420);
+  ctx.fillRect(0, 1240, W, 430);
 
   const favorites = summary.favorites;
   if (favorites.length === 0) return;
@@ -695,7 +702,7 @@ export function drawJourneyImage(ctx: Ctx, summary: JourneySummary, assets: Jour
   ctx.save();
   ctx.textBaseline = "alphabetic";
   drawBackground(ctx);
-  drawGlobe(ctx, summary, assets);
+  drawWorldMap(ctx, summary, assets);
   drawHeader(ctx, summary);
   drawProfile(ctx, summary, assets);
   drawStats(ctx, summary);

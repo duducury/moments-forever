@@ -6,8 +6,7 @@ import test from "node:test";
 import type { OwnerPlaceCardItem } from "@/lib/experiences/load-owner-place-cards";
 import { shareFile } from "@/lib/share/share-link";
 
-import { bestGlobeView, greatCircle, projectOrthographic } from "./journey-geo";
-import { layoutGlobe } from "./journey-layout";
+import { layoutWorldMap, projectFlat, type MapFrame } from "./journey-geo";
 import {
   MAX_FAVORITE_TRIPS,
   buildJourneySummary,
@@ -140,38 +139,66 @@ test("map points are grouped into places from real GPS photos", () => {
   assert.deepEqual(clusterJourneyPoints([]), []);
 });
 
-test("globe projection: visible centre, hidden far side, best view shows the most photos", () => {
-  const view = { centerLon: -43, centerLat: -22 };
-  const centre = projectOrthographic(-43, -22, view);
-  assert.ok(centre.visible && Math.hypot(centre.x, centre.y) < 1e-9);
-  const far = projectOrthographic(137, 22, view);
-  assert.equal(far.visible, false);
-  assert.ok(Math.abs(Math.hypot(far.x, far.y) - 1) < 1e-9, "hidden points sit on the limb");
+const FRAME: MapFrame = { x: 0, y: 646, width: 1080, height: 564, lonMin: -180, lonMax: 180, latMin: -58, latMax: 84, yStretch: 1.32, curveRadius: 1500 };
 
-  const clusters = [
-    { latitude: 25, longitude: 55, count: 50 },
-    { latitude: 24, longitude: 60, count: 30 },
-    { latitude: -22, longitude: -140, count: 5 },
-  ];
-  const best = bestGlobeView(clusters);
-  assert.ok(Math.abs(best.centerLon - 55) <= 40, "turns towards where most photos are");
-  assert.equal(greatCircle({ latitude: 0, longitude: 0 }, { latitude: 0, longitude: 90 }, 4).length, 5);
+/** Test-only GPS photos: 225 across the whole world, in 6 trips plus extra places. */
+function worldPoints(): JourneyPoint[] {
+  const spots = [
+    [-8.4, 115.2, 20], [25.2, 55.3, 35], [-22.9, -43.2, 50], [40.7, -74, 10], [36.1, -115.1, 15],
+    [48.85, 2.35, 22], [35.7, 139.7, 18], [-33.9, 151.2, 12], [64.1, -21.9, 8], [-13.5, -71.97, 15], [-33.9, 18.4, 10], [19.4, -99.1, 10],
+  ] as const;
+  return spots.flatMap(([lat, lon, n], i) =>
+    Array.from({ length: n }, (_, k) => ({
+      photoId: `p${i}-${k}`,
+      albumId: `album-${i % 7}`,
+      latitude: lat + (k % 5) * 0.03,
+      longitude: lon + (k % 7) * 0.03,
+      capturedAt: `20${19 + (i % 8)}-0${1 + (i % 9)}-10T10:00:00Z`,
+    })),
+  );
+}
+
+test("map: the whole world fits across the image, so no place is hidden", () => {
+  const a = projectFlat(-175, 84, FRAME);
+  const b = projectFlat(175, -58, FRAME);
+  assert.ok(a.x >= FRAME.x && b.x <= FRAME.x + FRAME.width, "all longitudes inside the panel");
+  assert.ok(a.y >= FRAME.y && b.y <= FRAME.y + FRAME.height + 120, "all latitudes inside the band (plus the horizon curve)");
+  assert.ok(projectFlat(-179, 40, FRAME).y > projectFlat(0, 40, FRAME).y, "the horizon curves down towards the sides");
+  const opposite = [projectFlat(-74, 40.7, FRAME), projectFlat(115.2, -8.4, FRAME)];
+  assert.ok(opposite.every((p) => p.x > FRAME.x && p.x < FRAME.x + FRAME.width), "opposite sides of the Earth both show");
 });
 
-test("layout: pins never overlap, extra places become dots, routes follow the dates", () => {
-  const frame = { cx: 540, cy: 1130, radius: 540, yMin: 730, yMax: 1190, xInset: 90 };
-  const clusters = [
-    { latitude: 25, longitude: 55, count: 40, photoId: "p1", firstAt: "2026-07-21T00:00:00Z" },
-    { latitude: 25.5, longitude: 55.5, count: 30, photoId: "p2", firstAt: "2026-07-22T00:00:00Z" },
-    { latitude: 35, longitude: 70, count: 20, photoId: "p3", firstAt: "2024-01-01T00:00:00Z" },
-  ];
-  const layout = layoutGlobe(clusters, { centerLon: 62, centerLat: 28 }, frame);
-  assert.ok(layout.pins.length >= 1);
+test("the map is fed by ALL GPS photos, never by the favourite trips", () => {
+  const points = worldPoints();
+  assert.equal(points.length, 225);
+  const none = buildJourneySummary({ places: trips(7), displayName: "x", bio: null, countryCodes: [], selectedAlbumIds: [], points });
+  const five = buildJourneySummary({ places: trips(7), displayName: "x", bio: null, countryCodes: [], selectedAlbumIds: ids(5), points });
+  assert.deepEqual(none.clusters, five.clusters, "the selection does not change the map data");
+  assert.equal(none.gpsPhotoCount, 225);
+  assert.equal(five.gpsPhotoCount, 225);
+  assert.equal(five.favorites.length, 5, "…and the selection still drives the cards");
+  assert.equal(none.favorites.length, 0);
+  assert.equal(five.clusters.reduce((sum, c) => sum + c.count, 0), 225, "every GPS photo is counted in some place");
+});
+
+test("layout: every place becomes a pin or a dot, pins do not overlap, and there are no routes", () => {
+  const { clusters } = buildJourneySummary({ places: trips(7), displayName: "x", bio: null, countryCodes: [], selectedAlbumIds: [], points: worldPoints() });
+  const layout = layoutWorldMap(clusters, FRAME);
+  assert.equal(layout.pins.length + layout.unpinned.length, clusters.length, "nothing is dropped");
+  assert.ok(layout.pins.length >= 3 && layout.pins.length <= 9);
   for (const a of layout.pins)
-    for (const b of layout.pins) if (a !== b) assert.ok(Math.hypot(a.x - b.x, a.y - b.y) >= 110);
-  assert.equal(layout.pins.length + layout.dots.length, 3);
-  assert.ok(layout.routes.length >= 1);
-  assert.deepEqual(layoutGlobe([], { centerLon: 0, centerLat: 0 }, frame), { pins: [], dots: [], routes: [] });
+    for (const b of layout.pins) if (a !== b) assert.ok(Math.hypot(a.x - b.x, a.y - b.y) >= 105);
+  for (const pin of layout.pins) assert.ok(pin.y - 112 >= FRAME.y, "pin head stays near the horizon");
+  assert.equal("routes" in layout, false, "no connecting lines");
+  assert.deepEqual(layoutWorldMap([], FRAME), { pins: [], unpinned: [] });
+});
+
+test("the renderer draws no routes or planes, and the map is the flat panel", () => {
+  const renderer = read("src/lib/share-journey/render-journey-image.ts");
+  assert.doesNotMatch(renderer, /drawPlane|setLineDash|routes|greatCircle|drawGlobe/);
+  assert.match(renderer, /drawWorldMap/);
+  assert.doesNotMatch(renderer, /roundRect\(ctx, MAP|createRadialGradient\(item\.x/, "no box around the map and no glowing dots");
+  assert.match(renderer, /horizonDrop/, "curved horizon");
 });
 
 test("shareFile: shares the image, stays quiet on cancel, reports unsupported browsers", async () => {
@@ -243,3 +270,16 @@ test("the journey-points API is owner-only", () => {
   assert.match(route, /status: 401/);
   assert.match(route, /loadOwnerMapPhotos\(supabase, user\.id\)/);
 });
+
+test("the picker dialog sits above the bottom menu so 'Gerar meu resumo' is always reachable", () => {
+  const section = read("src/app/perfil/share-journey-section.tsx");
+  assert.match(section, /createPortal\(/, "rendered on <body>, free of transformed ancestors");
+  const css = read("src/app/perfil/share-journey.module.css");
+  assert.match(css, /\.overlay\s*\{[^}]*z-index: var\(--z-modal/);
+  const globals = read("src/app/globals.css");
+  const zModal = Number(globals.match(/--z-modal:\s*(\d+)/)?.[1]);
+  const zDrawer = Number(globals.match(/--z-drawer:\s*(\d+)/)?.[1]);
+  assert.ok(zModal > zDrawer, "modal layer is above the bottom nav (drawer) layer");
+  assert.match(read("src/components/app-bottom-nav.module.css"), /z-index: var\(--z-drawer\)/);
+});
+

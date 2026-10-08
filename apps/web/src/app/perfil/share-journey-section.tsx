@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { countryNameFromCode } from "@moments-forever/shared";
 
@@ -164,7 +165,9 @@ export function ShareJourneySection({
         Compartilhar minha jornada no Instagram
       </button>
 
-      {step !== "closed" ? (
+      {/* In a portal on <body>: above the bottom menu (z-drawer) and free of any transformed ancestor. */}
+      {step !== "closed"
+        ? createPortal(
         <div aria-modal="true" className={styles.overlay} role="dialog" aria-label="Compartilhe sua jornada">
           <div className={styles.sheet}>
             <header className={styles.sheetHeader}>
@@ -260,8 +263,10 @@ export function ShareJourneySection({
               </>
             ) : null}
           </div>
-        </div>
-      ) : null}
+        </div>,
+            document.body,
+          )
+        : null}
     </section>
   );
 }

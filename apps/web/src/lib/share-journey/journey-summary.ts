@@ -159,7 +159,7 @@ export interface JourneyCluster {
  */
 export function clusterJourneyPoints(
   points: readonly JourneyPoint[],
-  cellDegrees = 3,
+  cellDegrees = 2,
 ): JourneyCluster[] {
   const cells = new Map<string, JourneyPoint[]>();
   for (const point of points) {
@@ -196,7 +196,10 @@ export interface JourneySummary {
   readonly period: string | null;
   readonly stats: JourneyStats;
   readonly favorites: readonly FavoriteTrip[];
+  /** EVERY place with GPS photos — the map. Independent of the favourite trips. */
   readonly clusters: readonly JourneyCluster[];
+  /** How many GPS photos fed the map. */
+  readonly gpsPhotoCount: number;
 }
 
 export function buildJourneySummary(input: {
@@ -215,5 +218,8 @@ export function buildJourneySummary(input: {
     stats: journeyStats(input.places),
     favorites: selectFavoriteTrips(input.places, input.selectedAlbumIds),
     clusters: clusterJourneyPoints(input.points),
+    gpsPhotoCount: input.points.filter(
+      (p) => Number.isFinite(p.latitude) && Number.isFinite(p.longitude) && Math.abs(p.latitude) <= 90 && Math.abs(p.longitude) <= 180,
+    ).length,
   };
 }

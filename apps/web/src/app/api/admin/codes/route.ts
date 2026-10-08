@@ -118,6 +118,7 @@ export async function POST(request: Request) {
     .from("plans")
     .select("id, name")
     .eq("id", planId)
+    .eq("is_custom", false)
     .maybeSingle();
   if (plan.error || !plan.data) {
     return NextResponse.json({ error: "Plano inválido." }, { status: 400 });

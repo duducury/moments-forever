@@ -1,8 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import { useAuth } from "@/components/auth-provider";
+import {
+  SALES_WHATSAPP_NUMBER,
+  customPlanWhatsappHref,
+  type CustomPlanRequest,
+} from "@/lib/pricing/custom-plan-request";
 
 import styles from "./home.module.css";
 
@@ -16,9 +21,6 @@ export interface PricingPlanRow {
   readonly highlight: boolean;
 }
 
-/** Digits only (country code + number), no "+" or formatting — wa.me's format. */
-const SALES_WHATSAPP_NUMBER = "12033947243";
-
 export function titleCase(name: string): string {
   return name.charAt(0) + name.slice(1).toLowerCase();
 }
@@ -26,6 +28,83 @@ export function titleCase(name: string): string {
 export function whatsappHref(planName: string): string {
   const message = `Olá, tenho interesse no plano ${titleCase(planName)}!`;
   return `https://wa.me/${SALES_WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
+}
+
+function CustomPlanCard() {
+  const [open, setOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  function onSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    const read = (key: string) => String(data.get(key) ?? "");
+    const request: CustomPlanRequest = {
+      name: read("name"),
+      email: read("email"),
+      trips: read("trips"),
+      photosPerTrip: read("photosPerTrip"),
+      nfcTags: read("nfcTags"),
+    };
+    const counts = [request.trips, request.photosPerTrip, request.nfcTags].map(Number);
+    if (!request.name.trim() || !/^\S+@\S+\.\S+$/.test(request.email.trim())) {
+      setError("Informe seu nome e um e-mail válido.");
+      return;
+    }
+    if (counts.some((value) => !Number.isInteger(value) || value < 1)) {
+      setError("Informe quantas viagens, fotos por viagem e tags NFC você precisa.");
+      return;
+    }
+    setError(null);
+    window.open(customPlanWhatsappHref(request), "_blank", "noopener,noreferrer");
+  }
+
+  return (
+    <li className={styles.pricingCard} data-custom="true">
+      <p className={styles.pricingName}>Plano personalizado</p>
+      <p className={styles.pricingCustomLead}>
+        Escolha exatamente o que você precisa. Para quem precisa de mais do
+        que o Premium.
+      </p>
+      <ul className={styles.pricingFeatures}>
+        <li>Mais viagens</li>
+        <li>Mais fotos</li>
+        <li>Mais tags NFC</li>
+        <li>Plano ajustado à sua necessidade</li>
+      </ul>
+      {open ? (
+        <form className={styles.pricingCustomForm} onSubmit={onSubmit}>
+          <label>
+            <span>Nome</span>
+            <input autoComplete="name" name="name" required type="text" />
+          </label>
+          <label>
+            <span>E-mail</span>
+            <input autoComplete="email" name="email" required type="email" />
+          </label>
+          <label>
+            <span>Viagens desejadas</span>
+            <input inputMode="numeric" min={1} name="trips" required type="number" />
+          </label>
+          <label>
+            <span>Fotos por viagem</span>
+            <input inputMode="numeric" min={1} name="photosPerTrip" required type="number" />
+          </label>
+          <label>
+            <span>Tags NFC</span>
+            <input inputMode="numeric" min={1} name="nfcTags" required type="number" />
+          </label>
+          {error ? <p role="alert">{error}</p> : null}
+          <button className="button secondary" type="submit">
+            Enviar pelo WhatsApp
+          </button>
+        </form>
+      ) : (
+        <button className="button secondary" onClick={() => setOpen(true)} type="button">
+          Montar meu plano
+        </button>
+      )}
+    </li>
+  );
 }
 
 export function PricingSection({
@@ -110,6 +189,7 @@ export function PricingSection({
             </a>
           </li>
         ))}
+        <CustomPlanCard />
       </ul>
     </section>
   );

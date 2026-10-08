@@ -17,6 +17,7 @@ export default async function AdminPlansPage() {
     .select(
       "id, name, max_nfc_tags, max_photos_per_trip, active, price_label, price_note, highlight",
     )
+    .eq("is_custom", false)
     .order("max_nfc_tags", { ascending: true });
 
   const rows: PlanRow[] = (plans.data ?? []).map((plan) => ({

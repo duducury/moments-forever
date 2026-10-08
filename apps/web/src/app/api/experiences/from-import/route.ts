@@ -153,7 +153,7 @@ export async function POST(request: Request) {
       // The database trigger already refused the insert; this only reads the
       // account's current allowance (sum of its active keys) to say it.
       const license = await getUserLicense(supabase, user.id).catch(() => null);
-      const limit = license?.maxNfcTags ?? null;
+      const limit = license?.maxTrips ?? null;
       return NextResponse.json(
         { error: tripLimitMessage(limit), code: "trip_limit_reached", limit },
         { status: 403 },

@@ -9,8 +9,8 @@ interface PatchAlbumBody {
   readonly position?: number;
   readonly parent_album_id?: string | null;
   readonly cover_photo_id?: string | null;
-  /** Where the cover is centred (0–100 %); null/centre clears it. */
-  readonly cover_focus?: { readonly x: number; readonly y: number } | null;
+  /** Where the cover is centred (0–100 %) and its zoom (1–4); null/centre clears it. */
+  readonly cover_focus?: { readonly x: number; readonly y: number; readonly zoom?: number } | null;
   readonly reorder?: "up" | "down";
   /** Full ordered photo ids for this album (drag-and-drop reorder). */
   readonly photo_order?: readonly string[];
@@ -319,15 +319,19 @@ export async function PATCH(
           ? clampFocus(body.cover_focus)
           : null;
       if (focus && !isCenterFocus(focus)) {
-        await supabase.from("album_cover_focus").upsert(
-          {
-            album_id: album.id,
-            focus_x: focus.x,
-            focus_y: focus.y,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: "album_id" },
-        );
+        const row = {
+          album_id: album.id,
+          focus_x: focus.x,
+          focus_y: focus.y,
+          updated_at: new Date().toISOString(),
+        };
+        const saved = await supabase
+          .from("album_cover_focus")
+          .upsert({ ...row, focus_zoom: focus.zoom ?? 1 }, { onConflict: "album_id" });
+        if (saved.error) {
+          // The zoom column comes from a later migration: keep the position without it.
+          await supabase.from("album_cover_focus").upsert(row, { onConflict: "album_id" });
+        }
       } else {
         await supabase.from("album_cover_focus").delete().eq("album_id", album.id);
       }

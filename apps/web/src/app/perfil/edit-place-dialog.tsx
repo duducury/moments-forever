@@ -4,16 +4,12 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 
 import { ExperienceCoverThumb } from "@/components/experience-cover-thumb";
-import {
-  CENTER_FOCUS,
-  isCenterFocus,
-  type CoverFocus,
-} from "@/lib/experiences/cover-focus";
+import type { CoverFocus } from "@/lib/experiences/cover-focus";
 import type { OwnerPlaceCardItem } from "@/lib/experiences/load-owner-place-cards";
 import { deleteLocalPhotoBlobs } from "@/lib/local-photos/photo-blob-store";
 import { clearCardPreviewPrefs } from "@/lib/profile/card-preview-prefs";
 
-import { CoverFocusEditor } from "./cover-focus-editor";
+import { CoverEditor } from "./cover-editor";
 import styles from "./perfil.module.css";
 
 interface PhotoOption {
@@ -38,15 +34,8 @@ export function EditPlaceDialog({
   const [photos, setPhotos] = useState<readonly PhotoOption[]>([]);
   const [name, setName] = useState(place.title);
   const [coverPhotoId, setCoverPhotoId] = useState(place.coverPhotoId);
-  const initialFocus = place.coverFocus ?? CENTER_FOCUS;
-  const [focus, setFocus] = useState<CoverFocus>(initialFocus);
-
-  function chooseCover(photoId: string) {
-    if (photoId === coverPhotoId) return;
-    setCoverPhotoId(photoId);
-    // A different photo starts centred; its old focus point means nothing here.
-    setFocus(photoId === place.coverPhotoId ? initialFocus : CENTER_FOCUS);
-  }
+  const [focus, setFocus] = useState<CoverFocus | null>(place.coverFocus);
+  const [coverEditorOpen, setCoverEditorOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -99,13 +88,8 @@ export function EditPlaceDialog({
         method: "PATCH",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
+          // The cover is saved by its own editor; saving the name never touches it.
           name: nextName,
-          cover_photo_id: coverPhotoId,
-          // Only sent when it changed (or the cover did and it isn't centred),
-          // so saving a name never rewrites the focus.
-          ...(focus.x !== initialFocus.x || focus.y !== initialFocus.y
-            ? { cover_focus: isCenterFocus(focus) ? null : focus }
-            : {}),
         }),
       });
       const payload = (await response.json()) as { readonly error?: string };
@@ -163,6 +147,7 @@ export function EditPlaceDialog({
   }
 
   return (
+    <>
     <div
       aria-label="Editar viagem"
       aria-modal="true"
@@ -212,46 +197,28 @@ export function EditPlaceDialog({
               value={name}
             />
 
-            {loading ? (
-              <p className={styles.fieldHint}>Carregando fotos…</p>
-            ) : (
-              <>
-                <fieldset className={styles.coverPicker}>
-                  <legend>Foto de capa</legend>
-                  <div className={styles.coverChoices}>
-                    {photos.map((photo) => (
-                      <button
-                        aria-pressed={coverPhotoId === photo.id}
-                        className={styles.coverChoice}
-                        data-selected={
-                          coverPhotoId === photo.id ? "true" : "false"
-                        }
-                        key={photo.id}
-                        onClick={() => chooseCover(photo.id)}
-                        type="button"
-                      >
-                        <ExperienceCoverThumb
-                          className={styles.coverChoiceThumb}
-                          coverPhotoId={photo.id}
-                          fallbackClassName={styles.coverFallback}
-                          imageClassName={styles.coverImage}
-                          title={place.title}
-                          variant="thumbnail"
-                        />
-                      </button>
-                    ))}
-                  </div>
-                </fieldset>
-                {coverPhotoId ? (
-                  <CoverFocusEditor
-                    coverPhotoId={coverPhotoId}
-                    focus={focus}
-                    onChange={setFocus}
-                    title={place.title}
-                  />
-                ) : null}
-              </>
-            )}
+            <div className={styles.coverRow}>
+              <ExperienceCoverThumb
+                className={styles.coverRowThumb}
+                coverPhotoId={coverPhotoId}
+                fallbackClassName={styles.coverRowThumb}
+                focus={focus}
+                imageClassName={styles.coverImage}
+                title={place.title}
+                variant="thumbnail"
+              />
+              <div className={styles.coverRowText}>
+                <strong>Capa</strong>
+                <button
+                  className="button secondary"
+                  disabled={busy || loading}
+                  onClick={() => setCoverEditorOpen(true)}
+                  type="button"
+                >
+                  Editar capa
+                </button>
+              </div>
+            </div>
 
             <div className={styles.dialogActions}>
               <button className="button primary" disabled={busy} type="submit">
@@ -301,5 +268,24 @@ export function EditPlaceDialog({
         ) : null}
       </div>
     </div>
+    {coverEditorOpen ? (
+      <CoverEditor
+        albumId={place.albumId}
+        coverFocus={focus}
+        coverPhotoId={coverPhotoId}
+        experienceId={place.experienceId}
+        onClose={() => setCoverEditorOpen(false)}
+        onSaved={(cover) => {
+          setCoverPhotoId(cover.photoId);
+          setFocus(cover.focus);
+          setCoverEditorOpen(false);
+          clearCardPreviewPrefs(place.albumId);
+          router.refresh();
+        }}
+        photoIds={photos.map((photo) => photo.id)}
+        title={place.title}
+      />
+    ) : null}
+    </>
   );
 }

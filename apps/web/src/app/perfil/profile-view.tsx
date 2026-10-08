@@ -19,6 +19,7 @@ import styles from "./perfil.module.css";
 import { ProfileCarousel } from "./profile-carousel";
 import { ProfileHeader } from "./profile-header";
 import { ProfilePlacesSection } from "./profile-places-section";
+import { ShareJourneySection } from "./share-journey-section";
 
 export function ProfileView({
   ownerId,
@@ -168,6 +169,18 @@ export function ProfileView({
         ) : null}
 
         {!loadError && !gridPending && places.length > 0 ? mapSlot : null}
+
+        {isOwner && !loadError && !gridPending && places.length > 0 ? (
+          <ShareJourneySection
+            avatarRemoteSrc={avatarRemoteSrc}
+            bio={bio}
+            countryCodes={visitedCountryCodes}
+            displayName={displayName}
+            ownerId={ownerId}
+            places={places}
+            profilePath={homeHref}
+          />
+        ) : null}
       </section>
 
       <footer>

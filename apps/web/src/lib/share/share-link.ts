@@ -23,7 +23,8 @@ export interface SharePayload {
 export type ShareResult = "shared" | "cancelled" | "copied" | "failed";
 
 interface ShareNavigator {
-  readonly share?: (data: { url?: string; title?: string; text?: string }) => Promise<void>;
+  readonly share?: (data: { url?: string; title?: string; text?: string; files?: File[] }) => Promise<void>;
+  readonly canShare?: (data: { files?: File[] }) => boolean;
   readonly clipboard?: { readonly writeText?: (text: string) => Promise<void> };
 }
 
@@ -127,4 +128,28 @@ export async function shareLink(
     }
   }
   return copyLink(payload.url, deps);
+}
+
+/**
+ * Shares an image/file through the system sheet (Instagram, Mensagens, "Salvar
+ * imagem"…). "unsupported" when this browser / web view cannot share files —
+ * the caller then offers a download instead. Closing the sheet is "cancelled".
+ */
+export async function shareFile(
+  file: File,
+  data: { readonly title?: string; readonly text?: string } = {},
+  deps: ShareDeps = {},
+): Promise<"shared" | "cancelled" | "unsupported"> {
+  const nav = deps.navigator ?? defaultNavigator();
+  if (!nav || typeof nav.share !== "function") return "unsupported";
+  if (typeof nav.canShare !== "function" || !nav.canShare({ files: [file] })) return "unsupported";
+  const payload: { files: File[]; title?: string; text?: string } = { files: [file] };
+  if (data.title) payload.title = data.title;
+  if (data.text) payload.text = data.text;
+  try {
+    await nav.share(payload);
+    return "shared";
+  } catch (error) {
+    return isShareCancellation(error) ? "cancelled" : "unsupported";
+  }
 }

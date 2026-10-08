@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { parseUserUsageRows } from "@/lib/admin/user-usage";
 import { profilePath } from "@/lib/routes/app-routes";
 import { requireAdminUser } from "@/lib/licensing/require-admin";
+import { CUSTOM_PLAN_LABEL } from "@/lib/licensing/types";
 
 import styles from "../admin.module.css";
 import { UsersTable, type UserRow } from "./users-table";
@@ -39,7 +40,7 @@ export default async function AdminUsersPage() {
     supabase.rpc("admin_user_usage", { p_user_ids: userIds }),
     supabase
       .from("plans")
-      .select("id, name, max_nfc_tags")
+      .select("id, name, max_nfc_tags, max_trips, max_photos_per_trip, is_custom, custom_user_id")
       .order("max_nfc_tags", { ascending: true }),
     supabase.rpc("admin_list_user_emails", { p_user_ids: userIds }),
   ]);
@@ -65,14 +66,25 @@ export default async function AdminUsersPage() {
     ]),
   );
 
-  const planOptions = (allPlans.data ?? []).map((plan) => ({
-    id: plan.id as string,
-    name: plan.name as string,
-  }));
+  // Custom plans belong to one user each: never offered as a plan to pick.
+  const planOptions = (allPlans.data ?? [])
+    .filter((plan) => !plan.is_custom)
+    .map((plan) => ({
+      id: plan.id as string,
+      name: plan.name as string,
+    }));
+  const customByUser = new Map(
+    (allPlans.data ?? [])
+      .filter((plan) => plan.is_custom && plan.custom_user_id)
+      .map((plan) => [plan.custom_user_id as string, plan]),
+  );
   const planById = new Map(
     (allPlans.data ?? []).map((plan) => [
       plan.id as string,
-      { name: plan.name as string, maxNfcTags: plan.max_nfc_tags as number },
+      {
+        name: plan.is_custom ? CUSTOM_PLAN_LABEL : (plan.name as string),
+        maxTrips: (plan.max_trips as number | null) ?? (plan.max_nfc_tags as number),
+      },
     ]),
   );
   const emailById = new Map(
@@ -107,7 +119,7 @@ export default async function AdminUsersPage() {
     const userUsage = usageByUser?.get(id) ?? null;
     const userLicenses = licensesByUser.get(id) ?? [];
     const totalTrips = userLicenses.reduce(
-      (sum, license) => sum + (planById.get(license.planId)?.maxNfcTags ?? 0),
+      (sum, license) => sum + (planById.get(license.planId)?.maxTrips ?? 0),
       0,
     );
     const planCounts = new Map<string, number>();
@@ -122,8 +134,17 @@ export default async function AdminUsersPage() {
         ? (codeById.get(license.activationCodeId) ?? null)
         : null,
     }));
+    const custom = customByUser.get(id) ?? null;
     return {
       id,
+      customPlan: custom
+        ? {
+            maxTrips: (custom.max_trips as number | null) ?? (custom.max_nfc_tags as number),
+            maxPhotosPerTrip: custom.max_photos_per_trip as number,
+            maxNfcTags: custom.max_nfc_tags as number,
+            active: userLicenses.some((license) => license.planId === (custom.id as string)),
+          }
+        : null,
       displayName: (user.display_name as string | null) || null,
       email: emailById.get(id) ?? null,
       profileSlug: slug,

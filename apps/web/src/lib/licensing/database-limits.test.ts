@@ -445,3 +445,97 @@ test("photos.source_asset_id: format is enforced, and deleting the photo forgets
   );
   must(psqlSync(conn, migration)); // repeatable
 });
+
+function setCustomPlan(callerId: string, userId: string, trips: number, photos: number, nfc: number, active = true): SqlResult {
+  return runAs(
+    callerId,
+    `SELECT public.admin_set_custom_plan('${userId}', ${trips}, ${photos}, ${nfc}, ${active});`,
+  );
+}
+
+function addNfcTag(userId: string): SqlResult {
+  return psqlSync(
+    conn,
+    `INSERT INTO public.nfc_tags (user_id, token) VALUES ('${userId}', '${randomBytes(8).toString("hex")}');`,
+  );
+}
+
+test("custom plan: only an admin can set it, and the user then gets exactly those limits", suite, () => {
+  const admin = newUser({ admin: true });
+  const regular = newUser();
+  const joao = newUser();
+  grantPlan(joao, "BASIC");
+
+  const refused = setCustomPlan(regular, joao, 99, 99, 99);
+  assert.equal(refused.ok, false);
+  assert.match(refused.err, /not_authorized/, "a normal user can never set limits, not even their own");
+  const own = setCustomPlan(regular, regular, 99, 99, 99);
+  assert.equal(own.ok, false);
+
+  // 3 trips, 4 photos per trip, 2 NFC tags: trips and NFC are independent numbers.
+  must(setCustomPlan(admin, joao, 3, 4, 2));
+  const trips = createTrips(joao, 3);
+  const fourth = createTrip(joao);
+  assert.equal(fourth.ok, false);
+  assert.match(fourth.err, /trip_limit_reached/, "the 4th trip is refused: the custom trip limit is 3");
+
+  addPhotos(trips[0]!, 4);
+  const extraPhoto = psqlSync(conn, `INSERT INTO public.photos (experience_id, moment_id, position_in_moment)
+    SELECT '${trips[0]}', moment_id, 99 FROM public.photos WHERE experience_id = '${trips[0]}' LIMIT 1;`);
+  assert.equal(extraPhoto.ok, false);
+  assert.match(extraPhoto.err, /photo_limit_reached/, "photos per trip follow the custom plan");
+
+  assert.ok(addNfcTag(joao).ok);
+  assert.ok(addNfcTag(joao).ok);
+  const thirdTag = addNfcTag(joao);
+  assert.equal(thirdTag.ok, false);
+  assert.match(thirdTag.err, /nfc_tag_limit_reached/, "NFC tags follow the custom plan");
+
+  // One license only, and it is the custom one; the plan is private to the user and never sellable.
+  assert.equal(must(psqlSync(conn, `SELECT count(*) FROM public.licenses WHERE user_id = '${joao}' AND status = 'active';`)), "1");
+  assert.equal(
+    must(psqlSync(conn, `SELECT is_custom || '/' || active || '/' || coalesce(price_label, 'none') FROM public.plans WHERE custom_user_id = '${joao}';`)),
+    "true/false/none",
+  );
+
+  // Raising the limits updates the same plan row (no duplicates) and takes effect at once.
+  must(setCustomPlan(admin, joao, 5, 4, 2));
+  assert.equal(must(psqlSync(conn, `SELECT count(*) FROM public.plans WHERE custom_user_id = '${joao}';`)), "1");
+  assert.ok(createTrip(joao).ok, "the 4th trip now fits");
+
+  // A normal user cannot edit plans directly either.
+  const tamper = runAs(joao, `UPDATE public.plans SET max_trips = 9999, max_nfc_tags = 9999 WHERE custom_user_id = '${joao}'; SELECT 1;`);
+  assert.equal(
+    must(psqlSync(conn, `SELECT max_trips FROM public.plans WHERE custom_user_id = '${joao}';`)),
+    "5",
+    `RLS keeps limits server-side (${tamper.err})`,
+  );
+
+  // Bad numbers are refused by the database too.
+  assert.equal(setCustomPlan(admin, joao, -1, 4, 2).ok, false);
+
+  // Inactive: the custom license is revoked; back to a normal plan: Basic limits again.
+  must(setCustomPlan(admin, joao, 5, 4, 2, false));
+  const noLicense = createTrip(joao);
+  assert.match(noLicense.err, /no_active_license/);
+  grantPlan(joao, "BASIC");
+  const basicMax = Number(must(psqlSync(conn, `SELECT max_nfc_tags FROM public.plans WHERE name = 'BASIC';`)));
+  const existing = Number(must(psqlSync(conn, `SELECT count(*) FROM public.experiences WHERE owner_id = '${joao}';`)));
+  createTrips(joao, basicMax - existing);
+  assert.match(createTrip(joao).err, /trip_limit_reached/, "back on Basic, Basic's own limit applies");
+});
+
+test("Basic/Plus/Premium are untouched: no trip limit of their own, so trips still equal NFC tags", suite, () => {
+  const rows = must(
+    psqlSync(
+      conn,
+      `SELECT name || ':' || coalesce(max_trips::text, 'null') || ':' || is_custom FROM public.plans WHERE name IN ('BASIC','PLUS','PREMIUM','LEGACY') ORDER BY name;`,
+    ),
+  ).split("\n");
+  assert.deepEqual(rows, ["BASIC:null:false", "LEGACY:null:false", "PLUS:null:false", "PREMIUM:null:false"]);
+  const owner = newUser();
+  grantPlan(owner, "BASIC");
+  const basicMax = Number(must(psqlSync(conn, `SELECT max_nfc_tags FROM public.plans WHERE name = 'BASIC';`)));
+  createTrips(owner, basicMax);
+  assert.match(createTrip(owner).err, /trip_limit_reached/);
+});

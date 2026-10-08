@@ -721,6 +721,47 @@ html[data-nav-hidden="true"] .header {
   background: color-mix(in srgb, var(--pricing-green) 14%, transparent);
 }
 
+/* Custom plan card: same card, no price — priced by hand after the request. */
+.pricingCard[data-custom="true"] {
+  border-style: dashed;
+}
+
+.pricingCustomLead {
+  margin: -8px 0 0;
+  color: color-mix(in srgb, #fff 70%, transparent);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.pricingCustomForm {
+  display: grid;
+  gap: 10px;
+}
+
+.pricingCustomForm label {
+  display: grid;
+  gap: 4px;
+  color: color-mix(in srgb, #fff 62%, transparent);
+  font-size: 0.8rem;
+}
+
+.pricingCustomForm input {
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid #333;
+  border-radius: 12px;
+  background: #0b0b0b;
+  color: #fff;
+  font: inherit;
+  font-size: 16px;
+}
+
+.pricingCustomForm p {
+  margin: 0;
+  color: #ff9d85;
+  font-size: 0.82rem;
+}
+
 /* —— Final CTA —— */
 
 .finale {
@@ -1437,7 +1478,7 @@ html[data-nav-hidden="true"] .header {
 
   .pricingGrid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 18px;
     margin: 0;
     padding: 0;
@@ -1455,6 +1496,10 @@ html[data-nav-hidden="true"] .header {
 }
 
 @media (min-width: 1024px) {
+  .pricingGrid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
   .home {
     padding-top: calc(22px + env(safe-area-inset-top, 0px));
     padding-right: calc(40px + env(safe-area-inset-right, 0px));

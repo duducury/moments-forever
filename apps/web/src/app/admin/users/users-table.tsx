@@ -7,6 +7,7 @@ import { publicProfilePath } from "@/lib/profile/profile-slug";
 
 import { ActionMenu } from "../action-menu";
 import styles from "../admin.module.css";
+import { CustomPlanForm, type CustomPlanValues } from "./custom-plan-form";
 import { DeleteUserButton } from "./delete-user-button";
 import { UserPlanSelect } from "./user-plan-select";
 
@@ -22,6 +23,8 @@ export interface UserRow {
   readonly tripsLimit: number;
   readonly photoCount: number | null;
   readonly plans: readonly { readonly name: string; readonly count: number }[];
+  /** The user's custom plan, kept even while inactive so the admin can edit it. */
+  readonly customPlan: CustomPlanValues | null;
   readonly redeemedCodes: readonly {
     readonly planName: string;
     readonly code: string | null;
@@ -47,6 +50,7 @@ const PLAN_TONE: Record<string, string> = {
   PLUS: "info",
   PREMIUM: "premium",
   LEGACY: "gold",
+  Personalizado: "accent",
 };
 
 const AVATAR_COLORS = [
@@ -149,6 +153,7 @@ function PlanEditorPanel({
         </ul>
       ) : null}
       <UserPlanSelect onDone={onDone} plans={plans} userId={row.id} />
+      <CustomPlanForm current={row.customPlan} onDone={onDone} userId={row.id} />
     </div>
   );
 }

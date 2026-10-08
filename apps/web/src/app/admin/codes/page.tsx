@@ -16,6 +16,7 @@ export default async function AdminCodesPage() {
     .from("plans")
     .select("id, name")
     .neq("name", "LEGACY")
+    .eq("is_custom", false)
     .order("max_nfc_tags", { ascending: true });
 
   return (

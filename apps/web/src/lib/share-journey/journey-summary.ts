@@ -153,40 +153,65 @@ export interface JourneyCluster {
   readonly firstAt: string | null;
 }
 
+function haversineKm(aLat: number, aLon: number, bLat: number, bLon: number): number {
+  const rad = Math.PI / 180;
+  const dLat = (bLat - aLat) * rad;
+  const dLon = (bLon - aLon) * rad;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(aLat * rad) * Math.cos(bLat * rad) * Math.sin(dLon / 2) ** 2;
+  return 12742 * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+
+/** Photos closer than this to a place's centre belong to that place (one city / metro area). */
+export const PLACE_RADIUS_KM = 60;
+
 /**
- * Groups GPS photos into places: `cellDegrees` grid cells, centred on the mean
- * position of their photos. Biggest clusters first.
+ * Groups GPS photos into places by REAL distance: a photo joins the nearest
+ * place within `radiusKm` of its centre, otherwise it starts a new place. Two
+ * different cities or states never merge just because a grid cell contains
+ * both. Biggest places first.
  */
 export function clusterJourneyPoints(
   points: readonly JourneyPoint[],
-  cellDegrees = 2,
+  radiusKm: number = PLACE_RADIUS_KM,
 ): JourneyCluster[] {
-  const cells = new Map<string, JourneyPoint[]>();
+  type Acc = { lat: number; lon: number; members: JourneyPoint[] };
+  const places: Acc[] = [];
   for (const point of points) {
     if (!Number.isFinite(point.latitude) || !Number.isFinite(point.longitude)) continue;
     if (Math.abs(point.latitude) > 90 || Math.abs(point.longitude) > 180) continue;
-    const key = `${Math.floor(point.latitude / cellDegrees)}:${Math.floor(point.longitude / cellDegrees)}`;
-    const list = cells.get(key);
-    if (list) list.push(point);
-    else cells.set(key, [point]);
+    let best: Acc | null = null;
+    let bestDistance = radiusKm;
+    for (const place of places) {
+      const d = haversineKm(point.latitude, point.longitude, place.lat, place.lon);
+      if (d <= bestDistance) {
+        best = place;
+        bestDistance = d;
+      }
+    }
+    if (best) {
+      best.members.push(point);
+      const n = best.members.length;
+      best.lat += (point.latitude - best.lat) / n;
+      best.lon += (point.longitude - best.lon) / n;
+    } else {
+      places.push({ lat: point.latitude, lon: point.longitude, members: [point] });
+    }
   }
-  const clusters: JourneyCluster[] = [];
-  for (const list of cells.values()) {
-    const latitude = list.reduce((sum, p) => sum + p.latitude, 0) / list.length;
-    const longitude = list.reduce((sum, p) => sum + p.longitude, 0) / list.length;
-    const dated = list
-      .map((p) => p.capturedAt)
-      .filter((value): value is string => Boolean(value) && Number.isFinite(Date.parse(value as string)))
-      .sort();
-    clusters.push({
-      latitude,
-      longitude,
-      count: list.length,
-      photoId: list[0]!.photoId,
-      firstAt: dated[0] ?? null,
-    });
-  }
-  return clusters.sort((a, b) => b.count - a.count);
+  return places
+    .map((place) => {
+      const dated = place.members
+        .map((m) => m.capturedAt)
+        .filter((value): value is string => Boolean(value) && Number.isFinite(Date.parse(value as string)))
+        .sort();
+      return {
+        latitude: place.lat,
+        longitude: place.lon,
+        count: place.members.length,
+        photoId: place.members[0]!.photoId,
+        firstAt: dated[0] ?? null,
+      };
+    })
+    .sort((x, y) => y.count - x.count);
 }
 
 export interface JourneySummary {

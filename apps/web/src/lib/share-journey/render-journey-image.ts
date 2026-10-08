@@ -4,7 +4,7 @@
  * point comes from the `JourneySummary` / `JourneyAssets` it is given.
  */
 
-import { horizonDrop, layoutWorldMap, projectFlat, type MapFrame } from "./journey-geo";
+import { horizonDrop, layoutWorldMap, projectFlat, type MapFrame, type MapLayout } from "./journey-geo";
 import { MAX_FAVORITE_TRIPS, type JourneySummary } from "./journey-summary";
 
 export const JOURNEY_IMAGE_WIDTH = 1080;
@@ -383,6 +383,11 @@ function earthPath(ctx: Ctx, bottom: number): void {
   ctx.closePath();
 }
 
+/** Which places get a photo pin (also tells the generator which photos to load). */
+export function planJourneyPins(summary: JourneySummary): MapLayout {
+  return layoutWorldMap(summary.clusters, MAP, { skyAllowance: 70 });
+}
+
 function drawWorldMap(ctx: Ctx, summary: JourneySummary, assets: JourneyAssets): void {
   const bottom = MAP.y + MAP.height + 40;
 
@@ -454,8 +459,8 @@ function drawWorldMap(ctx: Ctx, summary: JourneySummary, assets: JourneyAssets):
   ctx.fillRect(0, fadeTop, JOURNEY_IMAGE_WIDTH, bottom - fadeTop);
 
   // Photo pins on the main places. No glowing dots, no lines.
-  const layout = layoutWorldMap(summary.clusters, MAP, { skyAllowance: 70 });
-  [...layout.pins].sort((a, b) => a.y - b.y).forEach((pin) => drawPin(ctx, pin.x, pin.y, assets.pins.get(pin.cluster.photoId) ?? null));
+  const layout = planJourneyPins(summary);
+  [...layout.pins].sort((a, b) => a.y - b.y).forEach((pin) => drawPin(ctx, pin.x, pin.y, assets.pins.get(pin.cluster.photoId) ?? null, pin.radius));
 
   // Caption: what the map is made of (real counts).
   if (summary.gpsPhotoCount > 0) {
@@ -533,19 +538,20 @@ function drawLand(ctx: Ctx, land: LandGeoJson): void {
   ctx.stroke();
 }
 
-function drawPin(ctx: Ctx, x: number, y: number, image: DrawableImage | null): void {
-  const r = 42;
-  const headY = y - 62;
+function drawPin(ctx: Ctx, x: number, y: number, image: DrawableImage | null, radius = 42): void {
+  const k = radius / 42;
+  const r = radius;
+  const headY = y - 62 * k;
   ctx.save();
   ctx.shadowColor = "rgba(0,0,0,0.55)";
-  ctx.shadowBlur = 16;
-  ctx.shadowOffsetY = 6;
+  ctx.shadowBlur = 16 * k;
+  ctx.shadowOffsetY = 6 * k;
   ctx.fillStyle = "#f4efe6";
   ctx.beginPath();
-  ctx.arc(x, headY, r + 5, 0, Math.PI * 2);
-  ctx.moveTo(x - 18, headY + r);
+  ctx.arc(x, headY, r + 5 * k, 0, Math.PI * 2);
+  ctx.moveTo(x - 18 * k, headY + r);
   ctx.lineTo(x, y);
-  ctx.lineTo(x + 18, headY + r);
+  ctx.lineTo(x + 18 * k, headY + r);
   ctx.closePath();
   ctx.fill();
   ctx.restore();

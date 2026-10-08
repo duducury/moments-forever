@@ -47,37 +47,104 @@ export interface PlacedCluster {
   readonly y: number;
 }
 
+/** A photo pin: the tip is on the place, the round head (radius `radius`) sits above it. */
+export interface PlacedPin extends PlacedCluster {
+  readonly radius: number;
+}
+
 export interface MapLayout {
-  /** Biggest places that fit without overlapping: drawn as photo pins. */
-  readonly pins: readonly PlacedCluster[];
+  /** Photo pins, spread over the world (biggest places of each region first). */
+  readonly pins: readonly PlacedPin[];
   /** Every other place (positioned, not drawn as a picture). */
   readonly unpinned: readonly PlacedCluster[];
 }
 
+/** Head centre of a pin whose tip is at `y`. */
+export function pinHeadCentre(y: number, radius: number): number {
+  return y - radius * 1.48;
+}
+
+export interface LayoutOptions {
+  /** Hard cap; the selection is by geography first, this only stops runaway counts. */
+  readonly maxPins?: number;
+  /** Head radii to try, biggest first (a pin shrinks before it is dropped). */
+  readonly radii?: readonly number[];
+  /** Free space between two pin heads. */
+  readonly gap?: number;
+  /** Size (degrees) of the regions used to spread the pins. */
+  readonly regionDegrees?: number;
+  /** Pins a single region may take in the first pass (the rest wait for the others). */
+  readonly regionCap?: number;
+  /** A pin head may rise this far above the top of the map (the map has no box). */
+  readonly skyAllowance?: number;
+}
+
 /**
- * Places every cluster on the map. Nothing is dropped: a place is either a
- * photo pin or "unpinned" (no marker is drawn for those: no dots, no lines). Clusters must arrive biggest first.
+ * Chooses which places get a photo pin, spreading them geographically:
+ *  1. places are visited biggest first;
+ *  2. in the first pass each ~20° region may take only `regionCap` pins, so a
+ *     region with many photos cannot use up every pin;
+ *  3. a second pass fills any room left, relaxing the cap;
+ *  4. a pin is drawn at the largest size whose head does not overlap another
+ *     head; if even the smallest overlaps, the place stays unpinned.
+ * Nothing is dropped from the data: places without a pin stay in `unpinned`.
  */
 export function layoutWorldMap(
   clusters: readonly JourneyCluster[],
   frame: MapFrame,
-  options: { readonly maxPins?: number; readonly minPinDistance?: number; readonly pinHeadroom?: number; readonly skyAllowance?: number } = {},
+  options: LayoutOptions = {},
 ): MapLayout {
-  const maxPins = options.maxPins ?? 9;
-  const minDist = options.minPinDistance ?? 105;
-  // The map is part of the sky now (no box): a pin head may rise a bit above the horizon.
+  const maxPins = options.maxPins ?? 18;
+  const radii = options.radii ?? [38, 26, 18, 10];
+  const gap = options.gap ?? 2;
+  const regionDegrees = options.regionDegrees ?? 20;
+  const regionCap = options.regionCap ?? 3;
   const sky = options.skyAllowance ?? 0;
-  // A pin's round head sits above its tip: keep it inside the map panel.
-  const headroom = options.pinHeadroom ?? 112;
 
-  const pins: PlacedCluster[] = [];
-  const unpinned: PlacedCluster[] = [];
-  for (const cluster of clusters) {
-    const item = { cluster, ...projectFlat(cluster.longitude, cluster.latitude, frame) };
-    const clear = pins.every((pin) => Math.hypot(pin.x - item.x, pin.y - item.y) >= minDist);
-    const fits = item.y - headroom >= frame.y - sky && item.x >= frame.x + 50 && item.x <= frame.x + frame.width - 50;
-    if (pins.length < maxPins && clear && fits) pins.push(item);
-    else unpinned.push(item);
+  const placed = clusters.map((cluster) => ({ cluster, ...projectFlat(cluster.longitude, cluster.latitude, frame) }));
+  const pins: PlacedPin[] = [];
+  const taken = new Set<PlacedCluster>();
+  const perRegion = new Map<string, number>();
+  const regionOf = (c: JourneyCluster) => `${Math.floor(c.latitude / regionDegrees)}:${Math.floor(c.longitude / regionDegrees)}`;
+
+  const smallest = radii[radii.length - 1]!;
+  const fits = (item: PlacedCluster, radius: number, ignore?: PlacedPin): boolean => {
+    const headY = pinHeadCentre(item.y, radius);
+    const inside =
+      item.x - radius >= frame.x + 8 && item.x + radius <= frame.x + frame.width - 8 && headY - radius >= frame.y - sky;
+    if (!inside) return false;
+    return pins.every(
+      (pin) => pin === ignore || Math.hypot(pin.x - item.x, pinHeadCentre(pin.y, pin.radius) - headY) >= pin.radius + radius + gap,
+    );
+  };
+
+  // Phase 1 — choose WHICH places get a pin, assuming the smallest size so that
+  // crowded regions (many destinations close together, anywhere) can show every distinct one.
+  for (const cap of [regionCap, Infinity]) {
+    for (const item of placed) {
+      if (pins.length >= maxPins) break;
+      if (taken.has(item)) continue;
+      const region = regionOf(item.cluster);
+      if ((perRegion.get(region) ?? 0) >= cap) continue;
+      if (fits(item, smallest)) {
+        pins.push({ ...item, radius: smallest });
+        taken.add(item);
+        perRegion.set(region, (perRegion.get(region) ?? 0) + 1);
+      }
+    }
   }
+
+  // Phase 2 — grow pins to the largest size that still clears their neighbours,
+  // biggest places first, so important destinations stand out.
+  pins.forEach((pin, index) => {
+    for (const radius of radii) {
+      if (radius <= pin.radius) break;
+      if (fits(pin, radius, pin)) {
+        pins[index] = { ...pin, radius };
+        break;
+      }
+    }
+  });
+  const unpinned = placed.filter((item) => !taken.has(item));
   return { pins, unpinned };
 }

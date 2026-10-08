@@ -6,7 +6,7 @@ import test from "node:test";
 import type { OwnerPlaceCardItem } from "@/lib/experiences/load-owner-place-cards";
 import { shareFile } from "@/lib/share/share-link";
 
-import { layoutWorldMap, projectFlat, type MapFrame } from "./journey-geo";
+import { layoutWorldMap, pinHeadCentre, projectFlat, type MapFrame } from "./journey-geo";
 import {
   MAX_FAVORITE_TRIPS,
   buildJourneySummary,
@@ -181,21 +181,137 @@ test("the map is fed by ALL GPS photos, never by the favourite trips", () => {
   assert.equal(five.clusters.reduce((sum, c) => sum + c.count, 0), 225, "every GPS photo is counted in some place");
 });
 
-test("layout: every place becomes a pin or a dot, pins do not overlap, and there are no routes", () => {
-  const { clusters } = buildJourneySummary({ places: trips(7), displayName: "x", bio: null, countryCodes: [], selectedAlbumIds: [], points: worldPoints() });
-  const layout = layoutWorldMap(clusters, FRAME);
-  assert.equal(layout.pins.length + layout.unpinned.length, clusters.length, "nothing is dropped");
-  assert.ok(layout.pins.length >= 3 && layout.pins.length <= 9);
-  for (const a of layout.pins)
-    for (const b of layout.pins) if (a !== b) assert.ok(Math.hypot(a.x - b.x, a.y - b.y) >= 105);
-  for (const pin of layout.pins) assert.ok(pin.y - 112 >= FRAME.y, "pin head stays near the horizon");
+/** Test-only: a traveller with many trips inside the USA plus the rest of the world. */
+const US_SPOTS = [
+  ["New York", 40.71, -74.0, 50], ["Boston", 42.36, -71.06, 10], ["New Hampshire", 43.2, -71.5, 6], ["New Jersey", 40.73, -74.17, 8],
+  ["Connecticut", 41.76, -72.69, 5], ["Ohio", 39.96, -83.0, 7], ["Texas", 29.76, -95.37, 12], ["Florida", 25.76, -80.19, 20],
+  ["Nevada", 36.17, -115.14, 15], ["Hawaii", 21.31, -157.86, 9], ["California", 34.05, -118.24, 11],
+] as const;
+const WORLD_SPOTS = [
+  ["Dubai", 25.2, 55.3, 35], ["Rio", -22.9, -43.2, 40], ["Salvador", -12.97, -38.5, 8], ["Sao Paulo", -23.55, -46.63, 6],
+  ["Paris", 48.85, 2.35, 22], ["Roma", 41.9, 12.5, 9], ["Bali", -8.4, 115.2, 20], ["Tokyo", 35.7, 139.7, 18], ["Sydney", -33.9, 151.2, 12],
+] as const;
+function spotsToPoints(spots: readonly (readonly [string, number, number, number])[]): JourneyPoint[] {
+  return spots.flatMap(([name, lat, lon, n]) =>
+    Array.from({ length: n }, (_, k) => ({
+      photoId: `${name}-${k}`,
+      albumId: null,
+      latitude: lat + (k % 5) * 0.02,
+      longitude: lon + (k % 7) * 0.02,
+      capturedAt: "2024-05-10T10:00:00Z",
+    })),
+  );
+}
+const SPREAD = buildJourneySummary({
+  places: trips(7), displayName: "x", bio: null, countryCodes: [], selectedAlbumIds: [],
+  points: spotsToPoints([...US_SPOTS, ...WORLD_SPOTS]),
+});
+
+test("places are grouped by real distance: different cities/states never merge", () => {
+  // New York and New Jersey (~15 km apart) are one place; Boston, Ohio, Texas, Florida… are not.
+  const near = (lat: number, lon: number) => SPREAD.clusters.filter((c) => Math.hypot(c.latitude - lat, c.longitude - lon) < 1.5);
+  assert.equal(near(40.71, -74.0).length, 1, "NY + NJ = one metro area");
+  assert.equal(near(40.71, -74.0)[0]!.count, 58);
+  for (const [lat, lon] of [[42.36, -71.06], [39.96, -83.0], [29.76, -95.37], [25.76, -80.19], [36.17, -115.14], [21.31, -157.86]] as const) {
+    assert.ok(near(lat, lon).length >= 1, `place near ${lat},${lon} exists on its own`);
+  }
+  assert.ok(SPREAD.clusters.length >= 15, "many distinct places, not one per country");
+});
+
+test("pins are spread over the USA: several different destinations, not a single pin", () => {
+  const layout = layoutWorldMap(SPREAD.clusters, FRAME, { skyAllowance: 70 });
+  const inUsa = layout.pins.filter((p) => p.cluster.longitude < -60 && p.cluster.latitude > 15 && p.cluster.latitude < 50);
+  assert.ok(inUsa.length >= 6, `USA got ${inUsa.length} pins`);
+  const has = (lat: number, lon: number) => layout.pins.some((p) => Math.abs(p.cluster.latitude - lat) < 1.5 && Math.abs(p.cluster.longitude - lon) < 1.5);
+  for (const [name, lat, lon] of [["Texas", 29.76, -95.37], ["Florida", 25.76, -80.19], ["Nevada", 36.17, -115.14], ["Hawaii", 21.31, -157.86], ["New York", 40.71, -74.0]] as const) {
+    assert.ok(has(lat, lon), `${name} has its own pin`);
+  }
+  // Pins elsewhere in the world still appear (the USA does not eat them all).
+  const outside = layout.pins.filter((p) => !(p.cluster.longitude < -60 && p.cluster.latitude > 15 && p.cluster.latitude < 50));
+  assert.ok(outside.length >= 5, `${outside.length} pins outside the USA`);
+  for (const [lat, lon] of [[25.2, 55.3], [-22.9, -43.2], [48.85, 2.35], [35.7, 139.7]] as const) assert.ok(has(lat, lon), `${lat},${lon} pinned`);
+});
+
+/** Test-only destinations (lat, lon, photos). The algorithm only ever sees coordinates. */
+const BRAZIL = [[-22.9, -43.2, 30], [-23.55, -46.63, 12], [-12.97, -38.5, 15], [-3.73, -38.52, 9], [-8.05, -34.9, 8], [-30.03, -51.23, 7], [-25.43, -49.27, 6], [-15.8, -47.9, 5]] as const;
+const EUROPE = [[48.85, 2.35, 22], [41.9, 12.5, 14], [40.42, -3.7, 10], [51.5, -0.12, 12], [52.52, 13.4, 8], [38.7, -9.14, 7], [47.5, 19.04, 6], [37.98, 23.73, 6]] as const;
+const ASIA = [[35.7, 139.7, 18], [13.75, 100.5, 9], [-8.4, 115.2, 20], [1.35, 103.8, 10], [25.2, 55.3, 25], [28.6, 77.2, 7]] as const;
+const CARIBBEAN = [[18.47, -69.9, 10], [18.0, -76.8, 9], [23.1, -82.4, 8], [12.1, -68.9, 6], [25.04, -77.35, 8]] as const;
+type Spot = readonly [number, number, number];
+const toPoints = (spots: readonly Spot[]): JourneyPoint[] =>
+  spots.flatMap(([lat, lon, n], i) =>
+    Array.from({ length: n }, (_, k) => ({ photoId: `${lat},${lon}-${i}-${k}`, albumId: null, latitude: lat + (k % 5) * 0.02, longitude: lon + (k % 7) * 0.02, capturedAt: null })),
+  );
+const pinsFor = (spots: readonly Spot[]) =>
+  layoutWorldMap(clusterJourneyPoints(toPoints(spots)), FRAME, { skyAllowance: 70 }).pins;
+const inBox = (pins: ReturnType<typeof pinsFor>, lat: [number, number], lon: [number, number]) =>
+  pins.filter((p) => p.cluster.latitude >= lat[0] && p.cluster.latitude <= lat[1] && p.cluster.longitude >= lon[0] && p.cluster.longitude <= lon[1]);
+
+test("the distribution is geographic, not per country: any dense region gets several pins", () => {
+  // No United States data at all: Brazil, Europe, Asia and the Caribbean are all dense.
+  const pins = pinsFor([...BRAZIL, ...EUROPE, ...ASIA, ...CARIBBEAN]);
+  assert.ok(inBox(pins, [-35, 6], [-55, -33]).length >= 3, "several pins across Brazil");
+  assert.ok(inBox(pins, [35, 60], [-12, 28]).length >= 4, "several pins across Europe");
+  assert.ok(inBox(pins, [-10, 30], [75, 145]).length >= 3, "several pins across Asia");
+  assert.ok(inBox(pins, [10, 26], [-85, -66]).length >= 2, "several pins across the Caribbean");
+  assert.ok(pins.length <= 18, "still capped");
+});
+
+test("one dense region does not starve the others, whichever region it is", () => {
+  const only = (dense: readonly Spot[]) => pinsFor([...dense, [-22.9, -43.2, 3], [35.7, 139.7, 3], [48.85, 2.35, 3], [-33.9, 151.2, 3], [40.7, -74, 3]]);
+  for (const dense of [BRAZIL, EUROPE, ASIA, CARIBBEAN]) {
+    const pins = only(dense);
+    for (const [lat, lon] of [[35.7, 139.7], [-33.9, 151.2], [40.7, -74]] as const) {
+      assert.ok(pins.some((p) => Math.abs(p.cluster.latitude - lat) < 1.5 && Math.abs(p.cluster.longitude - lon) < 1.5), `${lat},${lon} keeps a pin`);
+    }
+  }
+});
+
+test("the layout algorithm only reads coordinates (no country, state or region names)", () => {
+  const geo = read("src/lib/share-journey/journey-geo.ts");
+  assert.doesNotMatch(geo, /countryCode|countryName|"US"|"BR"|Brasil|Estados Unidos|United States/);
+  assert.doesNotMatch(read("src/lib/share-journey/render-journey-image.ts"), /planJourneyPins[\s\S]{0,200}countryCode/);
+});
+
+test("layout: every place is a pin or unpinned, heads never overlap, nothing leaves the image", () => {
+  const layout = layoutWorldMap(SPREAD.clusters, FRAME, { skyAllowance: 70 });
+  assert.equal(layout.pins.length + layout.unpinned.length, SPREAD.clusters.length, "no place is lost");
+  assert.ok(layout.pins.length >= 12 && layout.pins.length <= 18, `${layout.pins.length} pins`);
+  for (const a of layout.pins) {
+    for (const b of layout.pins) {
+      if (a === b) continue;
+      const d = Math.hypot(a.x - b.x, pinHeadCentre(a.y, a.radius) - pinHeadCentre(b.y, b.radius));
+      assert.ok(d >= a.radius + b.radius, "two pin heads do not overlap");
+    }
+    assert.ok(a.x - a.radius >= 0 && a.x + a.radius <= 1080, "inside the image width");
+  }
   assert.equal("routes" in layout, false, "no connecting lines");
   assert.deepEqual(layoutWorldMap([], FRAME), { pins: [], unpinned: [] });
 });
 
+test("a region full of photos cannot use up every pin (geographic spread first)", () => {
+  // 40 places all in the northeast USA with the most photos, plus 4 places elsewhere with few photos.
+  const crowded = Array.from({ length: 40 }, (_, i) => ({
+    latitude: 38 + (i % 8) * 0.9, longitude: -84 + Math.floor(i / 8) * 2.2, count: 100 - i, photoId: `ne${i}`, firstAt: null,
+  }));
+  const far = [[-22.9, -43.2], [48.85, 2.35], [35.7, 139.7], [25.2, 55.3]].map(([latitude, longitude], i) => ({
+    latitude: latitude!, longitude: longitude!, count: 3, photoId: `far${i}`, firstAt: null,
+  }));
+  const layout = layoutWorldMap([...crowded, ...far], FRAME, { skyAllowance: 70 });
+  for (const f of far) assert.ok(layout.pins.some((p) => p.cluster.photoId === f.photoId), `${f.photoId} still gets a pin`);
+});
+
+test("pins shrink before being dropped, and the biggest places keep the large size", () => {
+  const layout = layoutWorldMap(SPREAD.clusters, FRAME, { skyAllowance: 70 });
+  const radii = new Set(layout.pins.map((p) => p.radius));
+  assert.ok(radii.size >= 2, "more than one pin size is used in a crowded map");
+  const first = layout.pins[0]!;
+  assert.equal(first.radius, 38, "the biggest place gets the large pin");
+});
+
 test("the renderer draws no routes or planes, and the map is the flat panel", () => {
   const renderer = read("src/lib/share-journey/render-journey-image.ts");
-  assert.doesNotMatch(renderer, /drawPlane|setLineDash|routes|greatCircle|drawGlobe/);
+  assert.doesNotMatch(renderer, /drawPlane|setLineDash|routes|greatCircle|drawGlobe|createRadialGradient\(item\.x/);
   assert.match(renderer, /drawWorldMap/);
   assert.doesNotMatch(renderer, /roundRect\(ctx, MAP|createRadialGradient\(item\.x/, "no box around the map and no glowing dots");
   assert.match(renderer, /horizonDrop/, "curved horizon");

@@ -13,14 +13,13 @@ import {
   JOURNEY_IMAGE_HEIGHT,
   JOURNEY_IMAGE_WIDTH,
   drawJourneyImage,
+  planJourneyPins,
   type DrawableImage,
   type JourneyAssets,
   type LandGeoJson,
 } from "./render-journey-image";
 
 const IMAGE_TIMEOUT_MS = 9000;
-/** Pins drawn on the map picture; more would only overlap. */
-const MAX_PIN_PHOTOS = 10;
 
 function loadImage(url: string, crossOrigin = false): Promise<DrawableImage | null> {
   return new Promise((resolve) => {
@@ -86,7 +85,8 @@ export async function loadJourneyAssets(
   ownerId: string,
   avatarRemoteSrc: string | null,
 ): Promise<JourneyAssets> {
-  const pinPhotoIds = summary.clusters.slice(0, MAX_PIN_PHOTOS * 2).map((cluster) => cluster.photoId);
+  // Only the photos of the pins that will actually be drawn.
+  const pinPhotoIds = planJourneyPins(summary).pins.map((pin) => pin.cluster.photoId);
   const coverTrips = summary.favorites.filter((trip) => trip.coverPhotoId);
   const flagCodes = [
     ...new Set([...summary.countryCodes, ...summary.favorites.map((trip) => trip.countryCode).filter((c): c is string => Boolean(c))]),

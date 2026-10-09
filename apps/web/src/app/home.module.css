@@ -1102,10 +1102,6 @@ html[data-nav-hidden="true"] .header {
   transform: rotate(8deg);
 }
 
-:global(html[data-native-ios-app]) .download {
-  display: none;
-}
-
 /* Entrance when the section scrolls into view (data-reveal → .is-visible).
    The card fades in (global rule) and then, in order: eyebrow, title, text,
    button, phone (rises from below), photos (small drift). Everything is

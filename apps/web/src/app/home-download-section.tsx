@@ -5,9 +5,8 @@ import styles from "./home.module.css";
 
 /**
  * "Baixe o Moments Forever": download section between the plans and the final
- * banner. Web only — CSS hides the whole section inside the iOS app (the
- * `data-native-ios-app` marker, see nativeIosAppMarkerScript). Appears with the
- * shared `data-reveal` scroll mechanism; the staging of its parts lives in
+ * banner. Shown on the web and inside the iOS app. Appears with the shared
+ * `data-reveal` scroll mechanism; the staging of its parts lives in
  * home.module.css.
  */
 export function HomeDownloadSection() {

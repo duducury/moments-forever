@@ -74,8 +74,8 @@ test("the download section sits right after the plans, the footer has no badge, 
   assert.match(badge, /<path d="M12\.152 6\.896/, "Apple logo");
 
   const css = readFileSync(path.join(web, "src/app/home.module.css"), "utf8");
-  // Whole section hidden inside the iOS app, with the same marker as the hero button.
-  assert.match(css, /:global\(html\[data-native-ios-app\]\) \.download\s*\{\s*display: none;/);
+  // The section is shown inside the iOS app too (only the hero button is hidden there).
+  assert.doesNotMatch(css, /:global\(html\[data-native-ios-app\]\) \.download\s*\{/);
   assert.doesNotMatch(css, /footerStore/);
   // Staged entrance in the requested order: eyebrow → title → text → button → phone → photos.
   const delayOf = (selector: string): number => {

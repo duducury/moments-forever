@@ -84,4 +84,5 @@ Registre aqui cada versão preparada. Atualize na mesma alteração que muda a v
 | 3.1 | 4 | versão final com Sign in with Apple, NFC e correções. Preparada |
 | 3.2 | 5 | publicada na App Store (o build 1 não foi reutilizado: segue a sequência depois do 4) |
 | 3.3 | 6 | preparada: login Google/Facebook dentro do app (plugin nativo) e Universal Links |
-| 3.4 | 7 | em preparação: resumo da jornada para o Instagram, plano personalizado e novo editor de capa. O último build enviado ao App Store Connect era o 4 (os builds 5 e 6 não chegaram lá); o 7 segue a regra de nunca reutilizar número |
+| 3.4 | 7 | enviada ao App Store Connect (a Apple fechou a versão 3.4 para novos envios, então o build 8 foi recusado): resumo da jornada para o Instagram, plano personalizado e novo editor de capa. O último build enviado ao App Store Connect era o 4 (os builds 5 e 6 não chegaram lá); o 7 segue a regra de nunca reutilizar número |
+| 3.5 | 9 | em preparação: mesmo conteúdo do 3.4 mais as correções do login Google/Facebook no app (plugin nativo, seletor de contas do Google) e a verificação dos plugins no Xcode Cloud. O 8 não foi enviado e não será reutilizado |

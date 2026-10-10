@@ -76,9 +76,10 @@ public class MomentsNativeAuthPlugin: CAPPlugin, CAPBridgedPlugin, ASWebAuthenti
                 }
             }
             session.presentationContextProvider = self
-            // Shares the Safari login with the person's Google/Facebook session
-            // (the system asks for consent first), like the Safari flow did.
-            session.prefersEphemeralWebBrowserSession = false
+            // Private sheet: shares no cookies with Safari, so iOS does not show the
+            // "Wants to Use <host> to Sign In" prompt. The person picks/types the account
+            // each time; the app session itself is kept by Supabase.
+            session.prefersEphemeralWebBrowserSession = true
 
             self.session = session
             if !session.start() {

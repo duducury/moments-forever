@@ -60,6 +60,7 @@ export {
   flagEmojiFromCountryCode,
   shortPlaceCaption,
   usStateCodeFromPlaceLabel,
+  usStateNameFromCode,
   type ShortPlaceCaption,
 } from "./country-flag";
 

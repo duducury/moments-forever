@@ -42,7 +42,7 @@ test("with nothing in Moments Forever both trips are new, named by their place",
     ...placed([trips[0]!, "França, Paris"], [trips[1]!, "Itália, Roma"]),
     context: emptyContext,
   });
-  assert.deepEqual(fresh.map((c) => c.title), ["Paris", "Roma"]);
+  assert.deepEqual(fresh.map((c) => c.title), ["França — Paris", "Itália — Roma"]);
   assert.deepEqual(fresh.map((c) => c.name), ["França, Paris", "Itália, Roma"]);
   assert.equal(existing.length, 0);
   assert.equal(fresh[0]?.countryCode, "FR");
@@ -107,7 +107,7 @@ test("same country, another year: a new trip, never merged — and no 'parece co
   });
   assert.equal(existing.length, 0);
   const candidate = fresh.find((c) => c.key === paris.id);
-  assert.equal(candidate?.title, "Paris");
+  assert.equal(candidate?.title, "França — Paris");
   assert.equal("hint" in (candidate ?? {}), false);
 });
 

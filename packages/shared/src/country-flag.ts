@@ -483,6 +483,19 @@ export function usStateCodeFromPlaceLabel(
   return US_STATE_CODE_BY_NAME[normalizeCountryKey(cleaned)] ?? null;
 }
 
+/** English display name of a US state from its USPS code ("PA" → "Pennsylvania"), or null. */
+export function usStateNameFromCode(code: string | null | undefined): string | null {
+  const wanted = code?.trim().toUpperCase();
+  if (!wanted) return null;
+  for (const [key, value] of Object.entries(US_STATE_CODE_BY_NAME)) {
+    // The first spelling of each state is its official English name.
+    if (value === wanted) {
+      return key.replace(/\b\p{L}/gu, (letter) => letter.toUpperCase()).replace(/ Of /u, " of ");
+    }
+  }
+  return null;
+}
+
 export function countryCodeFromName(countryName: string): string | null {
   const key = normalizeCountryKey(countryName);
   if (!key) return null;

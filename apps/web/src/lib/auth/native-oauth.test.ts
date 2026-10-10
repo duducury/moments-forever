@@ -116,11 +116,30 @@ test("full flow: sheet returns a code → the web view opens /auth/callback", as
   assert.deepEqual(seen, [
     {
       provider: "google",
-      options: { redirectTo: "com.momentsforever.app://auth/callback", skipBrowserRedirect: true },
+      options: {
+        redirectTo: "com.momentsforever.app://auth/callback",
+        skipBrowserRedirect: true,
+        queryParams: { prompt: "select_account" },
+      },
     },
   ]);
   assert.deepEqual(started, [AUTHORIZE_URL]);
   assert.deepEqual(navigated, [`/auth/callback?code=${CODE}`]);
+});
+
+test("Facebook does not get the Google-only account chooser parameter", async () => {
+  const seen: unknown[] = [];
+  await signInWithNativeOAuth(fakeClient({ data: { url: AUTHORIZE_URL }, error: null }, seen), "facebook", {
+    supabaseUrl: SUPABASE_URL,
+    start: async () => `com.momentsforever.app://auth/callback?code=${CODE}`,
+    navigate: () => undefined,
+  });
+  assert.deepEqual(seen, [
+    {
+      provider: "facebook",
+      options: { redirectTo: "com.momentsforever.app://auth/callback", skipBrowserRedirect: true },
+    },
+  ]);
 });
 
 test("the activation flow keeps its destination", async () => {

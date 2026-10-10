@@ -113,7 +113,7 @@ export interface NativeOAuthSupabaseClient {
   readonly auth: {
     signInWithOAuth(credentials: {
       provider: NativeAuthProvider;
-      options: { redirectTo: string; skipBrowserRedirect: boolean };
+      options: { redirectTo: string; skipBrowserRedirect: boolean; queryParams?: { prompt: string } };
     }): Promise<{
       data: { url: string | null } | null;
       error: { message: string } | null;
@@ -162,7 +162,12 @@ export async function signInWithNativeOAuth(
 
   const { data, error } = await client.auth.signInWithOAuth({
     provider,
-    options: { redirectTo: NATIVE_OAUTH_REDIRECT_URL, skipBrowserRedirect: true },
+    options: {
+      redirectTo: NATIVE_OAUTH_REDIRECT_URL,
+      skipBrowserRedirect: true,
+      // Google only: always show its account chooser (the accounts signed in on Safari).
+      ...(provider === "google" ? { queryParams: { prompt: "select_account" } } : {}),
+    },
   });
   if (error) {
     return {

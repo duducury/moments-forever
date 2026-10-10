@@ -55,12 +55,14 @@ import type {
   DiscoveredTrip,
   PhotoLibraryContext,
 } from "@/lib/photo-library/types";
+import { effectiveCover, findCoverFile } from "@/lib/photo-library/cover-choice";
 import { profileTripAlbumPath } from "@/lib/routes/app-routes";
 import { createNamedTripFromFiles, TripLicenseError } from "@/lib/photos/create-named-trip-from-files";
 import { uploadFilesToAlbum } from "@/lib/photos/upload-files-to-album";
 
 import styles from "./find-trips.module.css";
 import { PhotoGrid } from "./photo-grid";
+import { ReviewTripCard } from "./review-trip-card";
 import {
   Flag,
   formatPeriod,
@@ -158,6 +160,9 @@ export function FindTripsFlow({
   const [quick, setQuick] = useState<Record<string, QuickPlace>>({});
   const [legacy, setLegacy] = useState<PhotoLibraryContext["legacyPhotos"]>([]);
   const [renames, setRenames] = useState<Record<string, string>>({});
+  // What the person adds at confirmation, per new trip: its story and which photo is the cover.
+  const [stories, setStories] = useState<Record<string, string>>({});
+  const [covers, setCovers] = useState<Record<string, string>>({});
   const [relatedCandidate, setRelatedCandidate] = useState<Candidate | null>(null);
   const [emptyReason, setEmptyReason] = useState<string>("");
   const [selection, setSelection] = useState<Selection>(emptySelection());
@@ -503,6 +508,9 @@ export function FindTripsFlow({
           if (!user) throw new Error("Entre na sua conta para criar a viagem.");
           const created = await createNamedTripFromFiles({
             files: exported.files,
+            // The chosen cover, as its exported file (the first photo when none was chosen).
+            coverFile: findCoverFile(exported.files, exported.origins, effectiveCover(assets, covers[row.key])),
+            story: stories[row.key],
             name: row.name,
             ownerId: user.id,
             origins: exported.origins,
@@ -906,6 +914,24 @@ export function FindTripsFlow({
               const previewIds = candidate
                 ? pickPreview(selectedAssets(candidate, selection), 3).map((asset) => asset.nativeId)
                 : [];
+              if (row.kind === "new" && candidate) {
+                return (
+                  <ReviewTripCard
+                    assets={selectedAssets(candidate, selection)}
+                    candidate={candidate}
+                    coverId={covers[row.key]}
+                    key={row.key}
+                    name={candidate.name}
+                    onCover={(nativeId) => setCovers((previous) => ({ ...previous, [row.key]: nativeId }))}
+                    onName={(value) => setRenames((previous) => ({ ...previous, [row.key]: value }))}
+                    onNeedThumbs={ensureThumbs}
+                    onStory={(value) => setStories((previous) => ({ ...previous, [row.key]: value }))}
+                    story={stories[row.key] ?? ""}
+                    thumbs={thumbs}
+                    title={row.title}
+                  />
+                );
+              }
               return (
                 <div className={styles.reviewRow} key={row.key}>
                   <div className={styles.reviewTop}>
@@ -915,21 +941,7 @@ export function FindTripsFlow({
                     </span>
                     <strong>{photosLabel(row.selected)}</strong>
                   </div>
-                  {row.kind === "new" ? (
-                    <input
-                      aria-label="Nome da viagem"
-                      className={styles.nameInput}
-                      maxLength={80}
-                      onChange={(event) =>
-                        setRenames((previous) => ({ ...previous, [row.key]: event.target.value }))
-                      }
-                      placeholder="Nome da viagem"
-                      type="text"
-                      value={candidate?.name ?? row.name}
-                    />
-                  ) : (
-                    <span className={styles.rowMeta}>Entra na viagem que você já tem</span>
-                  )}
+                  <span className={styles.rowMeta}>Entra na viagem que você já tem</span>
                   <PreviewStrip
                     ids={previewIds}
                     size="small"

@@ -47,6 +47,13 @@ test("source check: @objc class name and jsName must match what is registered", 
   assert.equal(checkPluginSource('@objc(MomentsNativeAuthPlugin)\nlet jsName = "Other"').length, 1);
 });
 
+test("a cancelled session's late completion cannot release the session that replaced it", () => {
+  const source = readFileSync(SOURCE, "utf8");
+  assert.match(source, /generation \+= 1/);
+  assert.match(source, /plugin\.generation == generation/);
+  assert.doesNotMatch(source, /self\?\.session = nil/);
+});
+
 test("binary check looks for the class name in the executable", () => {
   assert.deepEqual(checkBinaryContainsPlugin(Buffer.from("xx_MomentsNativeAuthPlugin_yy")), []);
   assert.equal(checkBinaryContainsPlugin(Buffer.from("only NFCPlugin here")).length, 1);

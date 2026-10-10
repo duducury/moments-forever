@@ -25,6 +25,12 @@ public class MomentsNativeAuthPlugin: CAPPlugin, CAPBridgedPlugin, ASWebAuthenti
     /// Keeps the session alive while the sheet is on screen.
     private var session: ASWebAuthenticationSession?
 
+    /// Bumped on every start. A session that was cancelled to make room for a new one
+    /// still reports back later; without this check its late completion would clear
+    /// `session` while the NEW sheet is open, releasing it (the sheet vanishes and the
+    /// JS promise never settles).
+    private var generation = 0
+
     @objc func start(_ call: CAPPluginCall) {
         guard
             let raw = call.getString("url"),
@@ -42,13 +48,17 @@ public class MomentsNativeAuthPlugin: CAPPlugin, CAPBridgedPlugin, ASWebAuthenti
                 return
             }
             self.session?.cancel()
+            self.generation += 1
+            let generation = self.generation
 
             let session = ASWebAuthenticationSession(
                 url: url,
                 callbackURLScheme: Self.callbackScheme
             ) { [weak self] callbackURL, error in
                 DispatchQueue.main.async {
-                    self?.session = nil
+                    if let plugin = self, plugin.generation == generation {
+                        plugin.session = nil
+                    }
                     if let authError = error as? ASWebAuthenticationSessionError,
                        authError.code == .canceledLogin {
                         call.reject("Login cancelled.", "CANCELLED")

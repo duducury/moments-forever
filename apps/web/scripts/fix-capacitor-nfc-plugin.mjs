@@ -141,13 +141,19 @@ if (pkg.exports && !pkg.exports["./package.json"]) {
 const swiftPath = join(pluginDir, "Package.swift");
 if (existsSync(swiftPath)) {
   const original = readFileSync(swiftPath, "utf-8");
-  const patched = original.replace(/name:\s*"CapacitorNfc"/g, `name: "${spmName}"`);
+  // The plugin tracks `branch: "main"` of capacitor-swift-pm, a moving target that also
+  // clashes with CapApp-SPM's `exact: "8.5.2"` for the same package (and Xcode Cloud needs a
+  // reproducible Package.resolved). Use the same versioned rule as the other local plugins;
+  // the plugin only uses the Capacitor and Cordova products, present in every 8.x release.
+  const patched = original
+    .replace(/name:\s*"CapacitorNfc"/g, `name: "${spmName}"`)
+    .replace(/(capacitor-swift-pm\.git",\s*)branch:\s*"main"/, '$1from: "8.0.0"');
   if (patched !== original) {
     writeFileSync(swiftPath, patched);
     console.log(
-      `[fix-capacitor-nfc-plugin] Patched ${swiftPath}: package/product name -> "${spmName}"`,
+      `[fix-capacitor-nfc-plugin] Patched ${swiftPath}: package/product name -> "${spmName}", capacitor-swift-pm -> from 8.0.0`,
     );
-  } else if (original.includes(`name: "${spmName}"`)) {
+  } else if (original.includes(`name: "${spmName}"`) && !/branch:\s*"main"/.test(original)) {
     console.log(`[fix-capacitor-nfc-plugin] ${swiftPath} already patched — nothing to do.`);
   } else {
     console.warn(

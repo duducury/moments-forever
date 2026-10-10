@@ -36,7 +36,11 @@ public class MomentsNativeAuthPlugin: CAPPlugin, CAPBridgedPlugin, ASWebAuthenti
             return
         }
 
-        DispatchQueue.main.async {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else {
+                call.reject("The login could not start.", "FAILED")
+                return
+            }
             self.session?.cancel()
 
             let session = ASWebAuthenticationSession(

@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import type { ReactNode } from "react";
 
 import { AuthProvider } from "@/components/auth-provider";
 import { AutoHideNavOnScroll } from "@/components/auto-hide-nav";
@@ -123,7 +124,7 @@ const themeBootScript = `
 })();
 `;
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children }: { readonly children: ReactNode }) {
   return (
     <html
       lang="pt-BR"

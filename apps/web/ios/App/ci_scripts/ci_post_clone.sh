@@ -79,4 +79,21 @@ grep -q 'CapacitorCommunityAppleSignIn' "$WEB_DIR/ios/App/CapApp-SPM/Package.swi
 grep -q 'MomentsForeverCapacitorPhotoLibrary' "$WEB_DIR/ios/App/CapApp-SPM/Package.swift" \
   || fail "CapApp-SPM/Package.swift does not reference MomentsForeverCapacitorPhotoLibrary"
 
+# 4. The Google/Facebook login inside the app needs MomentsNativeAuthPlugin. Capacitor
+#    skips a plugin that is not in packageClassList (or not linked) WITHOUT any error and
+#    the app then silently falls back to the Safari login, so fail the build loudly here.
+grep -q 'MomentsNativeAuthPlugin' "$CONFIG_JSON" \
+  || fail "MomentsNativeAuthPlugin is missing from packageClassList in $CONFIG_JSON (Google login would fall back to Safari)"
+grep -q 'MomentsForeverCapacitorNativeAuth' "$WEB_DIR/ios/App/CapApp-SPM/Package.swift" \
+  || fail "CapApp-SPM/Package.swift does not reference MomentsForeverCapacitorNativeAuth"
+# Full check (registered + linked + class/jsName match the source); prints every problem found.
+# tsx is only a hoisted dev dependency of other workspaces, so do not let its absence
+# break the build: the two greps above are the hard gate either way.
+if [ -x "$REPO_ROOT/node_modules/.bin/tsx" ]; then
+  (cd "$WEB_DIR" && node --import tsx scripts/verify-ios-plugins.ts) \
+    || fail "iOS native plugin check failed (see the messages above)"
+else
+  log "WARNING: tsx not installed; skipped scripts/verify-ios-plugins.ts (the grep checks above passed)"
+fi
+
 log "done: Swift packages can be resolved"

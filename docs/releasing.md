@@ -35,9 +35,42 @@ Na pasta `apps/web`:
 
 `npm run ios:version -- check` falha se o arquivo do projeto estiver inconsistente.
 
+## Antes do Archive: dependências, `cap sync` e plugins nativos
+
+O login Google/Facebook dentro do app depende do plugin nativo `MomentsNativeAuthPlugin`. O Capacitor só o registra se ele estiver em `packageClassList` do `capacitor.config.json` e linkado no binário. **Se faltar, não há erro nenhum**: o app cai em silêncio no login pelo Safari. Por isso, antes de **todo** Archive manual no Mac, a partir da raiz do repositório:
+
+```bash
+git checkout master && git pull origin master
+npm ci                                   # instala dependências e cria os links de packages/*
+cd apps/web
+npm run cap:sync                         # = cap sync ios; gera capacitor.config.json e CapApp-SPM/Package.swift
+npm run ios:verify-plugins               # tem de imprimir "OK: MomentsNativeAuthPlugin is registered…"
+npm run ios:version                      # confira versão e build (próximo build nunca reutiliza um número)
+```
+
+- `capacitor.config.json` e `CapApp-SPM/Package.swift` são **gerados e ignorados pelo git**: o que está no seu Mac vale, não o que está no repositório. Rode o `cap sync` de novo sempre que atualizar o código, mesmo que nada nativo tenha mudado.
+- `npm run ios:verify-plugins` falha com mensagem clara se `MomentsNativeAuthPlugin` não estiver registrado, se o pacote não estiver linkado em `CapApp-SPM/Package.swift` ou se a classe e o `jsName` do código Swift não baterem com o que o JS registra.
+- Não faça o Archive se a verificação falhar.
+- No Xcode: **Product → Clean Build Folder** (e, se o pacote do plugin foi atualizado, **File → Packages → Reset Package Caches**) antes de arquivar.
+
+### Depois do Archive: confirme no app gerado
+
+No Organizer, clique com o botão direito no archive → **Show in Finder** → botão direito → **Mostrar conteúdo do pacote**. O app fica em `Products/Applications/App.app`. Então:
+
+```bash
+cd apps/web
+npm run ios:verify-plugins -- --app "/caminho/do/MeuApp.xcarchive/Products/Applications/App.app"
+```
+
+Esse comando confere o `capacitor.config.json` **dentro** do app e se o executável contém a classe do plugin. Só envie ao App Store Connect se terminar com `OK: … and present in the built app.`
+
+### Teste no iPhone (TestFlight)
+
+Toque em "Entrar com Google": deve abrir a folha de login por cima do app e fechar sozinha. Se abrir o Safari, o plugin não está nesse build.
+
 ## Xcode Cloud
 
-Cada push em `master` dispara um build do Xcode Cloud. O Xcode Cloud costuma controlar a numeração dos builds que ele arquiva; confira no App Store Connect (workflow → número do próximo build) para que o número de lá não colida com o do projeto. O número do `pbxproj` continua sendo a referência para builds feitos no Xcode (Archive manual) e para o histórico.
+Cada push em `master` dispara um build do Xcode Cloud. O `ci_scripts/ci_post_clone.sh` roda `npm ci` e `cap sync ios`, confere o plugin (registro em `packageClassList` e pacote em `CapApp-SPM/Package.swift`, mais o `ios:verify-plugins` completo quando o `tsx` está instalado) e falha o build se o plugin do login Google não estiver registrado. O Xcode Cloud costuma controlar a numeração dos builds que ele arquiva; confira no App Store Connect (workflow → número do próximo build) para que o número de lá não colida com o do projeto. O número do `pbxproj` continua sendo a referência para builds feitos no Xcode (Archive manual) e para o histórico.
 
 ## Histórico de releases
 

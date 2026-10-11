@@ -36,7 +36,7 @@ test("the callback URL is the fixed app scheme", () => {
   assert.equal(NATIVE_OAUTH_REDIRECT_URL, "com.momentsforever.app://auth/callback");
 });
 
-test("only the iOS app WITH the native plugin uses the native flow", () => {
+test("only the iOS and Android apps WITH the native plugin use the native flow", () => {
   const ios = (plugin: boolean) => ({
     isNativePlatform: () => true,
     getPlatform: () => "ios",
@@ -51,6 +51,16 @@ test("only the iOS app WITH the native plugin uses the native flow", () => {
   );
   assert.equal(
     isNativeOAuthAvailable({ isNativePlatform: () => true, getPlatform: () => "android", isPluginAvailable: () => true }),
+    true,
+    "Android app with the Custom Tabs plugin",
+  );
+  assert.equal(
+    isNativeOAuthAvailable({ isNativePlatform: () => true, getPlatform: () => "android", isPluginAvailable: () => false }),
+    false,
+    "Android app without the plugin falls back",
+  );
+  assert.equal(
+    isNativeOAuthAvailable({ isNativePlatform: () => true, getPlatform: () => "electron", isPluginAvailable: () => true }),
     false,
   );
 });

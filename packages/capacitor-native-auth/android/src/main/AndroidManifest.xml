@@ -1,0 +1,5 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- The custom-scheme intent-filter that receives the login callback lives on the app's
+         MainActivity (apps/web/android/app/src/main/AndroidManifest.xml): a library cannot add
+         one to an activity it does not own. -->
+</manifest>

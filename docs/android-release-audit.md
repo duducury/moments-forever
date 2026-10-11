@@ -97,7 +97,7 @@ por versão de plugin, o conserto é pontual no `build.gradle` do plugin afetado
 **Segurança:**
 - O plugin **não registra, não guarda nem repassa** o código além de devolvê-lo à página; só um login fica pendente por vez e o callback só é aceito enquanto há um pendente e no formato exato (host `auth`, caminho `/callback`, sem usuário/porta).
 - Outro app que registrasse o mesmo esquema veria o código, mas sem o verificador PKCE (que fica na página) ele não vale nada.
-- Custom Tabs não avisam quando o usuário fecha a aba: voltar ao app sem o callback vira `CANCELLED` depois de 700 ms (`onNewIntent` sempre vem antes de `onResume`).
+- Custom Tabs não avisam quando o usuário fecha a aba: voltar ao app sem o callback vira `CANCELLED` depois de 2 s de tolerância (`onNewIntent` costuma vir antes de `onResume`, mas alguns navegadores entregam o redirecionamento um instante depois de fechar a aba).
 - Tokens e sessão ficam só nos cookies do WebView, que **não entram em backup** (`allowBackup=false` + `data_extraction_rules`).
 
 **Limites [ASSUNÇÃO/MANUAL]:** se o Android matar o processo do app enquanto a aba está aberta, a chamada pendente se perde (a pessoa toca de novo em "Continuar com Google"). A tela de escolha de conta do Google depende de contas no Chrome. Nada disso foi executado em aparelho: **não afirmo que o login funciona** até o teste da seção 8.
@@ -198,3 +198,37 @@ Sem `MOMENTS_UPLOAD_STORE_FILE` o bundle sai **sem assinatura** e o Play Console
 - Informar o SHA-256 real (variável `ANDROID_APP_SHA256_FINGERPRINTS`).
 - Dizer se quer manter `versionName "1.0"` ou alinhar com a versão pública do iOS.
 - Decidir a justificativa (ou troca por Photo Picker) da permissão de fotos para "Encontrar viagem".
+
+## 12. Teste no TCL 50 XE 5G e correções (branch `claude/android-prep`)
+
+O teste real mostrou: NFC, câmera, upload e demais fluxos funcionando; três problemas. **Compilação Gradle ainda não executada aqui**: o Kotlin dos dois arquivos do plugin de fotos e o Java do plugin de login foram compilados com `kotlinc`/`javac` contra as classes reais do Android 16 (`android-all`) e *stubs* de `androidx` e do Capacitor (verifica sintaxe e tipos do código novo, não substitui o Gradle).
+
+### 12.1 Login Google não volta ao app
+- **O que foi verificado no código:** o fluxo iOS e o Android são idênticos na página (mesmo `signInWithOAuth` com `redirectTo = com.momentsforever.app://auth/callback`, PKCE no WebView, rota `/auth/callback`). A configuração do Supabase/Google que funciona no iOS vale para o Android: o iOS recebeu o `code` pelo mesmo redirect, então o Supabase aceita a URL. O que muda no Android é só quem entrega o redirect ao app: o navegador (Chrome Custom Tab) e o `intent-filter` da `MainActivity`.
+- **Causa:** **não confirmada**. Não há log do aparelho e nenhuma falha determinística apareceu na leitura do código. Os pontos frágeis que existiam e foram tratados:
+  1. A aba abria no navegador **padrão** do aparelho, que pode não suportar Custom Tabs; navegadores simples costumam não repassar o redirecionamento para um esquema próprio. Agora o plugin procura um navegador com Custom Tabs (`CustomTabsClient.getPackageName`, com o `<queries>` exigido no Android 11+) e usa esse.
+  2. Se o navegador entregasse o callback **depois** de a aba fechar, a tolerância de 700 ms já tinha cancelado o login. Agora são 2 s.
+  3. No Android **sem** o plugin disponível, o app caía no fluxo de redirecionamento no navegador do sistema, que **não pode funcionar** (o verificador PKCE fica no WebView) e deixava a pessoa presa no navegador. Agora aparece uma mensagem clara e esse fluxo não é iniciado (iOS não muda).
+  4. O plugin passou a registrar no `logcat`, sem nunca imprimir a URL nem o código, o que ele fez em cada etapa.
+- **Como saber o que aconteceu, se ainda falhar** (aparelho com depuração USB):
+  ```bash
+  adb logcat -c
+  adb logcat -s MomentsNativeAuth:I Capacitor:I Capacitor/Console:I chromium:W
+  ```
+  Toque em "Continuar com Google" e procure estas linhas: `opening the login in a Custom Tab, provider=…` (o plugin foi chamado e qual navegador), `login callback received` (o app recebeu o redirecionamento), `back in the app without a callback: treated as cancelled` (voltou sem receber), `ignored a link on the app scheme…` (chegou uma URL fora do formato). Se a mensagem "O login com Google e Facebook não está disponível…" aparecer, o plugin não está presente nesse build (rode `npm run cap:sync:android` e reinstale). **Sem a primeira linha, o plugin nem foi chamado; sem `login callback received`, o navegador não entregou o redirecionamento ao app.** Me envie essas linhas (sem códigos).
+- **Configuração externa (já feita para o iOS; confira, não é nova):** Supabase → Authentication → URL Configuration → **Redirect URLs** deve conter exatamente `com.momentsforever.app://auth/callback`. Google Cloud Console → Credenciais → seu cliente OAuth (Web) → **URIs de redirecionamento autorizados** deve conter `https://<ref-do-projeto>.supabase.co/auth/v1/callback`. Nenhum valor novo é necessário para o Android.
+
+### 12.2 "Encontrar uma viagem" carrega sem fim
+- **Causa (provável, não medida no aparelho):** no Android o GPS de **cada foto** é lido abrindo o arquivo (o MediaStore não tem coluna de GPS no Android 10+), e a busca pedia páginas de **4.000 fotos** de uma vez, sem mostrar progresso até a página inteira terminar e sem como cancelar: com milhares de fotos são minutos de "Procurando nas suas fotos…". Além disso, um erro dentro da thread nativa deixaria a chamada sem resposta.
+- **Correção:** no Android a busca lê **300 fotos por vez** (progresso "N de M fotos lidas" a cada poucos segundos; "Cancelar" vale entre as páginas), lê o GPS de **4 fotos em paralelo**, e cada chamada nativa agora **rejeita com erro** em vez de ficar pendente. Uma página que passa de **2 minutos** vira a mensagem "Ler as fotos está demorando mais do que o normal. Toque em “Tentar de novo”." Permissão negada continua mostrando o aviso com "Abrir Ajustes"; biblioteca vazia mostra "Não encontramos fotos neste aparelho…". O iOS mantém páginas de 4.000.
+- **Permissões:** continuam só `READ_MEDIA_IMAGES` (+ `READ_MEDIA_VISUAL_USER_SELECTED` no Android 14+, `ACCESS_MEDIA_LOCATION`). O Photo Picker não enumera a biblioteca, então não serve para descobrir viagens.
+- O plugin registra no `logcat` (tag `MomentsPhotoLibrary`) a posição, quantas fotos foram lidas e quanto tempo o GPS levou, sem dados pessoais: `adb logcat -s MomentsPhotoLibrary:I`.
+
+### 12.3 Confirmação do registro de NFC
+- A tela agora mostra, **somente depois de o plugin confirmar a gravação**, a pílula verde já usada em "NFC vinculada" com **"Tag NFC registrada com sucesso!"** (e a pasta continua a mesma). Texto de espera sem "iPhone". No Android há **"Cancelar gravação"** (cancela também a gravação pendente no plugin, para a próxima tag tocada não ser sobrescrita) e o estado "Gravação cancelada. Nenhuma tag foi alterada." com "Tentar novamente"; erros continuam no aviso de erro.
+
+### 12.4 Testes executados
+`npm test` 474 passando / 0 falhando / 16 pulados (os de sempre); `typecheck`, `build` e `cap sync android` OK; lint igual ao de antes (5 erros e 1 aviso fora destes arquivos); JUnit na JVM das regras puras (10 testes). **Não executados:** Gradle, `.aab`, qualquer teste no aparelho.
+
+### 12.5 O que testar de novo no TCL
+Atualize e reinstale: `git pull`, `npm ci`, `npm run cap:sync:android`, `./gradlew assembleDebug`, `adb install -r …`. Então: (1) Google e Facebook, vendo o `logcat` acima; (2) "Encontrar uma viagem" com a biblioteca real: o contador sobe e termina em resultado, "sem fotos" ou erro; negue a permissão uma vez para ver o aviso; (3) gravar uma tag nova dentro de uma pasta: pílula verde só depois de tocar a tag; testar "Cancelar gravação" e NFC desligado.

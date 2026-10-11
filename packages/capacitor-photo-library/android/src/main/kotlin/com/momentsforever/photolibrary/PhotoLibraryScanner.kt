@@ -56,8 +56,13 @@ object PhotoLibraryScanner {
     }
 
     private fun count(resolver: ContentResolver, uri: Uri): Int =
-        resolver.query(uri, arrayOf(MediaStore.MediaColumns._ID), null, null, null)
-            ?.use { it.count } ?: 0
+        try {
+            resolver.query(uri, arrayOf(MediaStore.MediaColumns._ID), null, null, null)
+                ?.use { it.count } ?: 0
+        } catch (e: SecurityException) {
+            // E.g. videos, whose permission is deliberately not declared: nothing to count.
+            0
+        }
 
     fun scan(
         resolver: ContentResolver,

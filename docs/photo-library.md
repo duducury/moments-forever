@@ -103,5 +103,12 @@ Viagens que já existem aparecem em "Já no Moments Forever — com fotos novas"
 - Teste de build local apontando para outro site: `CAPACITOR_SERVER_URL=https://… npx cap sync ios`.
 
 ## Android
-O repositório ainda não tem projeto Android. O código do plugin está pronto (`android/`), mas não foi compilado.
-Para ativar: `npm i @capacitor/android@8.5.2 -w @moments-forever/web`, `npx cap add android`, `npx cap sync android`.
+O projeto Android existe em `apps/web/android` (Capacitor 8.5.2). O plugin Kotlin (`packages/capacitor-photo-library/android`) é
+incluído no `cap sync android`, mas **ainda não foi compilado nem testado em aparelho** (ver `docs/android-release-audit.md`).
+
+- Permissões: `READ_MEDIA_IMAGES`, `READ_MEDIA_VISUAL_USER_SELECTED` (Android 14+), `ACCESS_MEDIA_LOCATION` e
+  `READ_EXTERNAL_STORAGE` só até a API 32. **Não** declara `READ_MEDIA_VIDEO` (o app só lê fotos; sem a permissão a contagem
+  de vídeos é 0). O Google Play restringe `READ_MEDIA_IMAGES`: exige a declaração de permissões de fotos e vídeos no Play Console.
+- Uploads por `<input type="file">` e câmera (`capture`) usam o seletor do sistema (Photo Picker em aparelhos compatíveis) e **não**
+  precisam de permissão; por isso `CAMERA` não é declarada.
+- Atualizar o projeto depois de mudar plugins: `npm run cap:sync:android` (em `apps/web`).

@@ -2,7 +2,8 @@
     <!-- Read-only access to the photo library. Nothing is written or uploaded. -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+    <!-- No READ_MEDIA_VIDEO on purpose: the app only reads photos (Google Play restricts the video
+         permission and the app never requests it at runtime). Without it the video count is 0. -->
     <!-- Android 14+: lets the user grant only the photos they pick. -->
     <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
     <!-- Android 10+: needed to read GPS from the original file's EXIF. -->

@@ -22,3 +22,6 @@ teste-fotos/
 supabase/.temp/
 supabase/.branches/
 teste-fotos/
+# Android signing keys: never commit
+*.jks
+*.keystore

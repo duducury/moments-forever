@@ -8,7 +8,12 @@ import { useAuth } from "@/components/auth-provider";
 import { OAuthButtons, type OAuthProvider } from "@/components/oauth-buttons";
 import { signalPwaBootReady } from "@/components/pwa-splash-dismiss";
 import { signInWithAppleNative } from "@/lib/auth/apple-sign-in";
-import { isNativeOAuthAvailable, signInWithNativeOAuth } from "@/lib/auth/native-oauth";
+import {
+  isAndroidAppWithoutNativeOAuth,
+  isNativeOAuthAvailable,
+  NATIVE_OAUTH_UNAVAILABLE_MESSAGE,
+  signInWithNativeOAuth,
+} from "@/lib/auth/native-oauth";
 import { getSupabaseConfig } from "@/lib/supabase/config";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
@@ -140,6 +145,13 @@ export function ActivationForm() {
       if (result.status === "redirecting") return;
       sessionStorage.removeItem(PENDING_CODE_KEY);
       setMessage(result.message);
+      setBusy(false);
+      return;
+    }
+    if (isAndroidAppWithoutNativeOAuth()) {
+      console.warn("[oauth] Android app without the MomentsNativeAuth plugin: browser redirect flow not started");
+      sessionStorage.removeItem(PENDING_CODE_KEY);
+      setMessage(NATIVE_OAUTH_UNAVAILABLE_MESSAGE);
       setBusy(false);
       return;
     }

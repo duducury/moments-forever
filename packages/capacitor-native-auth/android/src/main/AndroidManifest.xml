@@ -2,4 +2,12 @@
     <!-- The custom-scheme intent-filter that receives the login callback lives on the app's
          MainActivity (apps/web/android/app/src/main/AndroidManifest.xml): a library cannot add
          one to an activity it does not own. -->
+
+    <!-- Android 11+ package visibility: lets the plugin find a browser that supports Custom Tabs
+         (CustomTabsClient.getPackageName). Same declaration as the official @capacitor/browser. -->
+    <queries>
+        <intent>
+            <action android:name="android.support.customtabs.action.CustomTabsService" />
+        </intent>
+    </queries>
 </manifest>

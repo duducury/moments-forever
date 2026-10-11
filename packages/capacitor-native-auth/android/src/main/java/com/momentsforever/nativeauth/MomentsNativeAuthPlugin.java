@@ -5,6 +5,8 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
+import androidx.browser.customtabs.CustomTabsClient;
 import androidx.browser.customtabs.CustomTabsIntent;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
@@ -38,7 +40,14 @@ import com.getcapacitor.annotation.CapacitorPlugin;
  */
 @CapacitorPlugin(name = "MomentsNativeAuth")
 public class MomentsNativeAuthPlugin extends Plugin {
-    private static final long CANCEL_GRACE_MS = 700;
+    private static final String TAG = "MomentsNativeAuth";
+
+    /**
+     * How long after coming back to the app we wait for the callback before calling it a cancellation.
+     * Some browsers hand the redirect to the app a moment AFTER the tab closed (onResume first), and slow
+     * phones need longer, so this is generous; it only delays the message after a real cancellation.
+     */
+    private static final long CANCEL_GRACE_MS = 2000;
 
     private final Handler main = new Handler(Looper.getMainLooper());
 
@@ -71,8 +80,16 @@ public class MomentsNativeAuthPlugin extends Plugin {
         pendingCallId = call.getCallbackId();
         leftApp = false;
         try {
-            new CustomTabsIntent.Builder().setShowTitle(true).build().launchUrl(activity, Uri.parse(raw));
+            CustomTabsIntent tab = new CustomTabsIntent.Builder().setShowTitle(true).build();
+            // Use a browser that really supports Custom Tabs (Chrome, Samsung Internet…) even when the phone's
+            // default browser does not: a plain browser tab often refuses to hand the custom-scheme redirect
+            // back to the app. null = none found, then the system chooses (still opens the login page).
+            String provider = CustomTabsClient.getPackageName(activity, null);
+            if (provider != null) tab.intent.setPackage(provider);
+            Log.i(TAG, "opening the login in a Custom Tab, provider=" + (provider == null ? "system default" : provider));
+            tab.launchUrl(activity, Uri.parse(raw));
         } catch (RuntimeException e) {
+            Log.w(TAG, "could not open the login page: " + e.getClass().getSimpleName());
             settle(null, "FAILED", "Could not open the login page.");
         }
     }
@@ -102,7 +119,14 @@ public class MomentsNativeAuthPlugin extends Plugin {
         Uri data = intent.getData();
         if (data == null) return;
         String url = data.toString();
-        if (!AuthUrls.isAppCallback(url)) return;
+        if (!AuthUrls.isAppCallback(url)) {
+            // Never log the URL itself: it carries the one-time login code.
+            if (AuthUrls.CALLBACK_SCHEME.equalsIgnoreCase(data.getScheme())) {
+                Log.w(TAG, "ignored a link on the app scheme that is not the login callback");
+            }
+            return;
+        }
+        Log.i(TAG, "login callback received");
         settle(url, null, null);
     }
 
@@ -120,7 +144,10 @@ public class MomentsNativeAuthPlugin extends Plugin {
         // Back from the tab without a callback: the person closed it.
         main.postDelayed(
             () -> {
-                if (id.equals(pendingCallId)) settle(null, "CANCELLED", "Login cancelled.");
+                if (id.equals(pendingCallId)) {
+                    Log.i(TAG, "back in the app without a callback: treated as cancelled");
+                    settle(null, "CANCELLED", "Login cancelled.");
+                }
             },
             CANCEL_GRACE_MS
         );

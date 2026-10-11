@@ -6,7 +6,12 @@ import { useEffect, useState, type FormEvent } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { OAuthButtons, type OAuthProvider } from "@/components/oauth-buttons";
 import { signInWithAppleNative } from "@/lib/auth/apple-sign-in";
-import { isNativeOAuthAvailable, signInWithNativeOAuth } from "@/lib/auth/native-oauth";
+import {
+  isAndroidAppWithoutNativeOAuth,
+  isNativeOAuthAvailable,
+  NATIVE_OAUTH_UNAVAILABLE_MESSAGE,
+  signInWithNativeOAuth,
+} from "@/lib/auth/native-oauth";
 import { getSupabaseConfig } from "@/lib/supabase/config";
 
 import { AppBootSplash } from "./app-boot-splash";
@@ -133,6 +138,12 @@ export function AuthForm() {
         setMessage(result.message);
         setBusy(false);
       }
+      return;
+    }
+    if (isAndroidAppWithoutNativeOAuth()) {
+      console.warn("[oauth] Android app without the MomentsNativeAuth plugin: browser redirect flow not started");
+      setMessage(NATIVE_OAUTH_UNAVAILABLE_MESSAGE);
+      setBusy(false);
       return;
     }
     const redirectTo = `${window.location.origin}/auth/callback`;

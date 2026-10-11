@@ -1,5 +1,5 @@
 /**
- * Google / Facebook login INSIDE the iOS app.
+ * Google / Facebook login INSIDE the iOS and Android apps.
  *
  * In a browser the OAuth redirect flow works as usual (nothing here runs).
  * Inside the Capacitor shell it cannot: the shell hands any navigation to
@@ -17,8 +17,6 @@
  * `com.momentsforever.app://auth/callback` must be in Supabase's Redirect URLs.
  * Apps installed before this existed (no native plugin) keep the old flow.
  */
-
-import { isNativeIosApp } from "@/lib/auth/apple-sign-in";
 
 /** Same as the bundle id and the scheme fixed in MomentsNativeAuthPlugin.swift. */
 export const NATIVE_OAUTH_CALLBACK_SCHEME = "com.momentsforever.app";
@@ -39,15 +37,27 @@ function readCapacitor(): CapacitorGlobal | undefined {
   return (window as unknown as { Capacitor?: CapacitorGlobal }).Capacitor;
 }
 
+/** The iOS or Android app (the Capacitor shell), never a browser. */
+function isNativeMobileApp(capacitor: CapacitorGlobal | undefined): boolean {
+  try {
+    if (!capacitor?.isNativePlatform?.()) return false;
+    const platform = capacitor.getPlatform?.();
+    return platform === "ios" || platform === "android";
+  } catch {
+    return false;
+  }
+}
+
 /**
- * True only in the iOS app AND when this build has the native plugin. The 3.2
+ * True only in the iOS or Android app AND when this build has the native plugin
+ * (ASWebAuthenticationSession on iOS, Chrome Custom Tabs on Android). The iOS 3.2
  * app and older do not, so they keep using the browser redirect flow.
  */
 export function isNativeOAuthAvailable(
   capacitor: CapacitorGlobal | undefined = readCapacitor(),
 ): boolean {
   try {
-    return isNativeIosApp(capacitor) && Boolean(capacitor?.isPluginAvailable?.(PLUGIN_NAME));
+    return isNativeMobileApp(capacitor) && Boolean(capacitor?.isPluginAvailable?.(PLUGIN_NAME));
   } catch {
     return false;
   }

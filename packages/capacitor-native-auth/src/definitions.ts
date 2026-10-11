@@ -1,10 +1,11 @@
 /**
- * Public contract of the MomentsNativeAuth Capacitor plugin (iOS only).
+ * Public contract of the MomentsNativeAuth Capacitor plugin (iOS and Android).
  *
  * `start` opens the provider's login page in the system's
- * ASWebAuthenticationSession sheet and resolves with the URL the sheet was
- * redirected to (always on the app's own callback scheme). Rejects with code
- * `CANCELLED` when the person closes the sheet.
+ * ASWebAuthenticationSession sheet (iOS) or a Chrome Custom Tab (Android) and
+ * resolves with the URL the login was redirected to (always on the app's own
+ * callback scheme). Rejects with code `CANCELLED` when the person closes the
+ * sheet / tab without finishing.
  */
 export interface NativeAuthStartOptions {
   /** The https authorize URL (from Supabase `signInWithOAuth`, `skipBrowserRedirect: true`). */

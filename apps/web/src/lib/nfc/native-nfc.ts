@@ -1,3 +1,4 @@
+import { nativePlatform, needsStartScan, nfcUnavailableMessage } from "@/lib/nfc/android-nfc";
 import { isWebNfcSupported, writeUrlToNfcTag } from "@/lib/nfc/web-nfc";
 
 /**
@@ -56,6 +57,12 @@ export async function writeUrlToNfcTagAuto(url: string): Promise<void> {
         "[nfc-native] failed to import @exxili/capacitor-nfc — plugin not linked into the Xcode/Android project.",
       );
       throw new Error("Módulo de NFC nativo indisponível neste build.");
+    }
+    if (nativePlatform() === "android") {
+      // NFC is an optional feature on Android: never wait for a tag on a phone without NFC / with NFC off.
+      const { status } = await nfc.NFC.getStatus();
+      const problem = nfcUnavailableMessage(status);
+      if (problem) throw new Error(problem);
     }
     console.log("[nfc-native] plugin loaded, calling NFC.writeNDEF()…", url);
     // `writeNDEF` opens its own Core NFC session (NFCWriter.swift) — it must
@@ -138,6 +145,11 @@ export async function readNfcTag(): Promise<NativeNfcReadResult> {
     );
     throw new Error("Módulo de NFC nativo indisponível neste build.");
   }
+  if (nativePlatform() === "android") {
+    const { status } = await nfc.NFC.getStatus();
+    const problem = nfcUnavailableMessage(status);
+    if (problem) throw new Error(problem);
+  }
   console.log("[nfc-native] plugin loaded, calling NFC.startScan({ mode: 'full' })…");
 
   return new Promise<NativeNfcReadResult>((resolve, reject) => {
@@ -168,6 +180,8 @@ export async function readNfcTag(): Promise<NativeNfcReadResult> {
       console.error("[nfc-native] read error:", error);
       reject(new Error(error.error || "Falha ao ler a tag NFC."));
     });
+    // Android always listens for tags (onRead above is enough); its plugin rejects startScan.
+    if (!needsStartScan(nativePlatform())) return;
     nfc.NFC.startScan({ mode: "full" }).catch((error: unknown) => {
       if (settled) return;
       settled = true;

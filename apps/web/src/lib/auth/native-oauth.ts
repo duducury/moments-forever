@@ -63,6 +63,29 @@ export function isNativeOAuthAvailable(
   }
 }
 
+/**
+ * The Android app WITHOUT the native login plugin (an older or broken build). The browser redirect flow cannot
+ * work there: the shell hands the provider's page to the system browser, the PKCE verifier stays in the app's
+ * web view and the code can never be exchanged, so the person would end up stuck in the browser. Callers show
+ * {@link NATIVE_OAUTH_UNAVAILABLE_MESSAGE} instead of starting it. iOS keeps its documented fallback.
+ */
+export function isAndroidAppWithoutNativeOAuth(
+  capacitor: CapacitorGlobal | undefined = readCapacitor(),
+): boolean {
+  try {
+    return (
+      Boolean(capacitor?.isNativePlatform?.()) &&
+      capacitor?.getPlatform?.() === "android" &&
+      !capacitor?.isPluginAvailable?.(PLUGIN_NAME)
+    );
+  } catch {
+    return false;
+  }
+}
+
+export const NATIVE_OAUTH_UNAVAILABLE_MESSAGE =
+  "O login com Google e Facebook não está disponível nesta versão do aplicativo. Entre com e-mail e senha ou atualize o aplicativo.";
+
 export type NativeOAuthCallback =
   | { readonly status: "code"; readonly code: string }
   /** The person said no on the provider's page (`error=access_denied`). */

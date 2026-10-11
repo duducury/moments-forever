@@ -8,7 +8,13 @@ import type {
   ScanOptions,
 } from "@moments-forever/capacitor-photo-library";
 
-import { createLibraryClient, LibraryCancelledError } from "./library-client";
+import {
+  createLibraryClient,
+  LibraryCancelledError,
+  LibraryTimeoutError,
+  scanPageSize,
+  withTimeout,
+} from "./library-client";
 
 function item(id: string, extra: Partial<PhotoAssetMetadata> = {}): PhotoAssetMetadata {
   return {
@@ -297,4 +303,60 @@ test("Escolher fotos: 'preparing' starts only once photos were really chosen", a
     fakePlugin({ picked: [{ token: "t1", assetIdentifier: "a", name: "a.jpg" }] }),
   ).pickPhotos({ onSelected: (count) => events.push(`selected:${count}`) });
   assert.deepEqual(events, ["selected:1"]);
+});
+
+test("Android reads small pages (progress every few seconds), iOS keeps big ones", () => {
+  assert.equal(scanPageSize("android"), 300);
+  assert.equal(scanPageSize("ios"), 4000);
+});
+
+test("Android scan finishes after the last page and reports progress with the total", async () => {
+  const library: PhotoAssetMetadata[] = [];
+  for (let index = 0; index < 700; index += 1) library.push(item(`a${index}`));
+  const progress: Array<[number, number]> = [];
+  const pages: number[] = [];
+  const plugin = fakePlugin({ library });
+  const original = plugin.scanPhotoMetadata.bind(plugin);
+  plugin.scanPhotoMetadata = async (options) => {
+    pages.push(options?.limit ?? -1);
+    return original(options);
+  };
+  const lib = createLibraryClient({ plugin, platform: "android" });
+  const result = await lib.scan({ onProgress: (done, total) => progress.push([done, total]) });
+  assert.equal(result.assets.length, 700);
+  assert.deepEqual(pages, [300, 300, 300], "300 + 300 + 100 (a short page ends the scan)");
+  assert.deepEqual(progress, [
+    [300, 700],
+    [600, 700],
+    [700, 700],
+  ]);
+});
+
+test("Android scan of an empty library ends right away", async () => {
+  const lib = createLibraryClient({ plugin: fakePlugin({ library: [] }), platform: "android" });
+  const result = await lib.scan();
+  assert.deepEqual([result.assets.length, result.totalAssets], [0, 0]);
+});
+
+test("cancelling between Android pages stops before the next page", async () => {
+  const library: PhotoAssetMetadata[] = [];
+  for (let index = 0; index < 900; index += 1) library.push(item(`c${index}`));
+  const controller = new AbortController();
+  const lib = createLibraryClient({ plugin: fakePlugin({ library }), platform: "android" });
+  await assert.rejects(
+    lib.scan({ signal: controller.signal, onProgress: () => controller.abort() }),
+    LibraryCancelledError,
+  );
+});
+
+test("a page that never answers becomes a clear error instead of an endless spinner", async () => {
+  const plugin = fakePlugin({ library: [item("a")] });
+  plugin.scanPhotoMetadata = () => new Promise(() => undefined);
+  const lib = createLibraryClient({ plugin, platform: "android" });
+  await assert.rejects(lib.scan({ pageTimeoutMs: 20 }), LibraryTimeoutError);
+});
+
+test("withTimeout passes results and errors through and clears its timer", async () => {
+  assert.equal(await withTimeout(Promise.resolve(7), 1000), 7);
+  await assert.rejects(withTimeout(Promise.reject(new Error("native failed")), 1000), /native failed/);
 });

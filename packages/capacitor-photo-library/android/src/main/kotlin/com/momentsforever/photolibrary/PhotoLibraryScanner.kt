@@ -10,8 +10,13 @@ import android.util.Base64
 import java.io.ByteArrayOutputStream
 import android.os.Build
 import android.provider.MediaStore
+import android.util.Log
 import androidx.exifinterface.media.ExifInterface
 import java.time.Instant
+import java.util.concurrent.Callable
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import java.util.concurrent.Future
 
 /**
  * MediaStore reads for the "find trips" feature. Metadata only: no bitmap is
@@ -45,8 +50,25 @@ object PhotoLibraryScanner {
 
     data class Counts(val photos: Int, val videos: Int, val durationMs: Long)
 
+    private const val TAG = "MomentsPhotoLibrary"
+
     private val IMAGES: Uri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
     private val VIDEOS: Uri = MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+
+    /** Reading one photo's GPS opens its file (tens of ms); a few at a time keeps a big library fast enough. */
+    private const val EXIF_THREADS = 4
+    private val exifPool: ExecutorService by lazy {
+        Executors.newFixedThreadPool(EXIF_THREADS) { task -> Thread(task, "moments-exif").apply { isDaemon = true } }
+    }
+
+    private data class Row(
+        val uri: Uri,
+        val mediaType: String,
+        val id: Long,
+        val date: String?,
+        val width: Int,
+        val height: Int,
+    )
 
     fun counts(resolver: ContentResolver): Counts {
         val started = System.nanoTime()
@@ -87,6 +109,7 @@ object PhotoLibraryScanner {
         val windowStart = offset.coerceAtLeast(0)
         val windowEnd = windowStart + limit.coerceAtLeast(0)
         var index = 0
+        val window = ArrayList<Row>()
 
         for ((uri, mediaType) in sources) {
             val projection = arrayOf(
@@ -111,34 +134,52 @@ object PhotoLibraryScanner {
                     index += 1
                     if (position < windowStart || position >= windowEnd) continue
 
-                    val id = cursor.getLong(idCol)
-                    var lat: Double? = null
-                    var lon: Double? = null
-                    if (readExifLocation && mediaType == "image") {
-                        locationChecked += 1
-                        val latLong = readLocation(resolver, ContentUris.withAppendedId(uri, id))
-                        if (latLong != null) {
-                            lat = latLong[0]
-                            lon = latLong[1]
-                            withLocation += 1
-                        } else {
-                            withoutLocation += 1
-                        }
-                    }
-                    rows.add(
-                        Asset(
-                            localIdentifier = id.toString(),
-                            creationDate = date,
-                            latitude = lat,
-                            longitude = lon,
+                    window.add(
+                        Row(
+                            uri = uri,
+                            mediaType = mediaType,
+                            id = cursor.getLong(idCol),
+                            date = date,
                             width = cursor.getInt(widthCol),
                             height = cursor.getInt(heightCol),
-                            mediaType = mediaType,
                         ),
                     )
                 }
             }
         }
+
+        // GPS of the photos of THIS page only, a few files at a time (results keep the page's order).
+        val exifStarted = System.nanoTime()
+        val locations: List<DoubleArray?> = if (readExifLocation) readLocations(resolver, window) else emptyList()
+        val exifMs = (System.nanoTime() - exifStarted) / 1_000_000
+
+        for ((position, row) in window.withIndex()) {
+            var lat: Double? = null
+            var lon: Double? = null
+            if (readExifLocation && row.mediaType == "image") {
+                locationChecked += 1
+                val latLong = locations[position]
+                if (latLong != null) {
+                    lat = latLong[0]
+                    lon = latLong[1]
+                    withLocation += 1
+                } else {
+                    withoutLocation += 1
+                }
+            }
+            rows.add(
+                Asset(
+                    localIdentifier = row.id.toString(),
+                    creationDate = row.date,
+                    latitude = lat,
+                    longitude = lon,
+                    width = row.width,
+                    height = row.height,
+                    mediaType = row.mediaType,
+                ),
+            )
+        }
+        Log.i(TAG, "scan offset=$windowStart returned=${rows.size} total=$total exifChecked=$locationChecked exifMs=$exifMs")
 
         return Output(
             assets = rows,
@@ -151,6 +192,24 @@ object PhotoLibraryScanner {
             withoutLocation = withoutLocation,
             scanDurationMs = (System.nanoTime() - started) / 1_000_000,
         )
+    }
+
+    /** One future per image of the page, awaited in order; a failed read is just "no GPS". */
+    private fun readLocations(resolver: ContentResolver, window: List<Row>): List<DoubleArray?> {
+        val futures: List<Future<DoubleArray?>?> = window.map { row ->
+            if (row.mediaType != "image") {
+                null
+            } else {
+                exifPool.submit(Callable<DoubleArray?> { readLocation(resolver, ContentUris.withAppendedId(row.uri, row.id)) })
+            }
+        }
+        return futures.map { future ->
+            try {
+                future?.get()
+            } catch (_: Exception) {
+                null
+            }
+        }
     }
 
     /** GPS from the original file; null when absent or the app may not read it. */

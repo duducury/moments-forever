@@ -152,6 +152,7 @@ export function FindTripsFlow({
   const [access, setAccess] = useState<AccessState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [scanned, setScanned] = useState(0);
+  const [scanTotal, setScanTotal] = useState(0);
   const [scan, setScan] = useState<ScanOutcome | null>(null);
   const [discovered, setDiscovered] = useState<readonly DiscoveredTrip[]>([]);
   const [context, setContext] = useState<PhotoLibraryContext | null>(null);
@@ -289,12 +290,19 @@ export function FindTripsFlow({
     setError(null);
     setStep("scanning");
     setScanned(0);
+    setScanTotal(0);
     const controller = new AbortController();
     abortRef.current = controller;
     try {
       const experienceIds = target.mode === "related" ? [target.experienceId] : undefined;
       const [outcome, ctx] = await Promise.all([
-        client.scan({ onProgress: setScanned, signal: controller.signal }),
+        client.scan({
+          onProgress: (done, total) => {
+            setScanned(done);
+            setScanTotal(total);
+          },
+          signal: controller.signal,
+        }),
         fetchContext(experienceIds),
       ]);
       if (!mounted.current) return;
@@ -687,7 +695,12 @@ export function FindTripsFlow({
           <h2>{heading}</h2>
           <div className={styles.progress}>
             <p>Procurando nas suas fotos…</p>
-            {scanned > 0 ? <p className={styles.hint}>{scanned.toLocaleString("pt-BR")} fotos lidas</p> : null}
+            {scanned > 0 ? (
+              <p className={styles.hint}>
+                {scanned.toLocaleString("pt-BR")}
+                {scanTotal > scanned ? ` de ${scanTotal.toLocaleString("pt-BR")}` : ""} fotos lidas
+              </p>
+            ) : null}
           </div>
           <div className={styles.actions}>
             <button

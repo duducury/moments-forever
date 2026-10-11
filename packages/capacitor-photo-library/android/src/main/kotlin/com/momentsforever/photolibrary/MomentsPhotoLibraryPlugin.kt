@@ -7,6 +7,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.provider.Settings
 import android.os.Build
+import android.util.Log
 import androidx.core.content.ContextCompat
 import com.getcapacitor.JSArray
 import com.getcapacitor.JSObject
@@ -63,6 +64,22 @@ class MomentsPhotoLibraryPlugin : Plugin() {
 
     private fun readable(): Boolean = status().let { it == "granted" || it == "limited" }
 
+    /**
+     * Runs `work` off the main thread. Whatever goes wrong becomes a rejection the screen can show: an
+     * exception in a bare Thread would either take the app down or leave the call (and the "Procurando…"
+     * spinner) waiting forever.
+     */
+    private fun runAsync(call: PluginCall, errorCode: String, work: () -> Unit) {
+        Thread {
+            try {
+                work()
+            } catch (e: Throwable) {
+                Log.w("MomentsPhotoLibrary", "$errorCode: ${e.javaClass.simpleName}")
+                call.reject("Não foi possível ler as fotos deste aparelho.", errorCode)
+            }
+        }.start()
+    }
+
     private fun rejectDenied(call: PluginCall) =
         call.reject("Photo library access is ${status()}.", "PERMISSION_DENIED")
 
@@ -111,7 +128,7 @@ class MomentsPhotoLibraryPlugin : Plugin() {
     @PluginMethod
     fun getPhotoLibrarySummary(call: PluginCall) {
         if (!readable()) return rejectDenied(call)
-        Thread {
+        runAsync(call, "SUMMARY_FAILED") {
             val counts = PhotoLibraryScanner.counts(context.contentResolver)
             call.resolve(
                 JSObject().apply {
@@ -123,7 +140,7 @@ class MomentsPhotoLibraryPlugin : Plugin() {
                     put("durationMs", counts.durationMs)
                 },
             )
-        }.start()
+        }
     }
 
     @PluginMethod
@@ -136,7 +153,7 @@ class MomentsPhotoLibraryPlugin : Plugin() {
         val readExif = (call.getBoolean("readExifLocation") ?: false) &&
             (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q || granted(Manifest.permission.ACCESS_MEDIA_LOCATION))
 
-        Thread {
+        runAsync(call, "SCAN_FAILED") {
             val out = PhotoLibraryScanner.scan(
                 context.contentResolver, limit, offset, newestFirst, includeVideos, readExif,
             )
@@ -181,7 +198,7 @@ class MomentsPhotoLibraryPlugin : Plugin() {
                     )
                 },
             )
-        }.start()
+        }
     }
 
     @PluginMethod
@@ -189,7 +206,7 @@ class MomentsPhotoLibraryPlugin : Plugin() {
         if (!readable()) return rejectDenied(call)
         val ids = call.getArray("localIdentifiers")?.toList<String>().orEmpty().take(60)
         val size = (call.getInt("size") ?: 240).coerceIn(32, 600)
-        Thread {
+        runAsync(call, "THUMBNAILS_FAILED") {
             val list = JSArray()
             for (identifier in ids) {
                 val data = identifier.toLongOrNull()?.let { PhotoLibraryScanner.thumbnailBase64(context.contentResolver, it, size) }
@@ -201,7 +218,7 @@ class MomentsPhotoLibraryPlugin : Plugin() {
                 )
             }
             call.resolve(JSObject().put("thumbnails", list))
-        }.start()
+        }
     }
 
     @PluginMethod
@@ -215,7 +232,7 @@ class MomentsPhotoLibraryPlugin : Plugin() {
         }
         val maxDimension = (call.getInt("maxDimension") ?: 1600).coerceIn(256, 4096)
         val quality = ((call.getDouble("quality") ?: 0.85) * 100).toInt().coerceIn(30, 100)
-        Thread {
+        runAsync(call, "EXPORT_FAILED") {
             val exported = PhotoLibraryScanner.exportJpeg(context.contentResolver, id, maxDimension, quality)
             if (exported == null) {
                 call.reject("Could not prepare this photo.", "EXPORT_FAILED")
@@ -231,7 +248,7 @@ class MomentsPhotoLibraryPlugin : Plugin() {
                     },
                 )
             }
-        }.start()
+        }
     }
 
     @PluginMethod

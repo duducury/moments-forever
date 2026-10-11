@@ -66,8 +66,42 @@ export interface PickOutcome {
   readonly failedCount: number;
 }
 
-const SCAN_PAGE = 4000;
 const THUMBNAIL_BATCH = 40;
+
+/**
+ * Photos asked of the phone per call. On Android every photo's GPS is read from its file (MediaStore has no
+ * GPS column on Android 10+), tens of milliseconds each, so a page of thousands used to keep the screen on
+ * "Procurando…" for minutes with no progress and nothing to cancel. Small pages report progress after every
+ * few seconds and let "Cancelar" take effect between pages. iOS reads metadata in bulk and keeps big pages.
+ */
+export function scanPageSize(platform: NativePlatform): number {
+  return platform === "android" ? 300 : 4000;
+}
+
+/** A single page that takes longer than this is treated as stuck: the person gets an error and can retry. */
+export const SCAN_PAGE_TIMEOUT_MS = 120_000;
+
+export class LibraryTimeoutError extends Error {
+  constructor() {
+    super("Ler as fotos está demorando mais do que o normal. Toque em “Tentar de novo”.");
+    this.name = "LibraryTimeoutError";
+  }
+}
+
+/** Rejects with `LibraryTimeoutError` if `work` has not settled in `ms`; always clears its timer. */
+export async function withTimeout<T>(work: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      work,
+      new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(() => reject(new LibraryTimeoutError()), ms);
+      }),
+    ]);
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+  }
+}
 
 function base64ToBytes(base64: string): Uint8Array<ArrayBuffer> {
   const binary = atob(base64);
@@ -114,10 +148,13 @@ export function createLibraryClient(input: {
   }
 
   async function scan(options: {
-    readonly onProgress?: (scanned: number) => void;
+    readonly onProgress?: (scanned: number, total: number) => void;
     readonly signal?: AbortSignal;
+    /** Overrides SCAN_PAGE_TIMEOUT_MS (tests). */
+    readonly pageTimeoutMs?: number;
   } = {}): Promise<ScanOutcome> {
     const started = now();
+    const pageSize = scanPageSize(platform);
     const assets: LibraryAsset[] = [];
     let offset = 0;
     let total = 0;
@@ -125,15 +162,18 @@ export function createLibraryClient(input: {
 
     for (;;) {
       throwIfCancelled(options.signal);
-      const page = await plugin.scanPhotoMetadata({
-        limit: SCAN_PAGE,
-        offset,
-        newestFirst: true,
-        includeVideos: false,
-        includeCloudShared: false,
-        // Android has no GPS column: it is read per photo, page by page.
-        readExifLocation: platform === "android",
-      });
+      const page = await withTimeout(
+        plugin.scanPhotoMetadata({
+          limit: pageSize,
+          offset,
+          newestFirst: true,
+          includeVideos: false,
+          includeCloudShared: false,
+          // Android has no GPS column: it is read per photo, page by page.
+          readExifLocation: platform === "android",
+        }),
+        options.pageTimeoutMs ?? SCAN_PAGE_TIMEOUT_MS,
+      );
       throwIfCancelled(options.signal);
 
       total = page.diagnostics.totalAssets;
@@ -152,8 +192,8 @@ export function createLibraryClient(input: {
         });
       }
       offset += page.assets.length;
-      options.onProgress?.(Math.min(offset, total));
-      if (page.assets.length < SCAN_PAGE || offset >= total) break;
+      options.onProgress?.(Math.min(offset, total), total);
+      if (page.assets.length < pageSize || offset >= total) break;
     }
 
     return { assets, totalAssets: total, nativeMs, totalMs: now() - started };

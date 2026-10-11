@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { useLockPageScroll } from "../../album-ui";
 import styles from "../../trip.module.css";
 import { copyLink } from "@/lib/share/share-link";
 import { buildNfcTagRequestBody } from "@/lib/nfc/album-nfc-link";
+import { nativePlatform } from "@/lib/nfc/android-nfc";
 import {
   isNativeNfcSupported,
+  NfcWriteCancelledError,
   writeUrlToNfcTagAuto,
 } from "@/lib/nfc/native-nfc";
 import { isWebNfcSupported } from "@/lib/nfc/web-nfc";
@@ -24,6 +26,7 @@ type ViewState =
   | { readonly step: "linking" }
   | { readonly step: "writing" }
   | { readonly step: "success"; readonly url: string }
+  | { readonly step: "cancelled"; readonly url: string }
   | { readonly step: "created"; readonly url: string }
   | { readonly step: "existing"; readonly url: string }
   | { readonly step: "error"; readonly message: string };
@@ -46,6 +49,35 @@ export function NfcLinkPanel({
   const [canWriteDirectly] = useState(
     () => isWebNfcSupported() || isNativeNfcSupported(),
   );
+  // Android has no system sheet to cancel a write while it waits for a tag, so the panel offers its own.
+  const [canCancelWrite] = useState(() => nativePlatform() === "android");
+  const writeAbort = useRef<AbortController | null>(null);
+
+  // Closing the panel (or leaving the folder) while it waits for a tag cancels that write too.
+  useEffect(() => () => writeAbort.current?.abort(), []);
+
+  /** Waits for the physical write; success is set ONLY after the plugin confirmed it. */
+  async function writeToTag(url: string) {
+    writeAbort.current?.abort();
+    const controller = new AbortController();
+    writeAbort.current = controller;
+    setState({ step: "writing" });
+    try {
+      await writeUrlToNfcTagAuto(url, { signal: controller.signal });
+      setState({ step: "success", url });
+    } catch (err) {
+      if (err instanceof NfcWriteCancelledError) {
+        setState({ step: "cancelled", url });
+        return;
+      }
+      setState({
+        step: "error",
+        message: err instanceof Error ? err.message : "Falha ao gravar a tag.",
+      });
+    } finally {
+      if (writeAbort.current === controller) writeAbort.current = null;
+    }
+  }
 
   async function createLink(): Promise<{ readonly url: string }> {
     const response = await fetch("/api/nfc-tags", {
@@ -84,29 +116,11 @@ export function NfcLinkPanel({
       return;
     }
 
-    setState({ step: "writing" });
-    try {
-      await writeUrlToNfcTagAuto(url);
-      setState({ step: "success", url });
-    } catch (err) {
-      setState({
-        step: "error",
-        message: err instanceof Error ? err.message : "Falha ao gravar a tag.",
-      });
-    }
+    await writeToTag(url);
   }
 
   async function writeAgain(url: string) {
-    setState({ step: "writing" });
-    try {
-      await writeUrlToNfcTagAuto(url);
-      setState({ step: "success", url });
-    } catch (err) {
-      setState({
-        step: "error",
-        message: err instanceof Error ? err.message : "Falha ao gravar a tag.",
-      });
-    }
+    await writeToTag(url);
   }
 
   async function copyUrl(url: string) {
@@ -184,7 +198,7 @@ export function NfcLinkPanel({
             </p>
             <p className={styles.sectionHint}>
               {state.step === "writing"
-                ? "Gravando… aproxime uma tag NFC do iPhone."
+                ? "Gravando… aproxime uma tag NFC do aparelho."
                 : "Criando o link da tag…"}
             </p>
           </>
@@ -192,11 +206,21 @@ export function NfcLinkPanel({
 
         {state.step === "success" ? (
           <>
-            <p className={styles.sectionHint}>Tag configurada com sucesso!</p>
+            {/* Same green pill as "NFC vinculada"; shown only once the write was confirmed. */}
+            <span className={styles.nfcStatusPill} role="status">
+              <span aria-hidden="true" className={styles.nfcStatusDot} />
+              Tag NFC registrada com sucesso!
+            </span>
             <p className={styles.sectionHint}>
-              Esta tag está vinculada a {albumTitle}.
+              Esta tag está vinculada a <strong>{albumTitle}</strong>.
             </p>
           </>
+        ) : null}
+
+        {state.step === "cancelled" ? (
+          <p className={styles.sectionHint} role="status">
+            Gravação cancelada. Nenhuma tag foi alterada.
+          </p>
         ) : null}
 
         {state.step === "created" ? (
@@ -217,7 +241,8 @@ export function NfcLinkPanel({
 
         {(state.step === "existing" ||
           state.step === "created" ||
-          state.step === "success") &&
+          state.step === "success" ||
+          state.step === "cancelled") &&
         !canWriteDirectly ? (
           <p className={styles.sectionHint}>
             Este aparelho não grava NFC por aqui. Abra o app Moments Forever no
@@ -232,9 +257,19 @@ export function NfcLinkPanel({
         ) : null}
 
         <div className={styles.panelActions}>
+          {state.step === "writing" && canCancelWrite ? (
+            <button
+              className="button secondary"
+              onClick={() => writeAbort.current?.abort()}
+              type="button"
+            >
+              Cancelar gravação
+            </button>
+          ) : null}
           {state.step === "existing" ||
           state.step === "created" ||
-          state.step === "success" ? (
+          state.step === "success" ||
+          state.step === "cancelled" ? (
             <>
               {canWriteDirectly ? (
                 <button
@@ -242,7 +277,7 @@ export function NfcLinkPanel({
                   onClick={() => void writeAgain(state.url)}
                   type="button"
                 >
-                  Vincular outra tag
+                  {state.step === "cancelled" ? "Tentar novamente" : "Vincular outra tag"}
                 </button>
               ) : null}
               <button

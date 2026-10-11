@@ -1,4 +1,9 @@
-import { nativePlatform, needsStartScan, nfcUnavailableMessage } from "@/lib/nfc/android-nfc";
+import {
+  nativePlatform,
+  needsStartScan,
+  nfcUnavailableMessage,
+  type NfcHardwareStatus,
+} from "@/lib/nfc/android-nfc";
 import { isWebNfcSupported, writeUrlToNfcTag } from "@/lib/nfc/web-nfc";
 
 /**
@@ -40,6 +45,84 @@ export function isNativeNfcSupported(): boolean {
   return result;
 }
 
+/** The person (or the screen closing) gave up on a write that was waiting for a tag. */
+export class NfcWriteCancelledError extends Error {
+  constructor() {
+    super("Gravação cancelada.");
+    this.name = "NfcWriteCancelledError";
+  }
+}
+
+/** The slice of `@exxili/capacitor-nfc` a write needs (structural, so it can be faked in tests). */
+export interface NativeNfcWriter {
+  readonly NFC: {
+    getStatus(): Promise<{ status: NfcHardwareStatus }>;
+    writeNDEF(options: { records: { type: string; payload: string }[] }): Promise<unknown>;
+    onWrite(listener: () => void): () => void;
+    onError(listener: (error: { error: string }) => void): () => void;
+    cancelWriteAndroid(): Promise<unknown>;
+  };
+}
+
+/**
+ * One write over the native plugin. It settles ONLY when the plugin says so: resolved by the plugin's
+ * "write success" event (never when the call merely starts waiting for a tag), rejected by its error
+ * event, or rejected with {@link NfcWriteCancelledError} when `signal` aborts (on Android the pending write
+ * is also cancelled in the plugin, otherwise the next tag the phone touches would be overwritten).
+ */
+export async function performNativeWrite(
+  nfc: NativeNfcWriter,
+  url: string,
+  options: { readonly platform: string; readonly signal?: AbortSignal },
+): Promise<void> {
+  const { platform, signal } = options;
+  if (signal?.aborted) throw new NfcWriteCancelledError();
+  if (platform === "android") {
+    // NFC is an optional feature on Android: never wait for a tag on a phone without NFC / with NFC off.
+    const { status } = await nfc.NFC.getStatus();
+    const problem = nfcUnavailableMessage(status);
+    if (problem) throw new Error(problem);
+    if (signal?.aborted) throw new NfcWriteCancelledError();
+  }
+  console.log("[nfc-native] plugin loaded, calling NFC.writeNDEF()…", url);
+  // `writeNDEF` opens its own Core NFC session (NFCWriter.swift) — it must
+  // NOT be preceded by `startScan()` (that starts a *second*, competing
+  // session via NFCReader.swift; iOS only allows one active reader session
+  // per app and the write would fail or never prompt).
+  await new Promise<void>((resolve, reject) => {
+    let finished = false;
+    let removeWrite: () => void = () => undefined;
+    let removeError: () => void = () => undefined;
+    const finish = (settle: () => void) => {
+      if (finished) return;
+      finished = true;
+      removeWrite();
+      removeError();
+      signal?.removeEventListener("abort", onAbort);
+      settle();
+    };
+    const onAbort = () => {
+      finish(() => reject(new NfcWriteCancelledError()));
+      if (platform === "android") void nfc.NFC.cancelWriteAndroid().catch(() => undefined);
+    };
+    removeError = nfc.NFC.onError((error) => {
+      console.error("[nfc-native] write error:", error);
+      finish(() => reject(new Error(error.error || "Falha ao gravar a tag NFC.")));
+    });
+    removeWrite = nfc.NFC.onWrite(() => {
+      console.log("[nfc-native] write success");
+      finish(resolve);
+    });
+    signal?.addEventListener("abort", onAbort, { once: true });
+    nfc.NFC.writeNDEF({ records: [{ type: "U", payload: url }] }).catch((error: unknown) => {
+      console.error("[nfc-native] writeNDEF() call itself rejected:", error);
+      finish(() =>
+        reject(error instanceof Error ? error : new Error("Falha ao gravar a tag NFC.")),
+      );
+    });
+  });
+}
+
 /**
  * Writes `url` to a physical NFC tag using whichever mechanism is available:
  * the native Core NFC / Android NFC bridge inside the iOS/Android app shell,
@@ -47,8 +130,12 @@ export function isNativeNfcSupported(): boolean {
  * Rejects with a friendly message when neither is available — callers should
  * feature-detect with {@link isNativeNfcSupported} / `isWebNfcSupported`
  * first and only show the "gravar" button when one of them is true.
+ * `options.signal` cancels a native write that is still waiting for a tag.
  */
-export async function writeUrlToNfcTagAuto(url: string): Promise<void> {
+export async function writeUrlToNfcTagAuto(
+  url: string,
+  options: { readonly signal?: AbortSignal } = {},
+): Promise<void> {
   if (isRunningInNativeShell()) {
     console.log("[nfc-native] native shell detected, loading @exxili/capacitor-nfc…");
     const nfc = await loadNativeNfcModule();
@@ -58,43 +145,7 @@ export async function writeUrlToNfcTagAuto(url: string): Promise<void> {
       );
       throw new Error("Módulo de NFC nativo indisponível neste build.");
     }
-    if (nativePlatform() === "android") {
-      // NFC is an optional feature on Android: never wait for a tag on a phone without NFC / with NFC off.
-      const { status } = await nfc.NFC.getStatus();
-      const problem = nfcUnavailableMessage(status);
-      if (problem) throw new Error(problem);
-    }
-    console.log("[nfc-native] plugin loaded, calling NFC.writeNDEF()…", url);
-    // `writeNDEF` opens its own Core NFC session (NFCWriter.swift) — it must
-    // NOT be preceded by `startScan()` (that starts a *second*, competing
-    // session via NFCReader.swift; iOS only allows one active reader session
-    // per app and the write would fail or never prompt).
-    await new Promise<void>((resolve, reject) => {
-      const removeError = nfc.NFC.onError((error) => {
-        console.error("[nfc-native] write error:", error);
-        removeWrite();
-        removeError();
-        reject(new Error(error.error || "Falha ao gravar a tag NFC."));
-      });
-      const removeWrite = nfc.NFC.onWrite(() => {
-        console.log("[nfc-native] write success");
-        removeWrite();
-        removeError();
-        resolve();
-      });
-      nfc.NFC.writeNDEF({
-        records: [{ type: "U", payload: url }],
-      }).catch((error: unknown) => {
-        console.error("[nfc-native] writeNDEF() call itself rejected:", error);
-        removeWrite();
-        removeError();
-        reject(
-          error instanceof Error
-            ? error
-            : new Error("Falha ao gravar a tag NFC."),
-        );
-      });
-    });
+    await performNativeWrite(nfc, url, { platform: nativePlatform(), signal: options.signal });
     return;
   }
 

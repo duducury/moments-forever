@@ -278,3 +278,39 @@ Qualquer alteração em código web precisa estar **publicada** (produção ou P
 - **Correção na fonte:** a regra da URL agora é uma função só (`src/lib/capacitor/server-url.ts`), usada por `capacitor.config.ts`: tira Markdown, `<...>` e aspas, aceita apenas `https://host` (sem usuário, caminho, query ou barra final) e **falha com mensagem clara** para qualquer outra coisa. Sem a variável, continua a produção (o iOS não muda: `cap sync ios` gera a mesma URL de antes).
 - **Conferência automática:** `npm run cap:sync:android` agora termina com `android:check-config`, que lê de volta o JSON gerado e compara com `CAPACITOR_SERVER_URL` (pega o arquivo velho). Depois do Gradle, `npm run android:check-apk` abre o próprio APK (`assets/capacitor.config.json`) e confirma a URL embutida, comparando também com o último sync.
 - **Uso:** `CAPACITOR_SERVER_URL="https://SEU-PREVIEW.vercel.app" npm run cap:sync:android` → `./gradlew assembleDebug` → `CAPACITOR_SERVER_URL="https://SEU-PREVIEW.vercel.app" npm run android:check-apk`. Para voltar à produção: `npm run cap:sync:android` sem a variável.
+
+## 14. Loop de login com Google no Android: causa raiz e correção
+
+**Sintoma (logs do TCL):** Chrome abre, o login termina, o Android reinicia o `MainActivity` com o deep link
+`com.momentsforever.app://auth/callback?code=…` e a pessoa volta **deslogada**, em loop. Os logs não mostravam
+"login callback received" nem uma sessão criada.
+
+**Causa raiz (por leitura do código; a confirmação final é no aparelho):** o callback só era aproveitado se o
+`PluginCall` guardado em memória ainda existisse (`handleOnNewIntent` retornava em silêncio com `pendingCallId == null`).
+Com o Chrome na frente, um aparelho com pouca memória mata o processo ou o renderer do WebView: a página que esperava
+o plugin deixa de existir e o código OAuth era descartado. Agravantes: (1) `/auth/callback` falhava para
+`/login?error=…` e a tela de login nunca mostrava o erro (loop mudo); (2) cookies do WebView (verifier PKCE e sessão)
+só vão ao disco de forma preguiçosa e podiam se perder com o processo; (3) a troca do código não era idempotente.
+
+**Correção (mesmo fluxo, mesma biblioteca, PKCE mantido; nenhum segundo fluxo OAuth):**
+- `MomentsNativeAuthPlugin.java`: registra o login em andamento (timestamp + `next` permitido, nunca o código) em
+  SharedPreferences; `CookieManager.flush()` ao iniciar e ao pausar; o callback é consumido **uma única vez**, só se
+  houver login recente (15 min), e encaminhado nativamente para a rota existente `/auth/callback?code=…` no WebView
+  (`handled: true`), mesmo sem página/activity viva. Erro do provedor (sem código) segue para a página.
+- `MainActivity.java`: descarta o deep link do OAuth em intents restauradas (`savedInstanceState != null`) e faz
+  `flush()` dos cookies em `onPause`.
+- `auth-callback.ts` / `route.ts`: lógica testável; se o mesmo código chegar duas vezes e já houver usuário, é sucesso;
+  falhas viram `/login?error=auth_callback_failed&reason=no_verifier|exchange_failed` e o login mostra mensagem.
+- `native-oauth.ts`: com `handled: true` a página não navega nem troca o código de novo.
+
+**Logs úteis** (`adb logcat -s MomentsNativeAuth`; sem URL, código ou token): `opening the login in a Custom Tab`,
+`login callback received: pendingCall=…, codePresent=…, forwardedToWebView=…`, `callback ignored: no login in progress`.
+No servidor: `[auth/callback] code exchange failed: reason=…, errorCode=…`.
+
+**Verificado no sandbox:** `npm test` (512 testes, 0 falhas), `tsc`, eslint (baseline: 5 erros + 1 aviso já existentes),
+`npm run build`, `ios:verify-plugins`, JUnit (14) para `AuthUrls`/`AppLinkRules`, compilação javac do plugin e do
+`MainActivity` contra `android-all` com stubs. `apps/web/ios` sem alterações.
+
+**Não verificado (depende de você):** build Gradle/APK (SDK indisponível no sandbox) e o teste no TCL. O JS que o app
+roda é o site implantado: a parte web (`/auth/callback`, mensagens) só vale no app após o deploy; um build de teste
+deve apontar `CAPACITOR_SERVER_URL` para o Preview URL do commit com estas mudanças. Alterações não commitadas.

@@ -159,15 +159,22 @@ export interface NativeOAuthOptions {
   readonly next?: string;
   /** Host the authorize URL must belong to: the Supabase project. */
   readonly supabaseUrl: string | undefined;
-  readonly start?: (url: string) => Promise<string>;
+  readonly start?: (url: string, next?: string) => Promise<string | NativeSessionResult>;
   readonly navigate?: (path: string) => void;
 }
 
 const GENERIC_ERROR = "Não foi possível entrar. Tente novamente.";
 
-async function startNativeSession(url: string): Promise<string> {
+/** `handled`: the Android plugin already opened /auth/callback itself (see MomentsNativeAuthPlugin.java). */
+export interface NativeSessionResult {
+  readonly url: string;
+  readonly handled?: boolean;
+}
+
+async function startNativeSession(url: string, next?: string): Promise<NativeSessionResult> {
   const { MomentsNativeAuth } = await import("@moments-forever/capacitor-native-auth");
-  return (await MomentsNativeAuth.start({ url })).url;
+  const result = await MomentsNativeAuth.start(next ? { url, next } : { url });
+  return { url: result.url, handled: result.handled === true };
 }
 
 function isCancellation(error: unknown): boolean {
@@ -215,14 +222,21 @@ export async function signInWithNativeOAuth(
   }
 
   let callbackUrl: string;
+  let handled = false;
   try {
-    callbackUrl = await start(data.url);
+    const started = await start(data.url, options.next);
+    callbackUrl = typeof started === "string" ? started : started.url;
+    handled = typeof started === "string" ? false : started.handled === true;
   } catch (caught) {
     if (isCancellation(caught)) {
       return { status: "cancelled", message: NATIVE_OAUTH_CANCELLED_MESSAGE };
     }
     return { status: "error", message: GENERIC_ERROR };
   }
+
+  // Android: the native side already sent the code to /auth/callback and the web view is navigating. A code can be
+  // exchanged only once, so do not navigate (or even look at it) again.
+  if (handled) return { status: "redirecting" };
 
   const callback = parseNativeOAuthCallback(callbackUrl);
   if (callback.status === "cancelled") {

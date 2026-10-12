@@ -7,6 +7,7 @@ import {
   NATIVE_OAUTH_CALLBACK_SCHEME,
   NATIVE_OAUTH_CANCELLED_MESSAGE,
   NATIVE_OAUTH_REDIRECT_URL,
+  isAndroidAppWithoutNativeOAuth,
   isNativeOAuthAvailable,
   parseNativeOAuthCallback,
   signInWithNativeOAuth,
@@ -36,7 +37,7 @@ test("the callback URL is the fixed app scheme", () => {
   assert.equal(NATIVE_OAUTH_REDIRECT_URL, "com.momentsforever.app://auth/callback");
 });
 
-test("only the iOS app WITH the native plugin uses the native flow", () => {
+test("only the iOS and Android apps WITH the native plugin use the native flow", () => {
   const ios = (plugin: boolean) => ({
     isNativePlatform: () => true,
     getPlatform: () => "ios",
@@ -51,6 +52,16 @@ test("only the iOS app WITH the native plugin uses the native flow", () => {
   );
   assert.equal(
     isNativeOAuthAvailable({ isNativePlatform: () => true, getPlatform: () => "android", isPluginAvailable: () => true }),
+    true,
+    "Android app with the Custom Tabs plugin",
+  );
+  assert.equal(
+    isNativeOAuthAvailable({ isNativePlatform: () => true, getPlatform: () => "android", isPluginAvailable: () => false }),
+    false,
+    "Android app without the plugin falls back",
+  );
+  assert.equal(
+    isNativeOAuthAvailable({ isNativePlatform: () => true, getPlatform: () => "electron", isPluginAvailable: () => true }),
     false,
   );
 });
@@ -284,4 +295,74 @@ test("Info.plist registers the callback scheme (and only that one) under CFBundl
   );
   // Nothing else read from this scheme: no JS App plugin, and Universal Links stay https.
   assert.equal([...block.matchAll(/<key>CFBundleURLSchemes<\/key>/g)].length, 1);
+});
+
+test("the Android app without the plugin is detected; iOS, browsers and Android with the plugin are not", () => {
+  const cap = (platform: string, native: boolean, plugin: boolean) => ({
+    isNativePlatform: () => native,
+    getPlatform: () => platform,
+    isPluginAvailable: () => plugin,
+  });
+  assert.equal(isAndroidAppWithoutNativeOAuth(cap("android", true, false)), true);
+  assert.equal(isAndroidAppWithoutNativeOAuth(cap("android", true, true)), false);
+  assert.equal(isAndroidAppWithoutNativeOAuth(cap("ios", true, false)), false, "iOS keeps its documented fallback");
+  assert.equal(isAndroidAppWithoutNativeOAuth(cap("web", false, false)), false, "plain browser");
+  assert.equal(isAndroidAppWithoutNativeOAuth(undefined), false);
+});
+
+test("on Android the Google flow asks Supabase for the app-scheme redirect and only the account chooser extra", async () => {
+  const seen: unknown[] = [];
+  const started: string[] = [];
+  await signInWithNativeOAuth(fakeClient({ data: { url: AUTHORIZE_URL }, error: null }, seen), "google", {
+    supabaseUrl: SUPABASE_URL,
+    start: async (url) => {
+      started.push(url);
+      return `com.momentsforever.app://auth/callback?code=${CODE}`;
+    },
+    navigate: () => undefined,
+  });
+  assert.deepEqual(started, [AUTHORIZE_URL], "the plugin opens exactly the trusted authorize URL");
+  const call = seen[0] as { options: { redirectTo: string; skipBrowserRedirect: boolean } };
+  assert.equal(call.options.redirectTo, "com.momentsforever.app://auth/callback");
+  assert.equal(call.options.skipBrowserRedirect, true);
+});
+
+test("a plugin that never saw the callback (cancelled) leaves the web view where it is", async () => {
+  const navigated: string[] = [];
+  const result = await signInWithNativeOAuth(fakeClient({ data: { url: AUTHORIZE_URL }, error: null }), "google", {
+    supabaseUrl: SUPABASE_URL,
+    start: async () => {
+      throw Object.assign(new Error("Login cancelled."), { code: "CANCELLED" });
+    },
+    navigate: (target) => navigated.push(target),
+  });
+  assert.equal(result.status, "cancelled");
+  assert.deepEqual(navigated, []);
+});
+
+test("on Android the plugin already opened /auth/callback: the page does not navigate again", async () => {
+  const navigated: string[] = [];
+  const nexts: Array<string | undefined> = [];
+  const result = await signInWithNativeOAuth(fakeClient({ data: { url: AUTHORIZE_URL }, error: null }), "google", {
+    supabaseUrl: SUPABASE_URL,
+    next: "/ativar",
+    start: async (_url, next) => {
+      nexts.push(next);
+      return { url: `com.momentsforever.app://auth/callback?code=${CODE}`, handled: true };
+    },
+    navigate: (target) => navigated.push(target),
+  });
+  assert.equal(result.status, "redirecting");
+  assert.deepEqual(navigated, [], "a one-time code must be exchanged once");
+  assert.deepEqual(nexts, ["/ativar"]);
+});
+
+test("an unhandled plugin result (iOS, or a provider error) still goes through the page", async () => {
+  const navigated: string[] = [];
+  await signInWithNativeOAuth(fakeClient({ data: { url: AUTHORIZE_URL }, error: null }), "google", {
+    supabaseUrl: SUPABASE_URL,
+    start: async () => ({ url: `com.momentsforever.app://auth/callback?code=${CODE}`, handled: false }),
+    navigate: (target) => navigated.push(target),
+  });
+  assert.deepEqual(navigated, [`/auth/callback?code=${CODE}`]);
 });

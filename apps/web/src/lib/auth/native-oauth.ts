@@ -1,5 +1,5 @@
 /**
- * Google / Facebook login INSIDE the iOS app.
+ * Google / Facebook login INSIDE the iOS and Android apps.
  *
  * In a browser the OAuth redirect flow works as usual (nothing here runs).
  * Inside the Capacitor shell it cannot: the shell hands any navigation to
@@ -17,8 +17,6 @@
  * `com.momentsforever.app://auth/callback` must be in Supabase's Redirect URLs.
  * Apps installed before this existed (no native plugin) keep the old flow.
  */
-
-import { isNativeIosApp } from "@/lib/auth/apple-sign-in";
 
 /** Same as the bundle id and the scheme fixed in MomentsNativeAuthPlugin.swift. */
 export const NATIVE_OAUTH_CALLBACK_SCHEME = "com.momentsforever.app";
@@ -39,19 +37,54 @@ function readCapacitor(): CapacitorGlobal | undefined {
   return (window as unknown as { Capacitor?: CapacitorGlobal }).Capacitor;
 }
 
+/** The iOS or Android app (the Capacitor shell), never a browser. */
+function isNativeMobileApp(capacitor: CapacitorGlobal | undefined): boolean {
+  try {
+    if (!capacitor?.isNativePlatform?.()) return false;
+    const platform = capacitor.getPlatform?.();
+    return platform === "ios" || platform === "android";
+  } catch {
+    return false;
+  }
+}
+
 /**
- * True only in the iOS app AND when this build has the native plugin. The 3.2
+ * True only in the iOS or Android app AND when this build has the native plugin
+ * (ASWebAuthenticationSession on iOS, Chrome Custom Tabs on Android). The iOS 3.2
  * app and older do not, so they keep using the browser redirect flow.
  */
 export function isNativeOAuthAvailable(
   capacitor: CapacitorGlobal | undefined = readCapacitor(),
 ): boolean {
   try {
-    return isNativeIosApp(capacitor) && Boolean(capacitor?.isPluginAvailable?.(PLUGIN_NAME));
+    return isNativeMobileApp(capacitor) && Boolean(capacitor?.isPluginAvailable?.(PLUGIN_NAME));
   } catch {
     return false;
   }
 }
+
+/**
+ * The Android app WITHOUT the native login plugin (an older or broken build). The browser redirect flow cannot
+ * work there: the shell hands the provider's page to the system browser, the PKCE verifier stays in the app's
+ * web view and the code can never be exchanged, so the person would end up stuck in the browser. Callers show
+ * {@link NATIVE_OAUTH_UNAVAILABLE_MESSAGE} instead of starting it. iOS keeps its documented fallback.
+ */
+export function isAndroidAppWithoutNativeOAuth(
+  capacitor: CapacitorGlobal | undefined = readCapacitor(),
+): boolean {
+  try {
+    return (
+      Boolean(capacitor?.isNativePlatform?.()) &&
+      capacitor?.getPlatform?.() === "android" &&
+      !capacitor?.isPluginAvailable?.(PLUGIN_NAME)
+    );
+  } catch {
+    return false;
+  }
+}
+
+export const NATIVE_OAUTH_UNAVAILABLE_MESSAGE =
+  "O login com Google e Facebook não está disponível nesta versão do aplicativo. Entre com e-mail e senha ou atualize o aplicativo.";
 
 export type NativeOAuthCallback =
   | { readonly status: "code"; readonly code: string }
@@ -126,15 +159,22 @@ export interface NativeOAuthOptions {
   readonly next?: string;
   /** Host the authorize URL must belong to: the Supabase project. */
   readonly supabaseUrl: string | undefined;
-  readonly start?: (url: string) => Promise<string>;
+  readonly start?: (url: string, next?: string) => Promise<string | NativeSessionResult>;
   readonly navigate?: (path: string) => void;
 }
 
 const GENERIC_ERROR = "Não foi possível entrar. Tente novamente.";
 
-async function startNativeSession(url: string): Promise<string> {
+/** `handled`: the Android plugin already opened /auth/callback itself (see MomentsNativeAuthPlugin.java). */
+export interface NativeSessionResult {
+  readonly url: string;
+  readonly handled?: boolean;
+}
+
+async function startNativeSession(url: string, next?: string): Promise<NativeSessionResult> {
   const { MomentsNativeAuth } = await import("@moments-forever/capacitor-native-auth");
-  return (await MomentsNativeAuth.start({ url })).url;
+  const result = await MomentsNativeAuth.start(next ? { url, next } : { url });
+  return { url: result.url, handled: result.handled === true };
 }
 
 function isCancellation(error: unknown): boolean {
@@ -182,14 +222,21 @@ export async function signInWithNativeOAuth(
   }
 
   let callbackUrl: string;
+  let handled = false;
   try {
-    callbackUrl = await start(data.url);
+    const started = await start(data.url, options.next);
+    callbackUrl = typeof started === "string" ? started : started.url;
+    handled = typeof started === "string" ? false : started.handled === true;
   } catch (caught) {
     if (isCancellation(caught)) {
       return { status: "cancelled", message: NATIVE_OAUTH_CANCELLED_MESSAGE };
     }
     return { status: "error", message: GENERIC_ERROR };
   }
+
+  // Android: the native side already sent the code to /auth/callback and the web view is navigating. A code can be
+  // exchanged only once, so do not navigate (or even look at it) again.
+  if (handled) return { status: "redirecting" };
 
   const callback = parseNativeOAuthCallback(callbackUrl);
   if (callback.status === "cancelled") {

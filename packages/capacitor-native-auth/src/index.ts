@@ -14,13 +14,15 @@ export const MomentsNativeAuth = registerPlugin<MomentsNativeAuthPlugin>(
 );
 
 /**
- * True only inside the iOS app AND when this build contains the native half of
- * the plugin. An app installed before it existed (3.2 and older) has neither,
- * so callers must fall back to the browser redirect flow when this is false.
+ * True only inside the iOS or Android app AND when this build contains the
+ * native half of the plugin. An app installed before it existed (iOS 3.2 and
+ * older) has neither, so callers must fall back to the browser redirect flow
+ * when this is false.
  */
 export function isNativeAuthAvailable(): boolean {
+  const platform = Capacitor.getPlatform();
   return (
-    Capacitor.getPlatform() === "ios" &&
+    (platform === "ios" || platform === "android") &&
     Capacitor.isPluginAvailable("MomentsNativeAuth")
   );
 }

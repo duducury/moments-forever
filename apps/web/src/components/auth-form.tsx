@@ -1,12 +1,18 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, useSyncExternalStore, type FormEvent } from "react";
 
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { OAuthButtons, type OAuthProvider } from "@/components/oauth-buttons";
+import { loginErrorMessage } from "@/lib/auth/auth-callback";
 import { signInWithAppleNative } from "@/lib/auth/apple-sign-in";
-import { isNativeOAuthAvailable, signInWithNativeOAuth } from "@/lib/auth/native-oauth";
+import {
+  isAndroidAppWithoutNativeOAuth,
+  isNativeOAuthAvailable,
+  NATIVE_OAUTH_UNAVAILABLE_MESSAGE,
+  signInWithNativeOAuth,
+} from "@/lib/auth/native-oauth";
 import { getSupabaseConfig } from "@/lib/supabase/config";
 
 import { AppBootSplash } from "./app-boot-splash";
@@ -14,6 +20,10 @@ import { useAuth } from "./auth-provider";
 import { signalPwaBootReady } from "./pwa-splash-dismiss";
 
 type Mode = "sign-in" | "sign-up";
+
+const noopSubscribe = () => () => undefined;
+const readSearch = () => window.location.search;
+const readServerSearch = () => "";
 
 /**
  * Supabase's own error text can reveal whether an email is registered
@@ -46,6 +56,10 @@ export function AuthForm() {
   const [mode, setMode] = useState<Mode>("sign-in");
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // /auth/callback sends a failed login back here with ?error=…: show it instead of a silent return to the form.
+  const callbackError = loginErrorMessage(
+    useSyncExternalStore(noopSubscribe, readSearch, readServerSearch),
+  );
 
   useEffect(() => {
     if (!authLoading && session) {
@@ -135,6 +149,12 @@ export function AuthForm() {
       }
       return;
     }
+    if (isAndroidAppWithoutNativeOAuth()) {
+      console.warn("[oauth] Android app without the MomentsNativeAuth plugin: browser redirect flow not started");
+      setMessage(NATIVE_OAUTH_UNAVAILABLE_MESSAGE);
+      setBusy(false);
+      return;
+    }
     const redirectTo = `${window.location.origin}/auth/callback`;
     const { error } = await authClient.auth.signInWithOAuth({
       provider,
@@ -189,7 +209,9 @@ export function AuthForm() {
       </form>
       <div className="divider"><span>ou</span></div>
       <OAuthButtons busy={busy} onSelect={(provider) => void handleOAuth(provider)} />
-      {message ? <p className="form-message" role="status">{message}</p> : null}
+      {message ?? callbackError ? (
+        <p className="form-message" role="status">{message ?? callbackError}</p>
+      ) : null}
     </div>
   );
 }

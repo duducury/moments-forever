@@ -232,3 +232,49 @@ O teste real mostrou: NFC, câmera, upload e demais fluxos funcionando; três pr
 
 ### 12.5 O que testar de novo no TCL
 Atualize e reinstale: `git pull`, `npm ci`, `npm run cap:sync:android`, `./gradlew assembleDebug`, `adb install -r …`. Então: (1) Google e Facebook, vendo o `logcat` acima; (2) "Encontrar uma viagem" com a biblioteca real: o contador sobe e termina em resultado, "sem fotos" ou erro; negue a permissão uma vez para ver o aviso; (3) gravar uma tag nova dentro de uma pasta: pílula verde só depois de tocar a tag; testar "Cancelar gravação" e NFC desligado.
+
+## 13. Login ainda abre o navegador: causa raiz (versão do site que o app carrega)
+
+**Causa raiz [VERIFICADO]:** o app Android (como o iOS) é só uma casca que **carrega o site de produção** (`server.url = https://momentsforever.vercel.app`). O JavaScript que decide entre o login nativo e o redirecionamento é o do **site em produção**, não o do APK. A produção é publicada pela `master`, e as correções Android estão na branch `claude/android-prep`:
+
+| Onde | O que roda |
+|---|---|
+| Deployments do GitHub/Vercel, ambiente **Production** | commit `c418678` (a `master`, de 2026-10-10) |
+| Deployments, ambiente **Preview** | `9ee1ca1` e `726a90e` (a branch `claude/android-prep`) |
+| `native-oauth.ts` na `master` | `isNativeOAuthAvailable()` = `isNativeIosApp(...) && isPluginAvailable(...)`: **só iOS** |
+| `native-oauth.ts` na branch | `isNativeMobileApp(...)` aceita iOS **e Android** |
+
+Resultado no TCL: o APK novo tem o plugin (registrado, compilado e listado em `capacitor.plugins.json`), mas o site em produção ainda é o antigo, que nunca chama o plugin no Android. Cai no fluxo de redirecionamento, o Capacitor abre o provedor no navegador do sistema (`Bridge.launchIntent` → `ACTION_VIEW`) e o PKCE, que fica nos cookies do WebView, nunca é usado. Isso bate com os logs: **nenhuma** linha `opening the login in a Custom Tab` (o plugin nunca foi chamado) e nenhum `login callback received`. Pelo mesmo motivo **nenhuma** correção do site da rodada anterior está ativa no aparelho: login Android, busca de fotos em páginas menores/progresso/limite de tempo e a confirmação de NFC (todas são código web).
+
+O aviso `Capacitor: Unable to read file at path public/plugins` é **inofensivo**: o Capacitor procura scripts de plugins Cordova em `assets/public/plugins` (`JSExport.getFilesContent`), que este projeto não tem.
+
+**Verificado:** detecção de plataforma e `isPluginAvailable` na lógica da página (testes), plugin registrado em `capacitor.plugins.json`, módulo incluído em `capacitor.build.gradle`/`capacitor.settings.gradle`, plugin Java compilado contra o Android 16 (com stubs), código da página no bundle `next build`, mesma URL de redirect e configuração do Supabase que funcionam no iOS (o iOS recebeu o `code` por ela). **Não verificado:** build Gradle/APK (sem Android SDK neste ambiente) e o fluxo no aparelho.
+
+### Como testar a branch no TCL sem publicar na produção
+O site da branch já tem um deploy de Preview. Duas condições:
+1. **Proteção de Preview da Vercel:** por padrão exige login da Vercel e o WebView abriria a tela de login dela. Para o teste, em Vercel → projeto → Settings → Deployment Protection, desligue "Vercel Authentication" para Preview (ou use uma exceção) e **religue depois**: com ela desligada, os previews ficam públicos.
+2. **Variáveis do Supabase** (`NEXT_PUBLIC_SUPABASE_URL` e a chave pública) precisam existir no ambiente **Preview** do projeto.
+
+Pegue a URL do deploy da branch (Vercel → Deployments → ramo `claude/android-prep`, ou o link "Visit" do commit `726a90e`) e gere o APK apontando para ela. **Use a URL sem barra no final e só para teste**:
+```bash
+git fetch origin && git checkout claude/android-prep && git pull
+npm ci
+cd apps/web
+CAPACITOR_SERVER_URL="https://SEU-PREVIEW.vercel.app" npm run cap:sync:android
+cat android/app/src/main/assets/capacitor.config.json | grep '"url"'   # confirme a URL do preview
+cd android && ./gradlew assembleDebug
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+```
+**Antes de gerar qualquer build de loja**, volte ao padrão: `npm run cap:sync:android` **sem** `CAPACITOR_SERVER_URL` (aponta para a produção).
+
+### Alternativa: levar o código web para a produção
+Fazer o merge de `claude/android-prep` na `master` publica o site novo para **todos**, inclusive o app iOS 3.5 (9) que está com a Apple, porque ele também carrega o site remoto. As mudanças web desta branch preservam o comportamento iOS (portão do login iOS, páginas de 4.000 fotos no iOS, escrita NFC no iOS com os mesmos eventos), mas `native-nfc.ts` e `nfc-link-panel.tsx` mudam textos e a estrutura do fluxo de gravação também no iOS (por exemplo, "aparelho" no lugar de "iPhone" e a pílula de sucesso). Decisão sua, depois de testar no TCL.
+
+### Lição para os próximos builds
+Qualquer alteração em código web precisa estar **publicada** (produção ou Preview apontado por `CAPACITOR_SERVER_URL`) para aparecer no app; só mexer no plugin nativo e reinstalar o APK não basta. O `logcat` ajuda a distinguir: se `MomentsNativeAuth` não escreve nada ao tocar em "Continuar com Google", o site que o app carregou ainda não é o da branch.
+
+### 13.1 `CAPACITOR_SERVER_URL` com formato errado (Markdown) e APK com a URL antiga
+- **Origem:** a variável recebeu uma URL colada de um chat no formato Markdown, `[https://x](https://x)`. O `capacitor.config.ts` já rejeitava isso (o `cap sync` falha com código 1), mas o arquivo gerado **da vez anterior continua no lugar** e o `./gradlew assembleDebug`, que é outro comando, termina em `BUILD SUCCESSFUL` com a URL antiga dentro do APK. Reproduzido aqui.
+- **Correção na fonte:** a regra da URL agora é uma função só (`src/lib/capacitor/server-url.ts`), usada por `capacitor.config.ts`: tira Markdown, `<...>` e aspas, aceita apenas `https://host` (sem usuário, caminho, query ou barra final) e **falha com mensagem clara** para qualquer outra coisa. Sem a variável, continua a produção (o iOS não muda: `cap sync ios` gera a mesma URL de antes).
+- **Conferência automática:** `npm run cap:sync:android` agora termina com `android:check-config`, que lê de volta o JSON gerado e compara com `CAPACITOR_SERVER_URL` (pega o arquivo velho). Depois do Gradle, `npm run android:check-apk` abre o próprio APK (`assets/capacitor.config.json`) e confirma a URL embutida, comparando também com o último sync.
+- **Uso:** `CAPACITOR_SERVER_URL="https://SEU-PREVIEW.vercel.app" npm run cap:sync:android` → `./gradlew assembleDebug` → `CAPACITOR_SERVER_URL="https://SEU-PREVIEW.vercel.app" npm run android:check-apk`. Para voltar à produção: `npm run cap:sync:android` sem a variável.

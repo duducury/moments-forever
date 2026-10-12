@@ -339,3 +339,30 @@ test("a plugin that never saw the callback (cancelled) leaves the web view where
   assert.equal(result.status, "cancelled");
   assert.deepEqual(navigated, []);
 });
+
+test("on Android the plugin already opened /auth/callback: the page does not navigate again", async () => {
+  const navigated: string[] = [];
+  const nexts: Array<string | undefined> = [];
+  const result = await signInWithNativeOAuth(fakeClient({ data: { url: AUTHORIZE_URL }, error: null }), "google", {
+    supabaseUrl: SUPABASE_URL,
+    next: "/ativar",
+    start: async (_url, next) => {
+      nexts.push(next);
+      return { url: `com.momentsforever.app://auth/callback?code=${CODE}`, handled: true };
+    },
+    navigate: (target) => navigated.push(target),
+  });
+  assert.equal(result.status, "redirecting");
+  assert.deepEqual(navigated, [], "a one-time code must be exchanged once");
+  assert.deepEqual(nexts, ["/ativar"]);
+});
+
+test("an unhandled plugin result (iOS, or a provider error) still goes through the page", async () => {
+  const navigated: string[] = [];
+  await signInWithNativeOAuth(fakeClient({ data: { url: AUTHORIZE_URL }, error: null }), "google", {
+    supabaseUrl: SUPABASE_URL,
+    start: async () => ({ url: `com.momentsforever.app://auth/callback?code=${CODE}`, handled: false }),
+    navigate: (target) => navigated.push(target),
+  });
+  assert.deepEqual(navigated, [`/auth/callback?code=${CODE}`]);
+});

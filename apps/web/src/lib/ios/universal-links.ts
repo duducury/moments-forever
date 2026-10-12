@@ -46,6 +46,7 @@ const EXTRA_WEB_ONLY_ROOTS: readonly string[] = [
   "auth",
   "ativar",
   "politica-de-privacidade",
+  "excluir-conta",
   "brand",
   "fonts",
   "geo",

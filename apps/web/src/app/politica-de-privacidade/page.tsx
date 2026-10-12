@@ -43,7 +43,7 @@ export default function PrivacyPolicyPage() {
       <article className={styles.article}>
         <p className={styles.eyebrow}>Legal</p>
         <h1 className={styles.title}>Política de Privacidade</h1>
-        <p className={styles.updated}>Última atualização: 30 de setembro de 2026</p>
+        <p className={styles.updated}>Última atualização: 12 de outubro de 2026</p>
 
         <section className={styles.section}>
           <p>
@@ -182,15 +182,34 @@ export default function PrivacyPolicyPage() {
         <section className={styles.section}>
           <h2>Retenção e exclusão de dados</h2>
           <p>
-            Guardamos seus dados enquanto sua conta existir. Hoje a
-            exclusão de conta é feita mediante solicitação por e-mail — não
-            existe ainda um botão de autoatendimento dentro do app. Ao
-            solicitar a exclusão, removemos sua conta, suas fotos (inclusive
-            do armazenamento), viagens, álbuns e tags NFC vinculadas.
+            Guardamos seus dados enquanto sua conta existir. Você pode
+            excluir sua conta a qualquer momento, sozinho, no app para
+            iPhone e Android e no site: <strong>Mais → Geral → Zona de
+            perigo → Excluir minha conta</strong>, digitando EXCLUIR para
+            confirmar. A exclusão é permanente. Veja o passo a passo em{" "}
+            <Link href="/excluir-conta">/excluir-conta</Link>.
           </p>
           <p>
-            Para solicitar a exclusão dos seus dados, entre em contato pelo
-            e-mail abaixo informando o e-mail usado na sua conta.
+            Ao excluir, apagamos sua conta e seu perfil, suas viagens, fotos,
+            álbuns, momentos e histórias, suas tags NFC vinculadas, suas
+            licenças e seus bloqueios de usuários. Também removemos do
+            armazenamento (Cloudflare R2) os arquivos das suas fotos,
+            miniaturas e foto de perfil; como essa etapa é feita depois que a
+            conta é apagada e pode falhar, não garantimos que todos os
+            arquivos sejam removidos.
+          </p>
+          <p>
+            Algumas informações podem permanecer: as denúncias de conteúdo
+            que você fez são preservadas para moderação, sem vínculo com a
+            sua conta; os códigos de ativação usados são revogados e
+            desvinculados, mas continuam registrados; e backups e registros
+            dos serviços que usamos (Supabase, Cloudflare, Vercel) podem
+            conter dados por algum tempo depois da exclusão. Não definimos
+            prazos de retenção para esses casos.
+          </p>
+          <p>
+            Se você não consegue acessar o app, peça a exclusão pelo e-mail
+            abaixo, informando o e-mail usado na sua conta.
           </p>
         </section>
 

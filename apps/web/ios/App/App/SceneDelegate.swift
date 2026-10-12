@@ -82,6 +82,8 @@ enum UniversalLinkRouter {
         ("/auth/*", true),
         ("/brand", true),
         ("/brand/*", true),
+        ("/excluir-conta", true),
+        ("/excluir-conta/*", true),
         ("/favicon.ico", true),
         ("/favicon.ico/*", true),
         ("/fonts", true),

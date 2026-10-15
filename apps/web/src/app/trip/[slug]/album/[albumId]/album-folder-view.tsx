@@ -262,7 +262,15 @@ export function AlbumFolderView({
     albumPhotos.length === 1 ? "" : "s"
   }`;
 
-  const metaLine = [period, photoCountLabel].filter(Boolean).join(" · ");
+  // The last word of the place name is set in the accent colour (title only).
+  const heroTitleName = album?.displayName ?? "";
+  const heroTitleWords = heroTitleName.trim().split(/\s+/u);
+  const heroTitleLast =
+    heroTitleWords.length > 1 ? (heroTitleWords.at(-1) ?? "") : "";
+  const heroTitleLead =
+    heroTitleWords.length > 1
+      ? heroTitleWords.slice(0, -1).join(" ")
+      : heroTitleName;
 
   const countryCode = useMemo(() => {
     // Prefer the place title ("Cleveland, OH") so US states get the USA flag
@@ -634,6 +642,33 @@ export function AlbumFolderView({
       <div className={styles.albumStory}>
         <div className={styles.albumSplit} data-reveal>
           <header className={styles.albumHeroHeader}>
+            <svg
+              aria-hidden="true"
+              className={styles.albumHeroRoute}
+              fill="none"
+              focusable="false"
+              viewBox="0 0 320 140"
+            >
+              <path
+                d="M6 118C60 96 96 112 140 84s58-62 120-58"
+                stroke="currentColor"
+                strokeDasharray="3 6"
+                strokeLinecap="round"
+                strokeWidth="1.4"
+              />
+              <path
+                d="M0 40c40-14 70-4 100-22M20 8c50 6 80 24 118 14"
+                opacity=".35"
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeWidth="1"
+              />
+              <path
+                d="m283 22 24-12c3-1.5 5 1.6 3 3.4l-8 7.6 9 17-4 2-12-12-7 4 1 7-3 1.5-6-10-10-6 1.6-3 8 1.6 6-6Z"
+                fill="currentColor"
+                transform="rotate(8 292 28)"
+              />
+            </svg>
             <div className={styles.albumHeroCopy}>
               <div className={styles.albumHeroTitleRow}>
                 {countryCode ? (
@@ -647,7 +682,15 @@ export function AlbumFolderView({
                     width={30}
                   />
                 ) : null}
-                <h1 className={styles.albumHeroTitle}>{album.displayName}</h1>
+                <h1 className={styles.albumHeroTitle}>
+                  {heroTitleLead}
+                  {heroTitleLast ? (
+                    <span className={styles.albumHeroTitleAccent}>
+                      {heroTitleLead ? " " : ""}
+                      {heroTitleLast}
+                    </span>
+                  ) : null}
+                </h1>
               </div>
               {placeUsState ? (
                 <p className={styles.albumHeroCountry}>{placeUsState}</p>
@@ -656,9 +699,25 @@ export function AlbumFolderView({
                   {experience.primaryCountry}
                 </p>
               ) : null}
-              {metaLine ? (
-                <p className={styles.albumHeroMeta}>{metaLine}</p>
-              ) : null}
+              <ul className={styles.albumHeroFacts}>
+                {period ? (
+                  <li>
+                    <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
+                      <rect height="15" rx="3" stroke="currentColor" strokeWidth="1.6" width="17" x="3.5" y="5.5" />
+                      <path d="M3.5 10h17M8 3.5v4M16 3.5v4" stroke="currentColor" strokeLinecap="round" strokeWidth="1.6" />
+                    </svg>
+                    <span>{period}</span>
+                  </li>
+                ) : null}
+                <li>
+                  <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
+                    <rect height="15" rx="3" stroke="currentColor" strokeWidth="1.6" width="17" x="3.5" y="4.5" />
+                    <path d="m5 17 4.5-4.5 3.5 3.5 2.5-2.5L19 17" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.6" />
+                    <circle cx="9" cy="9" fill="currentColor" r="1.3" />
+                  </svg>
+                  <span>{photoCountLabel}</span>
+                </li>
+              </ul>
             </div>
           </header>
 

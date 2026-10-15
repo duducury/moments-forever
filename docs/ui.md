@@ -42,12 +42,19 @@ A capa e primeiras thumbnails têm prioridade. Grid usa carregamento virtualizad
 
 ## Cabeçalho da viagem e do lugar
 
-As páginas da viagem (`/trip/{slug}`, `/perfil/{viagem}`) e do lugar (`.../album/{id}`) não têm foto de capa nem cartão (fundo, borda, sombra ou altura fixa) no topo. O texto fica direto sobre a página:
+Referência visual: app de viagem premium, fundo escuro com acentos cobre/salmão (`--accent`), bordas sutis, cantos arredondados consistentes. Funciona nos temas escuro e claro porque usa só variáveis do tema. Não há foto de capa nem cartão (fundo, borda, sombra ou altura fixa) no topo.
 
-- Lugar: composição original preservada. Título e detalhes à esquerda e mapa à direita, lado a lado, com o texto centralizado na altura do mapa, também no celular (testado de 320 a 1280 px, sem rolagem horizontal). No celular a fonte do título e dos detalhes é menor para caber na meia largura, e o mapa mantém a altura compacta. Conteúdo: bandeira + nome em destaque, país/estado em cobre, data e contagem de fotos.
-- Viagem: bandeira + “Cidade, País”, título grande e etiquetas de data, fotos e lugares, com um fio fino cobre/salmão embaixo.
-- O botão “Escolher capa” não é exibido dentro da viagem nem do lugar. A foto de capa continua nos dados e nos cartões do perfil, mas não é mais escolhida nem exibida nessas páginas.
-- Galeria, descrição, botões de ação, cores, tipografia e navegação não mudaram. Não reintroduzir cartão ou altura fixa no cabeçalho.
+**Lugar (`.../album/{id}`)**
+- Desktop (≥ 720 px): título e detalhes à esquerda, mapa à direita, lado a lado, texto centralizado na altura do mapa. Celular (< 720 px): título e detalhes empilhados acima do mapa, com fonte própria (não é o desktop encolhido).
+- Título: bandeira + nome em serifa grande; a última palavra do nome vai na cor de acento. Abaixo, país/estado em caixa alta cobre; depois data e quantidade de fotos, cada uma com ícone (calendário e imagem).
+- Decoração: rota tracejada e um pequeno avião (SVG inline, cor de acento, opacidade baixa) atrás do título; `pointer-events: none`, `aria-hidden`, `z-index` atrás do texto, menor no celular. Mantê-la leve: sem imagem, sem animação.
+- Mapa: cantos de 22 px, borda cobre sutil e sombra; funções preservadas (marcadores de fotos, zoom, “Ver mapa completo”).
+- Galeria: no celular continua de ponta a ponta (grade de 2 px); no desktop os quadros ganham 10 px de espaço e 14 px de raio.
+- O botão “Escolher capa” não é exibido dentro da viagem nem do lugar. A foto de capa continua nos dados e nos cartões do perfil.
+
+**Viagem (`/trip/{slug}`, `/perfil/{viagem}`)**: bandeira + “Cidade, País”, título grande e etiquetas de data, fotos e lugares, com um fio fino cobre/salmão embaixo.
+
+Não reintroduzir cartão ou altura fixa no cabeçalho, nem dados de exemplo da referência: tudo vem dos dados reais.
 
 ## Conteúdo e estados
 

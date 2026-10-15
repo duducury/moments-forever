@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { randomUUID } from "node:crypto";
+import { createHmac, randomUUID } from "node:crypto";
 import test from "node:test";
 
 import type { ExperienceImportDraft } from "@moments-forever/types";
@@ -16,12 +16,24 @@ import {
   readLocalSupabaseConfig,
 } from "../supabase/local-client.ts";
 
-/** Well-known local Supabase demo keys (never use against remote). */
+/**
+ * Local Supabase (`supabase start`) only. Its default API keys are JWTs signed with the secret that
+ * Supabase publishes in its CLI documentation, so they are not credentials of this project. They are
+ * derived here instead of pasted as literals, and SUPABASE_ANON_KEY / SUPABASE_SERVICE_ROLE_KEY from
+ * the environment (e.g. `supabase status -o env`) take precedence. Never use against a remote project.
+ */
 const LOCAL_URL = "http://127.0.0.1:54321";
-const LOCAL_ANON_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0";
-const LOCAL_SERVICE_ROLE_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU";
+const LOCAL_DEMO_JWT_SECRET = "super-secret-jwt-token-with-at-least-32-characters-long";
+
+function localDemoJwt(role: "anon" | "service_role"): string {
+  const encode = (value: object) => Buffer.from(JSON.stringify(value)).toString("base64url");
+  const unsigned = `${encode({ alg: "HS256", typ: "JWT" })}.${encode({ iss: "supabase-demo", role, exp: 1983812996 })}`;
+  const signature = createHmac("sha256", LOCAL_DEMO_JWT_SECRET).update(unsigned).digest("base64url");
+  return `${unsigned}.${signature}`;
+}
+
+const LOCAL_ANON_KEY = localDemoJwt("anon");
+const LOCAL_SERVICE_ROLE_KEY = localDemoJwt("service_role");
 
 function localEnv(): NodeJS.ProcessEnv {
   return {
@@ -120,7 +132,7 @@ async function createSyntheticUser(): Promise<{
   const config = readLocalSupabaseConfig(localEnv());
   assertLocalSupabaseUrl(config.url);
 
-  const admin = createClient(config.url, LOCAL_SERVICE_ROLE_KEY, {
+  const admin = createClient(config.url, process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() || LOCAL_SERVICE_ROLE_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 

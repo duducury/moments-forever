@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import maplibregl, { type Map as MapLibreMap, type Marker } from "maplibre-gl";
+import * as maplibregl from "maplibre-gl";
+import type { Map as MapLibreMap, Marker } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 
 import { getLocalPhotoBlob } from "@/lib/local-photos/photo-blob-store";
@@ -20,6 +21,8 @@ import {
   zoomToFitGlobe,
 } from "@/lib/map/globe-camera";
 import { globeEffectOpacity, globeScreenRadius } from "@/lib/map/globe-geometry";
+import { configureMapLibreWorker } from "@/lib/map/maplibre-worker";
+import { describePinContent } from "@/lib/map/pin-content";
 import {
   CITY_DOT_IMAGE,
   GEO_DATA_VERSION,
@@ -194,6 +197,7 @@ export function GlobeMapCanvas({
     };
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const start = reducedMotion ? rest : introStart(rest);
+    configureMapLibreWorker();
     const map = new maplibregl.Map({
       container: containerRef.current,
       style: {
@@ -331,14 +335,24 @@ export function GlobeMapCanvas({
       el.type = "button";
       el.className = thumbUrl ? styles.mapPhotoPin : styles.mapMarker;
       el.setAttribute("aria-label", label);
-      if (thumbUrl) {
-        el.innerHTML = `<img alt="" draggable="false" src="${thumbUrl.replaceAll('"', "&quot;")}" />${
-          count > 1
-            ? `<span class="${styles.mapPhotoPinBadge}">${count}</span>`
-            : ""
-        }`;
+      const content = describePinContent({ thumbUrl, count });
+      if (content.kind === "photo") {
+        // Built with the DOM API, never innerHTML: nothing from the URL is ever parsed as markup.
+        const img = document.createElement("img");
+        img.alt = "";
+        img.draggable = false;
+        img.src = content.src;
+        el.append(img);
+        if (content.badge !== null) {
+          const badge = document.createElement("span");
+          badge.className = styles.mapPhotoPinBadge;
+          badge.textContent = String(content.badge);
+          el.append(badge);
+        }
       } else {
-        el.innerHTML = `<span>${count}</span>`;
+        const text = document.createElement("span");
+        text.textContent = content.text;
+        el.append(text);
       }
 
       el.addEventListener("click", (event) => {

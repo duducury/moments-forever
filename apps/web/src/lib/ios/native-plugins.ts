@@ -103,3 +103,19 @@ export function verifyNativeAuthPlugin(inputs: PluginInputs): string[] {
     ...checkPluginSource(inputs.pluginSource),
   ];
 }
+
+/**
+ * `--app <path>` of verify-ios-plugins: it makes the script read files below that path, so the argument must name an
+ * App bundle directory (`….app`) and nothing else (no empty value, NUL bytes, or a path that climbs out with `..`
+ * after the bundle name). Returns an error message, or null when the path is acceptable.
+ */
+export function appBundlePathProblem(raw: string | undefined): string | null {
+  if (!raw || raw.startsWith("--")) {
+    return "--app needs the path to a built App.app (e.g. …/Products/Applications/App.app).";
+  }
+  if (raw.includes("\0")) return "--app: the path contains an invalid character.";
+  const trimmed = raw.replace(/\/+$/u, "");
+  if (!/\.app$/u.test(trimmed)) return `--app must point to an App bundle directory ending in ".app" (got "${raw}").`;
+  if (trimmed.split("/").slice(-1)[0] === ".app") return "--app: the bundle needs a name before \".app\".";
+  return null;
+}

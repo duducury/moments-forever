@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import maplibregl, { type Map as MapLibreMap } from "maplibre-gl";
+import * as maplibregl from "maplibre-gl";
+import type { Map as MapLibreMap } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+
+import { configureMapLibreWorker } from "@/lib/map/maplibre-worker";
 
 import styles from "./passaporte.module.css";
 
@@ -51,6 +54,7 @@ export function PassportWorldMap({
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
+    configureMapLibreWorker();
     const map = new maplibregl.Map({
       container: containerRef.current,
       style: {

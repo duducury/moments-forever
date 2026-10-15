@@ -1833,61 +1833,26 @@
   overflow: hidden;
   width: 100%;
   min-height: clamp(148px, 44vw, 220px);
-  height: clamp(148px, 44vw, 220px);
   margin-bottom: 0;
   border: 1px solid var(--border);
   border-radius: 16px;
-  background: color-mix(in srgb, var(--surface) 88%, #1a1a1a);
+  background:
+    radial-gradient(
+      120% 140% at 0% 0%,
+      color-mix(in srgb, var(--accent) 24%, transparent) 0%,
+      transparent 62%
+    ),
+    var(--surface);
   box-shadow: 0 12px 28px var(--shadow);
   isolation: isolate;
 }
 
-.albumHeroMedia {
+.albumHeroHeader::before {
+  content: "";
   position: absolute;
-  inset: 0;
-  z-index: 0;
-}
-
-.albumHeroMedia :global([data-progressive-cover]),
-.albumHeroMedia :global([data-has-image]) {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-
-.albumHeroImage {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center;
-}
-
-.albumHeroFallback {
-  display: grid;
-  place-items: center;
-  width: 100%;
-  height: 100%;
-  color: color-mix(in srgb, var(--muted) 70%, transparent);
-  font-size: 2.4rem;
-  font-weight: 650;
-  background:
-    radial-gradient(ellipse 80% 70% at 30% 20%, #3a4658 0%, transparent 55%),
-    linear-gradient(160deg, #1c222c 0%, #0d1016 100%);
-}
-
-.albumHeroOverlay {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-  background:
-    linear-gradient(
-      180deg,
-      rgb(8 10 14 / 28%) 0%,
-      rgb(8 10 14 / 38%) 40%,
-      rgb(8 10 14 / 86%) 100%
-    );
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent), transparent 80%);
 }
 
 .albumHeroCopy {
@@ -1918,28 +1883,25 @@
 .albumHeroTitle {
   margin: 0;
   min-width: 0;
-  color: #fff;
+  color: var(--text);
   font-size: clamp(1.55rem, 6.2vw, 2.2rem);
   line-height: 1.08;
-  text-shadow: 0 1px 14px rgb(0 0 0 / 72%);
   overflow-wrap: anywhere;
 }
 
 .albumHeroCountry {
   margin: 0;
-  color: rgb(243 239 232 / 88%);
+  color: var(--accent);
   font-size: 0.92rem;
-  font-weight: 550;
+  font-weight: 650;
   line-height: 1.3;
-  text-shadow: 0 1px 10px rgb(0 0 0 / 65%);
 }
 
 .albumHeroMeta {
   margin: 0;
-  color: rgb(243 239 232 / 82%);
+  color: var(--text-secondary);
   font-size: 0.88rem;
   line-height: 1.35;
-  text-shadow: 0 1px 10px rgb(0 0 0 / 65%);
 }
 
 .albumHeroActions {
@@ -1954,10 +1916,10 @@
 .albumHeroCoverButton {
   min-height: 34px;
   padding: 0 12px;
-  border: 1px solid rgb(255 255 255 / 28%);
+  border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--border));
   border-radius: 999px;
-  color: #fff;
-  background: rgb(8 10 14 / 42%);
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   cursor: pointer;
@@ -1967,7 +1929,7 @@
 }
 
 .albumHeroCoverButton:hover {
-  background: rgb(8 10 14 / 58%);
+  background: color-mix(in srgb, var(--accent) 24%, transparent);
 }
 
 .albumHeroCoverButton:disabled {
@@ -2788,7 +2750,10 @@
     gap: 8px;
   }
 
-  .albumHeroHeader,
+  .albumHeroHeader {
+    min-height: clamp(148px, 44vw, 220px);
+  }
+
   .albumMapCard {
     min-height: clamp(148px, 44vw, 220px);
     height: clamp(148px, 44vw, 220px);
@@ -2994,7 +2959,6 @@
   .albumHeroHeader {
     margin-bottom: 0;
     min-height: 280px;
-    height: 280px;
   }
 
   .albumSplit {

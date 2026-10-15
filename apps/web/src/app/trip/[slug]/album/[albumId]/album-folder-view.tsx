@@ -17,7 +17,6 @@ import {
 
 import { AppBottomNav } from "@/components/app-bottom-nav";
 import { useAuth } from "@/components/auth-provider";
-import { ExperienceCoverThumb } from "@/components/experience-cover-thumb";
 import {
   deleteLocalPhotoBlob,
   deleteLocalPhotoBlobs,
@@ -635,18 +634,6 @@ export function AlbumFolderView({
       <div className={styles.albumStory}>
         <div className={styles.albumSplit} data-reveal>
           <header className={styles.albumHeroHeader}>
-            <div aria-hidden="true" className={styles.albumHeroMedia}>
-              <ExperienceCoverThumb
-                coverPhotoId={heroCoverId}
-                fallbackClassName={styles.albumHeroFallback}
-                focus={album.coverPhotoId ? album.coverFocus : null}
-                imageClassName={styles.albumHeroImage}
-                priority
-                title={album.displayName}
-              />
-            </div>
-            <div aria-hidden="true" className={styles.albumHeroOverlay} />
-
             {isOwner ? (
               <div className={styles.albumHeroActions}>
                 <button

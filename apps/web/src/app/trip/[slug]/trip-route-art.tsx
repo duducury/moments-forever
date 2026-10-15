@@ -1,18 +1,23 @@
 import { useId } from "react";
 
+import {
+  WORLD_OUTLINE_PATH,
+  WORLD_OUTLINE_VIEWBOX,
+} from "@/lib/geo/world-outline";
+
 import styles from "./trip.module.css";
 
 /**
- * Decorative flight-path illustration behind the place title. Pure inline SVG: layered, fading curves in
- * copper / terracotta / salmon tones taken from the theme (see `.albumHeroRoute` in trip.module.css), a few orbital
- * and contour arcs for depth, and a small aeroplane sitting on the main route and following its direction.
- * It is independent of the destination and the title length, `aria-hidden`, and never takes pointer events.
+ * Decorative backdrop behind the place title: a quiet world map (simplified continent outlines, see
+ * `lib/geo/world-outline.ts`), dotted great-circle style routes, thin orbital and topographic curves, a small
+ * aeroplane on one route and a compass detail. It is purely generic: no pins, no destination markers and no
+ * trip-specific data, so the same artwork serves every country, city and trip. Inline vector, no animation,
+ * `aria-hidden` and never interactive. Colours come from the theme (`--route-*` in trip.module.css).
  */
 export function TripRouteArt() {
   const uid = useId().replace(/:/gu, "");
-  const fadeIn = `route-fade-in-${uid}`;
-  const fadeOut = `route-fade-out-${uid}`;
-  const fadeBoth = `route-fade-both-${uid}`;
+  const land = `route-land-${uid}`;
+  const fade = `route-fade-${uid}`;
 
   return (
     <svg
@@ -20,104 +25,61 @@ export function TripRouteArt() {
       className={styles.albumHeroRoute}
       fill="none"
       focusable="false"
-      preserveAspectRatio="xMaxYMid meet"
-      viewBox="0 0 600 220"
+      preserveAspectRatio="xMidYMid slice"
+      viewBox={WORLD_OUTLINE_VIEWBOX}
     >
       <defs>
-        {/* Left end fades out so the curves dissolve behind the title. */}
-        <linearGradient id={fadeIn} x1="0" x2="1" y1="0" y2="0">
-          <stop offset="0" stopColor="var(--route-1)" stopOpacity="0" />
-          <stop offset="0.45" stopColor="var(--route-1)" stopOpacity="0.85" />
-          <stop offset="1" stopColor="var(--route-3)" stopOpacity="0.95" />
+        <linearGradient id={land} x1="0" x2="1" y1="0" y2="1">
+          <stop offset="0" stopColor="var(--route-2)" />
+          <stop offset="0.55" stopColor="var(--route-1)" />
+          <stop offset="1" stopColor="var(--route-3)" />
         </linearGradient>
-        {/* Right end fades out. */}
-        <linearGradient id={fadeOut} x1="0" x2="1" y1="0" y2="0">
-          <stop offset="0" stopColor="var(--route-2)" stopOpacity="0.8" />
-          <stop offset="1" stopColor="var(--route-2)" stopOpacity="0" />
-        </linearGradient>
-        {/* Both ends fade out. */}
-        <linearGradient id={fadeBoth} x1="0" x2="1" y1="0" y2="0">
+        <linearGradient id={fade} x1="0" x2="1" y1="0" y2="0">
           <stop offset="0" stopColor="var(--route-3)" stopOpacity="0" />
-          <stop offset="0.5" stopColor="var(--route-3)" stopOpacity="0.7" />
+          <stop offset="0.5" stopColor="var(--route-3)" stopOpacity="0.9" />
           <stop offset="1" stopColor="var(--route-3)" stopOpacity="0" />
         </linearGradient>
       </defs>
 
-      {/* Contour-like arcs: depth, very quiet. */}
-      <g stroke={`url(#${fadeBoth})`} strokeWidth="0.8">
-        <path d="M120 214C230 150 330 150 470 196" opacity="0.55" />
-        <path d="M150 218C250 166 340 168 450 208" opacity="0.4" />
-        <path d="M200 8C300 40 420 30 540 94" opacity="0.5" />
-        <path d="M230 2C320 28 430 20 560 76" opacity="0.35" />
-      </g>
-
-      {/* Orbital curves. */}
-      <g strokeLinecap="round">
-        <ellipse
-          cx="330"
-          cy="108"
-          rx="250"
-          ry="74"
-          stroke={`url(#${fadeOut})`}
-          strokeWidth="0.9"
-          transform="rotate(-14 330 108)"
-          opacity="0.6"
-        />
-        <ellipse
-          cx="352"
-          cy="100"
-          rx="196"
-          ry="48"
-          stroke={`url(#${fadeBoth})`}
-          strokeWidth="0.8"
-          transform="rotate(-22 352 100)"
-          opacity="0.7"
-        />
-      </g>
-
-      {/* Secondary routes: thinner, different opacity. */}
-      <g strokeLinecap="round">
-        <path
-          d="M40 150C140 170 210 96 320 118S470 150 580 88"
-          stroke={`url(#${fadeBoth})`}
-          strokeWidth="1"
-          opacity="0.75"
-        />
-        <path
-          d="M90 120C170 70 250 70 330 52S470 20 590 66"
-          stroke={`url(#${fadeOut})`}
-          strokeDasharray="1 7"
-          strokeWidth="1.4"
-          opacity="0.8"
-        />
-      </g>
-
-      {/* Main route. */}
+      {/* World map: fine outlines with a barely-there fill. */}
       <path
-        d="M10 176C120 196 190 64 318 92S500 24 592 38"
-        stroke={`url(#${fadeIn})`}
-        strokeLinecap="round"
-        strokeWidth="1.6"
-      />
-      <path
-        d="M10 176C120 196 190 64 318 92S500 24 592 38"
-        stroke={`url(#${fadeIn})`}
-        strokeDasharray="2 9"
-        strokeLinecap="round"
-        strokeWidth="3.2"
-        opacity="0.35"
+        d={WORLD_OUTLINE_PATH}
+        fill="var(--route-1)"
+        fillOpacity="0.05"
+        stroke={`url(#${land})`}
+        strokeLinejoin="round"
+        strokeOpacity="0.45"
+        strokeWidth="0.7"
       />
 
-      {/* Waypoints. */}
-      <g fill="var(--route-3)">
-        <circle cx="318" cy="92" r="2.4" opacity="0.85" />
-        <circle cx="592" cy="38" r="2" opacity="0.7" />
-        <circle cx="318" cy="92" fill="none" r="7" stroke="var(--route-3)" strokeWidth="0.8" opacity="0.45" />
+      {/* Topographic contours (bottom-left) and orbital curves. */}
+      <g stroke={`url(#${fade})`} strokeLinecap="round" strokeWidth="0.7">
+        <ellipse cx="120" cy="230" rx="150" ry="58" opacity="0.5" />
+        <ellipse cx="120" cy="230" rx="118" ry="44" opacity="0.4" />
+        <ellipse cx="120" cy="230" rx="86" ry="30" opacity="0.32" />
+        <ellipse cx="120" cy="230" rx="54" ry="17" opacity="0.25" />
+        <ellipse cx="400" cy="120" rx="330" ry="104" opacity="0.5" transform="rotate(-12 400 120)" />
+        <ellipse cx="410" cy="116" rx="262" ry="70" opacity="0.4" transform="rotate(-20 410 116)" />
       </g>
 
-      {/* Small aeroplane on the route, rotated to the route's direction at that point. */}
-      <g transform="translate(504.6 53.7) rotate(-23.5) scale(1)" fill="var(--route-3)">
+      {/* Dotted flight routes (no end markers). */}
+      <g stroke="var(--route-3)" strokeDasharray="0.5 6" strokeLinecap="round" strokeWidth="1.8">
+        <path d="M190 172C280 28 450 18 548 112" opacity="0.9" />
+        <path d="M70 120C150 40 250 36 330 96" opacity="0.55" />
+        <path d="M300 200C400 150 520 150 650 70" opacity="0.5" />
+      </g>
+
+      {/* Small aeroplane on the main route, rotated to the route's direction there. */}
+      <g fill="var(--route-3)" transform="translate(405.6 51) rotate(2.6) scale(0.9)">
         <path d="M15 0 6 -1.6 -3 -9.5 -6.5 -9.5 -3.2 -1.4 -10 -1 -12.5 -4.5 -15 -4.5 -13.5 0 -15 4.5 -12.5 4.5 -10 1 -3.2 1.4 -6.5 9.5 -3 9.5 6 1.6Z" />
+      </g>
+
+      {/* Compass detail. */}
+      <g stroke="var(--route-3)" strokeLinecap="round" strokeWidth="0.8" transform="translate(618 204)" opacity="0.7">
+        <circle r="22" opacity="0.6" />
+        <circle r="15" opacity="0.4" />
+        <path d="M0 -27V27M-27 0H27" opacity="0.45" />
+        <path d="M0 -22 4 -4 22 0 4 4 0 22-4 4-22 0-4-4Z" fill="var(--route-1)" fillOpacity="0.28" />
       </g>
     </svg>
   );

@@ -1816,27 +1816,29 @@
   isolation: isolate;
 }
 
-/* Flight-path illustration behind the title (see trip-route-art.tsx): never intercepts taps or text. */
+/* World-map backdrop behind the title (see trip-route-art.tsx): decorative, never intercepts taps or text. */
 .albumHeroRoute {
   --route-1: var(--accent);
-  --route-2: color-mix(in srgb, var(--accent) 72%, #9d4e35);
+  --route-2: color-mix(in srgb, var(--accent) 70%, #8a5a2b);
   --route-3: color-mix(in srgb, var(--accent) 62%, #f0b49c);
 
   position: absolute;
-  top: 50%;
-  right: -4%;
+  inset: -14px -10px;
   z-index: -1;
-  width: min(112%, 640px);
-  height: auto;
-  opacity: 0.95;
+  width: calc(100% + 20px);
+  height: calc(100% + 28px);
+  opacity: 0.85;
   pointer-events: none;
-  transform: translateY(-54%);
+  /* Keep the artwork quiet where the text sits (left) and soft at the edges. */
+  -webkit-mask-image: radial-gradient(ellipse 78% 82% at 64% 50%, #000 30%, rgb(0 0 0 / 0%) 100%);
+  mask-image: radial-gradient(ellipse 78% 82% at 64% 50%, #000 30%, rgb(0 0 0 / 0%) 100%);
 }
 
 :global(html[data-resolved-theme="light"]) .albumHeroRoute {
-  --route-3: color-mix(in srgb, var(--accent) 80%, #c9744f);
+  --route-1: color-mix(in srgb, var(--accent) 85%, #5a2a18);
+  --route-3: color-mix(in srgb, var(--accent) 82%, #c9744f);
 
-  opacity: 0.7;
+  opacity: 0.6;
 }
 
 .albumHeroCopy {
@@ -2745,10 +2747,7 @@
   }
 
   .albumHeroRoute {
-    top: 46%;
-    right: -6%;
-    width: 112%;
-    opacity: 0.7;
+    opacity: 0.6;
   }
 
   .albumMapCard {

@@ -6,7 +6,7 @@ const land = JSON.parse(readFileSync(new URL("../public/geo/land-v1.json", impor
 const SCALE = 2; // svg units per degree
 const LAT_TOP = 78;
 const LAT_BOTTOM = -57;
-const TOLERANCE = 1.5; // degrees
+const TOLERANCE = 1.6; // degrees
 const MIN_AREA = 16; // square degrees; drops small islands
 
 function perpDist(p, a, b) {
@@ -48,9 +48,22 @@ for (const f of land.features) {
   }
 }
 const fmt = (n) => String(Math.round(n * 10) / 10);
+// Quadratic midpoint smoothing: rounds the polygonal corners so the continents read as organic shapes.
+function smoothPath(ring) {
+  const pts = ring.slice(0, -1).map(([lon, lat]) => [(lon + 180) * SCALE, (LAT_TOP - Math.max(LAT_BOTTOM, lat)) * SCALE]);
+  const n = pts.length;
+  const mid = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+  let out = `M${fmt(mid(pts[0], pts[1])[0])} ${fmt(mid(pts[0], pts[1])[1])}`;
+  for (let i = 1; i <= n; i++) {
+    const c = pts[i % n];
+    const m = mid(c, pts[(i + 1) % n]);
+    out += `Q${fmt(c[0])} ${fmt(c[1])} ${fmt(m[0])} ${fmt(m[1])}`;
+  }
+  return out + "Z";
+}
 const d = rings
-  .filter((r) => r.length >= 4)
-  .map((r) => "M" + r.map(([lon, lat]) => `${fmt((lon + 180) * SCALE)} ${fmt((LAT_TOP - Math.max(LAT_BOTTOM, lat)) * SCALE)}`).join("L") + "Z")
+  .filter((r) => r.length >= 5)
+  .map(smoothPath)
   .join("");
 const w = 360 * SCALE;
 const h = (LAT_TOP - LAT_BOTTOM) * SCALE;

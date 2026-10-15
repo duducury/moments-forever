@@ -2050,19 +2050,18 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   margin: 0;
   padding: 2px 0 2px;
 }
 
 .albumToolButton {
-  min-height: 40px;
-  border: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
+  min-height: 42px;
+  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
   border-radius: 999px;
-  padding: 0 14px;
+  padding: 0 16px;
   color: var(--text);
-  background: color-mix(in srgb, var(--surface) 92%, transparent);
-  box-shadow: 0 1px 0 color-mix(in srgb, var(--shadow) 55%, transparent);
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
   cursor: pointer;
   font: inherit;
   font-size: 0.88rem;
@@ -2090,7 +2089,8 @@
   border-color: color-mix(in srgb, var(--accent) 55%, transparent);
   color: white;
   background: var(--accent);
-  box-shadow: 0 8px 18px color-mix(in srgb, var(--accent) 28%, transparent);
+  font-weight: 700;
+  box-shadow: 0 10px 22px color-mix(in srgb, var(--accent) 34%, transparent);
 }
 
 .albumToolPrimary:hover {
@@ -2182,6 +2182,11 @@
   border-radius: 22px;
   color: var(--text);
   background:
+    radial-gradient(
+      90% 120% at 0% 0%,
+      color-mix(in srgb, var(--accent) 14%, transparent) 0%,
+      transparent 65%
+    ),
     linear-gradient(
       160deg,
       color-mix(in srgb, var(--surface) 72%, var(--accent)) 0%,
@@ -3251,19 +3256,5 @@
   .albumLoadingMap::after,
   .albumLoadingGrid > span::after {
     animation: none;
-  }
-}
-
-/* Desktop gallery: rounded tiles with breathing room (mobile stays edge to edge). */
-@media (min-width: 720px) {
-  .albumPage .squareGrid,
-  .albumPage .squareGridInstagram {
-    gap: 10px;
-  }
-
-  .albumPage .squareGrid .squareTile,
-  .albumPage .squareGrid .tileButton {
-    border-radius: 14px;
-    overflow: hidden;
   }
 }

@@ -52,7 +52,8 @@ Referência visual: app de viagem premium, fundo escuro com acentos cobre/salmã
   - Cores: derivadas de `--accent` pelas variáveis `--route-1..3` em `.albumHeroRoute` (tema claro: tons mais escuros e opacidade menor). Uma máscara radial deixa o efeito mais forte ao redor do título e o esmaece até zero antes das bordas. A intensidade é deliberadamente baixa (continentes ~10–20 % de opacidade): o fundo não pode competir com título, data e contagem de fotos. Responsivo (`preserveAspectRatio="slice"` recorta em vez de achatar; no celular parte do desenho sai do enquadramento).
   - Regras: `aria-hidden`, `pointer-events: none`, `z-index: -1`, sem animação e sem dependências; um único filtro de desfoque estático.
 - Mapa: cantos de 22 px, borda cobre sutil e sombra; funções preservadas (marcadores de fotos, zoom, “Ver mapa completo”).
-- Galeria: no celular continua de ponta a ponta (grade de 2 px); no desktop os quadros ganham 10 px de espaço e 14 px de raio.
+- Galeria: **não faz parte deste design e não deve ser alterada**. Segue o estilo Instagram (3 colunas, quadros quadrados cortados em cover, 2 px de espaço, sem cantos arredondados, de ponta a ponta no celular), com as mesmas interações e o mesmo carregamento.
+- Cartão “Sobre essa viagem”: borda cobre sutil, brilho quente no canto, globo delicado ao fundo, texto em serifa, “Editar história” como pílula cobre (só o dono). Botões de ação: “+ Adicionar fotos” é a ação primária (preenchida em cobre, com sombra quente); as demais são pílulas discretas de 42 px, com o mesmo espaçamento; ações e permissões não mudaram.
 - O botão “Escolher capa” não é exibido dentro da viagem nem do lugar. A foto de capa continua nos dados e nos cartões do perfil.
 
 **Viagem (`/trip/{slug}`, `/perfil/{viagem}`)**: bandeira + “Cidade, País”, título grande e etiquetas de data, fotos e lugares, com um fio fino cobre/salmão embaixo.

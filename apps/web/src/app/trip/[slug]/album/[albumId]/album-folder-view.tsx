@@ -632,51 +632,52 @@ export function AlbumFolderView({
       }
     >
       <div className={styles.albumStory}>
-        <div className={styles.albumSplit} data-reveal>
-          <header className={styles.albumHeroHeader}>
-            {isOwner ? (
-              <div className={styles.albumHeroActions}>
-                <button
-                  className={styles.albumHeroCoverButton}
-                  disabled={busy || albumPhotos.length === 0}
-                  onClick={() => {
-                    setError(null);
-                    setCoverPickerOpen(true);
-                  }}
-                  type="button"
-                >
-                  Escolher capa
-                </button>
-              </div>
-            ) : null}
-
-            <div className={styles.albumHeroCopy}>
-              <div className={styles.albumHeroTitleRow}>
-                {countryCode ? (
-                  // eslint-disable-next-line @next/next/no-img-element -- small flag CDN asset
-                  <img
-                    alt=""
-                    className={styles.albumHeroFlag}
-                    decoding="async"
-                    height={22}
-                    src={`https://flagcdn.com/w80/${countryCode.toLowerCase()}.png`}
-                    width={30}
-                  />
-                ) : null}
-                <h1 className={styles.albumHeroTitle}>{album.displayName}</h1>
-              </div>
-              {placeUsState ? (
-                <p className={styles.albumHeroCountry}>{placeUsState}</p>
-              ) : experience.primaryCountry ? (
-                <p className={styles.albumHeroCountry}>
-                  {experience.primaryCountry}
-                </p>
-              ) : null}
-              {metaLine ? (
-                <p className={styles.albumHeroMeta}>{metaLine}</p>
-              ) : null}
+        <header className={styles.albumHeroHeader} data-reveal>
+          {isOwner ? (
+            <div className={styles.albumHeroActions}>
+              <button
+                className={styles.albumHeroCoverButton}
+                disabled={busy || albumPhotos.length === 0}
+                onClick={() => {
+                  setError(null);
+                  setCoverPickerOpen(true);
+                }}
+                type="button"
+              >
+                Escolher capa
+              </button>
             </div>
-          </header>
+          ) : null}
+
+          <div className={styles.albumHeroCopy}>
+            <div className={styles.albumHeroTitleRow}>
+              {countryCode ? (
+                // eslint-disable-next-line @next/next/no-img-element -- small flag CDN asset
+                <img
+                  alt=""
+                  className={styles.albumHeroFlag}
+                  decoding="async"
+                  height={22}
+                  src={`https://flagcdn.com/w80/${countryCode.toLowerCase()}.png`}
+                  width={30}
+                />
+              ) : null}
+              <h1 className={styles.albumHeroTitle}>{album.displayName}</h1>
+            </div>
+            {placeUsState ? (
+              <p className={styles.albumHeroCountry}>{placeUsState}</p>
+            ) : experience.primaryCountry ? (
+              <p className={styles.albumHeroCountry}>
+                {experience.primaryCountry}
+              </p>
+            ) : null}
+            {metaLine ? (
+              <p className={styles.albumHeroMeta}>{metaLine}</p>
+            ) : null}
+          </div>
+        </header>
+
+        <div className={styles.albumSplit} data-reveal>
 
           <section
             aria-label="Mapa do lugar"

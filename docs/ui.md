@@ -38,7 +38,16 @@ Fluxo principal de administração: “Adicionar fotos”, selecionar, analisar 
 
 No atalho da tela inicial do iPhone, o primeiro quadro é a marca escura (ícone, slogan e pulso), nunca uma tela branca. O HTML de `/perfil` e `/{nome}` pinta na hora; a sessão e os dados do perfil resolvem por baixo do splash. `apple-touch-startup-image` precisa estar no HTML estático e no tamanho exato do aparelho. Salvar um host único `*.vercel.app` da Vercel (com SSO) abre uma tela branca de login — usar o domínio estável. Depois do deploy em produção, o ícone antigo da Home tem de ser apagado e o site real salvo de novo.
 
-A capa e primeiras thumbnails têm prioridade. Grid usa carregamento virtualizado e imagens responsivas. A galeria e o lightbox seguem a ordem de posição; a capa fica só no hero, sem pular para o início da grelha. Em tela cheia só a foto tocada está visível até o gesto; as vizinhas não ficam no DOM em descanso (isso fazia a primeira abrir a segunda e a última a penúltima no iPhone). Mapa só busca dados do viewport e nível de zoom. Na página de álbum, o HTML crítico (capa + galeria) não espera o bloco “Veja também”; MapLibre do mapa em destaque entra após idle para não competir com as primeiras fotos. No perfil (`/{nome}`), Destaques entram com o grid; só o mapa inferior faz stream e o MapLibre carrega perto do viewport.
+A capa e primeiras thumbnails têm prioridade. Grid usa carregamento virtualizado e imagens responsivas. A galeria e o lightbox seguem a ordem de posição; a capa do lugar não aparece mais na página do lugar (ver “Cabeçalho da viagem e do lugar”), sem pular para o início da grelha. Em tela cheia só a foto tocada está visível até o gesto; as vizinhas não ficam no DOM em descanso (isso fazia a primeira abrir a segunda e a última a penúltima no iPhone). Mapa só busca dados do viewport e nível de zoom. Na página de álbum, o HTML crítico (cabeçalho + galeria) não espera o bloco “Veja também”; MapLibre do mapa em destaque entra após idle para não competir com as primeiras fotos. No perfil (`/{nome}`), Destaques entram com o grid; só o mapa inferior faz stream e o MapLibre carrega perto do viewport.
+
+## Cabeçalho da viagem e do lugar
+
+As páginas da viagem (`/trip/{slug}`, `/perfil/{viagem}`) e do lugar (`.../album/{id}`) não têm foto de capa, cartão, borda, fundo nem altura fixa no topo. O cabeçalho é texto direto sobre a página, acima do mapa e da galeria, com um fio fino em cobre/salmão embaixo:
+
+- Lugar: bandeira + nome em destaque, país/estado em cobre, depois data e contagem de fotos. O botão “Escolher capa” (só do dono) fica alinhado à direita e quebra para baixo em telas estreitas. A foto de capa do lugar continua nos dados e nos cartões do perfil; só deixou de ser exibida aqui.
+- Viagem: bandeira + “Cidade, País”, título grande e etiquetas de data, fotos e lugares.
+- O mapa do lugar ocupa a largura toda abaixo do cabeçalho (antes dividia a linha com a capa). Mapa e galeria não mudaram.
+- Não reintroduzir cartão ou altura fixa no cabeçalho: no celular ele deve ocupar só o espaço do texto.
 
 ## Conteúdo e estados
 

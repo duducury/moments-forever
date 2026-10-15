@@ -5,6 +5,7 @@ import path from "node:path";
 import test from "node:test";
 
 import {
+  appBundlePathProblem,
   NATIVE_AUTH_PLUGIN,
   checkBinaryContainsPlugin,
   checkLinkedInSpmManifest,
@@ -104,3 +105,11 @@ function hasGenerated(): boolean {
     return false;
   }
 }
+
+test("--app only accepts the path of an App bundle directory", () => {
+  assert.equal(appBundlePathProblem("/tmp/DerivedData/Build/Products/Release-iphoneos/App.app"), null);
+  assert.equal(appBundlePathProblem("./App.app/"), null);
+  for (const bad of [undefined, "", "--other", "/etc/passwd", "/tmp/App.app/../../etc", "/tmp/.app", "App.app\0x"]) {
+    assert.notEqual(appBundlePathProblem(bad), null, JSON.stringify(bad));
+  }
+});

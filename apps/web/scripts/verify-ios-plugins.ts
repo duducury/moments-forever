@@ -6,11 +6,12 @@
  *   npm run ios:verify-plugins                       check the files `cap sync ios` generated
  *   npm run ios:verify-plugins -- --app path/App.app  also check a BUILT app (config inside it + the executable)
  */
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
 import path from "node:path";
 
 import {
   NATIVE_AUTH_PLUGIN,
+  appBundlePathProblem,
   checkBinaryContainsPlugin,
   checkRegisteredInConfig,
   verifyNativeAuthPlugin,
@@ -39,10 +40,15 @@ if (configJson !== null && packageSwift !== null && pluginSource !== null) {
 
 const appFlag = process.argv.indexOf("--app");
 if (appFlag !== -1) {
-  const appDir = process.argv[appFlag + 1];
-  if (!appDir) {
-    errors.push("--app needs the path to a built App.app (e.g. …/Products/Applications/App.app).");
+  const appArg = process.argv[appFlag + 1];
+  const problem = appBundlePathProblem(appArg);
+  if (problem) {
+    errors.push(problem);
+  } else if (!existsSync(appArg) || !statSync(appArg).isDirectory()) {
+    errors.push(`${appArg} is not a directory: not a built App.app?`);
   } else {
+    // Resolve symlinks once so every file read below stays inside the bundle that was named.
+    const appDir = realpathSync(appArg);
     const builtConfig = read(path.join(appDir, "capacitor.config.json"));
     const executable = path.join(appDir, "App");
     if (builtConfig === null) errors.push(`${appDir}/capacitor.config.json not found: not a built App.app?`);

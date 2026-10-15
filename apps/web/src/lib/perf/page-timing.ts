@@ -5,8 +5,10 @@
  *   [perf] passaporte auth=118 data=262 total=391
  * (read it in the Vercel function logs). It records durations only: no user ids, tokens or data.
  */
+import { perfLogEnabled } from "./flags";
+
 export function pageTimer(page: string): { mark: (step: string) => void; end: () => void } {
-  if (process.env.PERF_LOG !== "1") return { mark: () => undefined, end: () => undefined };
+  if (!perfLogEnabled()) return { mark: () => undefined, end: () => undefined };
   const start = Date.now();
   let last = start;
   const steps: string[] = [];

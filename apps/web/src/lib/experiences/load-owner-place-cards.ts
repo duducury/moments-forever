@@ -9,6 +9,7 @@ import {
 } from "@moments-forever/shared";
 
 import { clampFocus, loadCoverFocusByAlbum, type CoverFocus } from "./cover-focus";
+import { placeCardsJoinMode } from "@/lib/perf/flags";
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type ServerSupabase = NonNullable<
@@ -164,7 +165,7 @@ type PlaceCardsResult =
 
 type PlaceCardsOptions = { readonly publicOnly?: boolean };
 
-async function loadOwnerPlaceCardsSequential(
+export async function loadOwnerPlaceCardsSequential(
   supabase: ServerSupabase,
   ownerId: string,
   options?: PlaceCardsOptions,
@@ -301,11 +302,14 @@ async function loadOwnerPlaceCardsSequential(
  * Any error, or an embed this database cannot resolve, returns null and the caller falls back to the sequential
  * loader, which is the proven path (it also handles the databases that lack the optional columns).
  */
-async function loadOwnerPlaceCardsJoined(
+export async function loadOwnerPlaceCardsJoined(
   supabase: ServerSupabase,
   ownerId: string,
   options?: PlaceCardsOptions,
+  /** Told WHY the joined read was refused (database error text or a failed check; never row data). */
+  onProblem?: (reason: string) => void,
 ): Promise<PlaceCardsResult | null> {
+  const problem = (reason: string) => onProblem?.(reason.slice(0, 200));
   try {
     const publicOnly = Boolean(options?.publicOnly);
 
@@ -352,7 +356,10 @@ async function loadOwnerPlaceCardsJoined(
         .eq("albums.experiences.owner_id", ownerId),
     ]);
 
-    if (albumsResult.error || photosResult.error) return null;
+    if (albumsResult.error || photosResult.error) {
+      problem(`query error: ${albumsResult.error?.message ?? photosResult.error?.message ?? "unknown"}`);
+      return null;
+    }
 
     const albumRows: AlbumRow[] = [];
     const experienceById = new Map<string, { slug: string; title: string }>();
@@ -363,7 +370,10 @@ async function loadOwnerPlaceCardsJoined(
       albumRows.push(album);
       const embedded = asRecord(Array.isArray(row.experiences) ? row.experiences[0] : row.experiences);
       // An inner join always carries the experience; a row without it means the embed did not resolve as expected.
-      if (!embedded || typeof embedded.slug !== "string" || typeof embedded.title !== "string") return null;
+      if (!embedded || typeof embedded.slug !== "string" || typeof embedded.title !== "string") {
+        problem("an album came back without its joined experience");
+        return null;
+      }
       if (!experienceById.has(album.experience_id)) {
         experienceById.set(album.experience_id, { slug: embedded.slug, title: embedded.title });
       }
@@ -402,7 +412,8 @@ async function loadOwnerPlaceCardsJoined(
       }),
       error: null,
     };
-  } catch {
+  } catch (error) {
+    problem(`exception: ${error instanceof Error ? error.name : "unknown"}`);
     return null;
   }
 }
@@ -463,19 +474,20 @@ export async function loadOwnerPlaceCards(
   ownerId: string,
   options?: PlaceCardsOptions,
 ): Promise<PlaceCardsResult> {
-  const mode = process.env.PLACE_CARDS_JOIN;
-  if (mode === "1") {
+  const mode = placeCardsJoinMode();
+  if (mode === "on") {
     return (
       (await loadOwnerPlaceCardsJoined(supabase, ownerId, options)) ??
       loadOwnerPlaceCardsSequential(supabase, ownerId, options)
     );
   }
   if (mode === "compare") {
+    let why = "";
     const [sequential, joined] = await Promise.all([
       loadOwnerPlaceCardsSequential(supabase, ownerId, options),
-      loadOwnerPlaceCardsJoined(supabase, ownerId, options),
+      loadOwnerPlaceCardsJoined(supabase, ownerId, options, (reason) => (why = reason)),
     ]);
-    console.log(`[perf] place-cards joined=${describePlaceCardsComparison(sequential, joined)}`);
+    console.log(`[perf] place-cards joined=${describePlaceCardsComparison(sequential, joined)}${why ? ` why="${why}"` : ""}`);
     return sequential;
   }
   return loadOwnerPlaceCardsSequential(supabase, ownerId, options);

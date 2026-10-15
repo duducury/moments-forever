@@ -9,6 +9,7 @@ import { persistOwnerPlaceCountryCodesAfterResponse } from "@/lib/location/persi
 import { LicenseGate } from "@/components/license-gate";
 import { getUserLicense } from "@/lib/licensing/get-user-license";
 import { isAdminUser } from "@/lib/licensing/require-admin";
+import { pageTimer } from "@/lib/perf/page-timing";
 import { loadPricingPlans } from "@/lib/pricing/load-pricing-plans";
 import {
   isReservedProfileSlug,
@@ -163,6 +164,7 @@ export async function PublicProfileContent({
   // The admin check only needs the viewer's id, so it starts as soon as getUser answers, in parallel with the
   // profile lookup. Its result is used only when the viewer owns this profile (the admin link never shows on
   // someone else's profile).
+  const timer = pageTimer("profile");
   const userPromise = supabase.auth.getUser();
   const adminPromise = userPromise
     .then(({ data }) => (data.user ? isAdminUser(supabase, data.user.id) : false))
@@ -171,7 +173,9 @@ export async function PublicProfileContent({
     lookupPublicProfile(supabase, profileSlug),
     userPromise,
   ]);
+  timer.mark("profile+auth");
   if (!profile) {
+    timer.end();
     notFound();
   }
 
@@ -180,6 +184,8 @@ export async function PublicProfileContent({
     userResult.data.user?.id && userResult.data.user.id === profile.id,
   );
   const isAdmin = isOwner ? await adminPromise : false;
+  timer.mark("admin");
+  timer.end();
   const identity = profileViewIdentity(
     profile,
     isOwner,

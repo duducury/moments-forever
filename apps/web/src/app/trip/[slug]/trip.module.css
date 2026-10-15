@@ -1816,17 +1816,27 @@
   isolation: isolate;
 }
 
-/* Lightweight decoration behind the title: never intercepts taps or text. */
+/* Flight-path illustration behind the title (see trip-route-art.tsx): never intercepts taps or text. */
 .albumHeroRoute {
+  --route-1: var(--accent);
+  --route-2: color-mix(in srgb, var(--accent) 72%, #9d4e35);
+  --route-3: color-mix(in srgb, var(--accent) 62%, #f0b49c);
+
   position: absolute;
-  top: 6%;
-  right: 0;
+  top: 50%;
+  right: -4%;
   z-index: -1;
-  width: min(72%, 340px);
+  width: min(112%, 640px);
   height: auto;
-  color: var(--accent);
-  opacity: 0.5;
+  opacity: 0.95;
   pointer-events: none;
+  transform: translateY(-54%);
+}
+
+:global(html[data-resolved-theme="light"]) .albumHeroRoute {
+  --route-3: color-mix(in srgb, var(--accent) 80%, #c9744f);
+
+  opacity: 0.7;
 }
 
 .albumHeroCopy {
@@ -2735,9 +2745,10 @@
   }
 
   .albumHeroRoute {
-    top: 0;
-    width: 55%;
-    opacity: 0.4;
+    top: 46%;
+    right: -6%;
+    width: 112%;
+    opacity: 0.7;
   }
 
   .albumMapCard {

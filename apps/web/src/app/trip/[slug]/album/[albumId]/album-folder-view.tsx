@@ -61,6 +61,7 @@ import {
   type TripPhoto,
 } from "../../album-types";
 import styles from "../../trip.module.css";
+import { TripRouteArt } from "../../trip-route-art";
 import { TripMap } from "../../trip-map";
 import { PhotoOrganizeGrid } from "./photo-organize-grid";
 
@@ -642,33 +643,7 @@ export function AlbumFolderView({
       <div className={styles.albumStory}>
         <div className={styles.albumSplit} data-reveal>
           <header className={styles.albumHeroHeader}>
-            <svg
-              aria-hidden="true"
-              className={styles.albumHeroRoute}
-              fill="none"
-              focusable="false"
-              viewBox="0 0 320 140"
-            >
-              <path
-                d="M6 118C60 96 96 112 140 84s58-62 120-58"
-                stroke="currentColor"
-                strokeDasharray="3 6"
-                strokeLinecap="round"
-                strokeWidth="1.4"
-              />
-              <path
-                d="M0 40c40-14 70-4 100-22M20 8c50 6 80 24 118 14"
-                opacity=".35"
-                stroke="currentColor"
-                strokeLinecap="round"
-                strokeWidth="1"
-              />
-              <path
-                d="m283 22 24-12c3-1.5 5 1.6 3 3.4l-8 7.6 9 17-4 2-12-12-7 4 1 7-3 1.5-6-10-10-6 1.6-3 8 1.6 6-6Z"
-                fill="currentColor"
-                transform="rotate(8 292 28)"
-              />
-            </svg>
+            <TripRouteArt />
             <div className={styles.albumHeroCopy}>
               <div className={styles.albumHeroTitleRow}>
                 {countryCode ? (

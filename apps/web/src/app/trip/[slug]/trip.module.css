@@ -2668,11 +2668,28 @@
     gap: 12px;
   }
 
-  /* Title/details above the map (stacked) → about → actions → photos */
+  /* Title/details left + map right (side by side) → about → actions → photos */
   .albumSplit {
     order: 0;
-    grid-template-columns: minmax(0, 1fr);
-    gap: 14px;
+    gap: 10px;
+  }
+
+  .albumHeroTitleRow {
+    gap: 6px;
+  }
+
+  .albumHeroFlag {
+    width: 22px;
+  }
+
+  .albumHeroTitle {
+    font-size: clamp(0.95rem, 4.4vw, 1.3rem);
+    line-height: 1.12;
+  }
+
+  .albumHeroCountry,
+  .albumHeroMeta {
+    font-size: 0.74rem;
   }
 
   .albumMapCard {

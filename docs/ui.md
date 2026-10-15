@@ -44,7 +44,7 @@ A capa e primeiras thumbnails têm prioridade. Grid usa carregamento virtualizad
 
 As páginas da viagem (`/trip/{slug}`, `/perfil/{viagem}`) e do lugar (`.../album/{id}`) não têm foto de capa nem cartão (fundo, borda, sombra ou altura fixa) no topo. O texto fica direto sobre a página:
 
-- Lugar: composição original preservada. No desktop (≥ 720 px) título e detalhes à esquerda e mapa à direita, lado a lado, com o texto centralizado na altura do mapa. No celular (< 720 px) o texto vem primeiro e o mapa logo abaixo, empilhados. Conteúdo: bandeira + nome em destaque, país/estado em cobre, data e contagem de fotos.
+- Lugar: composição original preservada. Título e detalhes à esquerda e mapa à direita, lado a lado, com o texto centralizado na altura do mapa, também no celular (testado de 320 a 1280 px, sem rolagem horizontal). No celular a fonte do título e dos detalhes é menor para caber na meia largura, e o mapa mantém a altura compacta. Conteúdo: bandeira + nome em destaque, país/estado em cobre, data e contagem de fotos.
 - Viagem: bandeira + “Cidade, País”, título grande e etiquetas de data, fotos e lugares, com um fio fino cobre/salmão embaixo.
 - O botão “Escolher capa” não é exibido dentro da viagem nem do lugar. A foto de capa continua nos dados e nos cartões do perfil, mas não é mais escolhida nem exibida nessas páginas.
 - Galeria, descrição, botões de ação, cores, tipografia e navegação não mudaram. Não reintroduzir cartão ou altura fixa no cabeçalho.

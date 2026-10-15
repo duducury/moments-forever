@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 import { AuthProvider } from "@/components/auth-provider";
 import { AutoHideNavOnScroll } from "@/components/auto-hide-nav";
+import { NavTimer } from "@/components/nav-timer";
 import { PwaSplashDismiss } from "@/components/pwa-splash-dismiss";
 import { RevealOnScroll } from "@/components/reveal-on-scroll";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -179,6 +180,7 @@ export default function RootLayout({ children }: { readonly children: ReactNode 
           </AuthProvider>
         </ThemeProvider>
         <PwaSplashDismiss />
+        <NavTimer />
       </body>
     </html>
   );

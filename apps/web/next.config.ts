@@ -44,6 +44,21 @@ const nextConfig: NextConfig = {
         source: "/:path*",
         headers: securityHeaders,
       },
+      // Map data and glyphs are static files (the geo files carry their data version in the name). Next serves
+      // public/ with `max-age=0`, so every globe/map open revalidated 2+ MB of JSON; a day of browser cache plus
+      // stale-while-revalidate removes that round trip without pinning old data for long.
+      {
+        source: "/geo/:file*",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=86400, stale-while-revalidate=604800" },
+        ],
+      },
+      {
+        source: "/fonts/:path*",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=86400, stale-while-revalidate=604800" },
+        ],
+      },
     ];
   },
 };

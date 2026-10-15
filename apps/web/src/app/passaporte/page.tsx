@@ -5,7 +5,7 @@ import { AppWordmark } from "@/components/app-wordmark";
 import { AuthStatus } from "@/components/auth-status";
 import { SignalPwaBootReady } from "@/components/signal-pwa-boot-ready";
 import { displayNameFromUser } from "@/lib/auth/display-name";
-import { persistOwnerPlaceCountryCodes } from "@/lib/location/place-country-code";
+import { persistOwnerPlaceCountryCodesAfterResponse } from "@/lib/location/persist-after-response";
 import { loadOwnerPlaceCards } from "@/lib/experiences/load-owner-place-cards";
 import { buildPassport } from "@/lib/passport/build-passport";
 import {
@@ -14,6 +14,8 @@ import {
   profileAvatarPublicPath,
   publicProfilePath,
 } from "@/lib/profile/profile-slug";
+import { pageTimer } from "@/lib/perf/page-timing";
+import { peekSessionUserId } from "@/lib/supabase/session-user-id";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import { PassaporteClient } from "./passaporte-client";
@@ -37,22 +39,41 @@ export default async function PassaportePage() {
     );
   }
 
+  const timer = pageTimer("passaporte");
+
+  // getUser() is a network call to Supabase Auth and used to run BEFORE any data was requested. The profile and the
+  // places only need the owner id, which the session cookie already carries, so they start now, in parallel; the
+  // results are used only if getUser() confirms the same user (see session-user-id.ts).
+  const sessionUserId = await peekSessionUserId(supabase);
+  const early = sessionUserId
+    ? Promise.all([
+        lookupOwnerProfileById(supabase, sessionUserId),
+        loadOwnerPlaceCards(supabase, sessionUserId),
+      ])
+    : null;
+  early?.catch(() => undefined);
+
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  timer.mark("auth");
 
   if (!user) {
     redirect("/login");
   }
 
-  // Record the country of any place that has none yet (one-time, best-effort).
-  await persistOwnerPlaceCountryCodes(supabase, user.id);
+  // Record the country of any place that has none yet (one-time, best-effort) once the page is sent.
+  persistOwnerPlaceCountryCodesAfterResponse(supabase, user.id);
 
-  // Profile + places in parallel — biggest win vs sequential waterfall.
-  const [profileResult, placesResult] = await Promise.all([
-    lookupOwnerProfileById(supabase, user.id),
-    loadOwnerPlaceCards(supabase, user.id),
-  ]);
+  // Profile + places in parallel. Normally already in flight (see above); otherwise start them now.
+  const [profileResult, placesResult] =
+    early && sessionUserId === user.id
+      ? await early
+      : await Promise.all([
+          lookupOwnerProfileById(supabase, user.id),
+          loadOwnerPlaceCards(supabase, user.id),
+        ]);
+  timer.mark("data");
 
   let profile = profileResult;
   if (!profile?.profileSlug) {
@@ -74,6 +95,7 @@ export default async function PassaportePage() {
     }
   }
 
+  timer.end();
   const places = placesResult.places ?? [];
   const passport = buildPassport(places, user.created_at ?? null);
   const displayName =

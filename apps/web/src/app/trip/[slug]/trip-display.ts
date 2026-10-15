@@ -5,6 +5,8 @@
 
 import {
   cleanLocationLabel,
+  countryCodeFromName,
+  countryCodeFromPlaceLabel,
   isGenericLocationLabel,
 } from "@moments-forever/shared";
 
@@ -17,6 +19,10 @@ export interface TripHeroDisplay {
   readonly title: string;
   /** Date line without repeating the title year when possible. */
   readonly dateLine: string;
+  /** "Cidade, País" from data already on the trip; null when unknown. */
+  readonly locationLine: string | null;
+  /** ISO alpha-2 of the trip country (for the flag); null when unknown. */
+  readonly countryCode: string | null;
 }
 
 function isGenericTripTitle(title: string): boolean {
@@ -219,9 +225,30 @@ export function buildTripHeroDisplay(
     title = manualTitle || "Viagem";
   }
 
+  const city = experience.primaryCity?.trim() ?? "";
+  const country = experience.primaryCountry?.trim() ?? "";
+  const locationParts = [city, country].filter(
+    (part, index, all) =>
+      part &&
+      !isGenericLocationLabel(part) &&
+      all.findIndex((other) => other.toLowerCase() === part.toLowerCase()) ===
+        index,
+  );
+  const locationLine =
+    locationParts.length > 0 ? locationParts.join(", ") : eyebrow;
+
+  const countryCode =
+    (country ? countryCodeFromName(country) : null) ??
+    [country, city, ...rootLabels, manualTitle]
+      .map((label) => (label ? countryCodeFromPlaceLabel(label) : null))
+      .find((code): code is string => Boolean(code)) ??
+    null;
+
   return {
     eyebrow,
     title,
     dateLine: formatTripHeroDateRange(experience.startsAt, experience.endsAt),
+    locationLine,
+    countryCode,
   };
 }

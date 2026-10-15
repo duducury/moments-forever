@@ -7,7 +7,6 @@ import {
   canApplySuggestedPlaceName,
 } from "@moments-forever/shared";
 
-import { useLocalPhotoObjectUrl } from "@/lib/local-photos/use-local-photo-urls";
 import {
   confirmRemoveTripLocation,
   removeLocationFromExperience,
@@ -30,12 +29,6 @@ import { TripMap } from "./trip-map";
 import styles from "./trip.module.css";
 
 type TripTab = "fotos" | "lugares";
-
-function heroTone(coverPhotoId: string | null): "a" | "b" | "c" {
-  if (!coverPhotoId) return "a";
-  const code = coverPhotoId.charCodeAt(0) % 3;
-  return code === 0 ? "a" : code === 1 ? "b" : "c";
-}
 
 interface Props {
   readonly experience: TripExperience;
@@ -93,7 +86,6 @@ export function TripLibraryView({
     node?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [initialTab]);
 
-  const coverSrc = useLocalPhotoObjectUrl(experience.coverPhotoId, "full");
   const heroDisplay = useMemo(
     () => buildTripHeroDisplay(experience, albums),
     [albums, experience],
@@ -275,35 +267,36 @@ export function TripLibraryView({
           </div>
 
           <header className={styles.hero} data-reveal>
-            <div
-              aria-hidden="true"
-              className={styles.heroVisual}
-              data-has-image={coverSrc ? "true" : "false"}
-              data-tone={heroTone(experience.coverPhotoId)}
-            >
-              {coverSrc ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  alt=""
-                  className={styles.heroImage}
-                  decoding="async"
-                  src={coverSrc}
-                />
-              ) : null}
-            </div>
             <div className={styles.heroContent}>
-              {heroDisplay.eyebrow ? (
-                <p className={styles.eyebrow}>{heroDisplay.eyebrow}</p>
+              {heroDisplay.locationLine ? (
+                <p className={styles.eyebrow}>
+                  {heroDisplay.countryCode ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- small flag CDN asset
+                    <img
+                      alt=""
+                      className={styles.heroFlag}
+                      decoding="async"
+                      height={16}
+                      src={`https://flagcdn.com/w40/${heroDisplay.countryCode.toLowerCase()}.png`}
+                      width={22}
+                    />
+                  ) : null}
+                  <span>{heroDisplay.locationLine}</span>
+                </p>
               ) : null}
               <h1 className={styles.title}>{heroDisplay.title}</h1>
               {experience.description ? (
                 <p className={styles.description}>{experience.description}</p>
               ) : null}
-              <p className={styles.metaLine}>
-                {heroDisplay.dateLine}
-                {` · ${photos.length} foto${photos.length === 1 ? "" : "s"}`}
-                {` · ${rootAlbumCount} lugar${rootAlbumCount === 1 ? "" : "es"}`}
-              </p>
+              <ul className={styles.heroFacts}>
+                <li>{heroDisplay.dateLine}</li>
+                <li>
+                  {photos.length} foto{photos.length === 1 ? "" : "s"}
+                </li>
+                <li>
+                  {rootAlbumCount} lugar{rootAlbumCount === 1 ? "" : "es"}
+                </li>
+              </ul>
             </div>
           </header>
         </>

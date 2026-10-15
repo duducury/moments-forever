@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { loadOwnerPlaceCards } from "./load-owner-place-cards";
+import { describePlaceCardsComparison, loadOwnerPlaceCards } from "./load-owner-place-cards";
 
 type Call = { readonly method: string; readonly args: readonly unknown[] };
 
@@ -66,4 +66,156 @@ test("publicOnly: false behaves the same as omitted", async () => {
     .filter((call) => call.method === "eq")
     .map((call) => call.args);
   assert.deepEqual(eqCalls, [["owner_id", "owner-1"]]);
+});
+
+// ---------------------------------------------------------------------------
+// Joined loader (PLACE_CARDS_JOIN): same answer as the sequential one, in one round of queries.
+// ---------------------------------------------------------------------------
+
+type Row = Record<string, unknown>;
+
+function dataSupabase(
+  data: { readonly albums: Row[]; readonly photos: Row[]; readonly focus: Row[] },
+  log: { tables: string[]; eqs: unknown[][]; albumsError?: boolean },
+) {
+  const experiences: Row[] = [{ id: "ex1", slug: "viagem", title: "Viagem" }];
+  function builder(table: string) {
+    const state = { error: null as null | { message: string } };
+    const self = {
+      select: () => self,
+      eq: (...args: unknown[]) => {
+        log.eqs.push(args);
+        return self;
+      },
+      in: () => self,
+      is: () => self,
+      order: () => self,
+      then: (resolve: (value: unknown) => void) => {
+        let rows: Row[] = [];
+        if (table === "experiences") rows = experiences;
+        if (table === "albums") {
+          if (log.albumsError && log.tables.filter((t) => t === "albums").length === 1) {
+            state.error = { message: "embed not available" };
+          }
+          rows = data.albums;
+        }
+        if (table === "photos") rows = data.photos;
+        if (table === "album_cover_focus") rows = data.focus;
+        resolve({ data: state.error ? null : rows, error: state.error });
+      },
+    };
+    return self;
+  }
+  return {
+    from: (table: string) => {
+      log.tables.push(table);
+      return builder(table);
+    },
+  } as unknown as Parameters<typeof loadOwnerPlaceCards>[0];
+}
+
+const SAMPLE = {
+  albums: [
+    { id: "al1", experience_id: "ex1", name: "Local 1", cover_photo_id: "ph1", position: 0, source_moment_id: null, moment: null, experiences: { slug: "viagem", title: "Viagem" } },
+    { id: "al2", experience_id: "ex1", name: "Paris", cover_photo_id: null, position: 1, source_moment_id: "m2", moment: { place: { name: "Paris, França", confirmed_by_user: true, country_code: "FR" } }, experiences: { slug: "viagem", title: "Viagem" } },
+  ],
+  photos: [
+    { album_id: "al1", captured_at: "2024-05-02T10:00:00Z" },
+    { album_id: "al1", captured_at: "2024-05-01T10:00:00Z" },
+    { album_id: "al2", captured_at: "2024-06-10T10:00:00Z" },
+    { album_id: null, captured_at: null },
+  ],
+  focus: [{ album_id: "al1", focus_x: 30, focus_y: 70, focus_zoom: 1.5 }],
+};
+
+async function withMode<T>(mode: string | undefined, run: () => Promise<T>): Promise<T> {
+  const previous = process.env.PLACE_CARDS_JOIN;
+  if (mode === undefined) delete process.env.PLACE_CARDS_JOIN;
+  else process.env.PLACE_CARDS_JOIN = mode;
+  try {
+    return await run();
+  } finally {
+    if (previous === undefined) delete process.env.PLACE_CARDS_JOIN;
+    else process.env.PLACE_CARDS_JOIN = previous;
+  }
+}
+
+test("joined loader returns exactly what the sequential loader returns, with one round of 3 parallel queries", async () => {
+  const seqLog = { tables: [] as string[], eqs: [] as unknown[][] };
+  const sequential = await withMode(undefined, () => loadOwnerPlaceCards(dataSupabase(SAMPLE, seqLog), "owner-1"));
+  const joinLog = { tables: [] as string[], eqs: [] as unknown[][] };
+  const joined = await withMode("1", () => loadOwnerPlaceCards(dataSupabase(SAMPLE, joinLog), "owner-1"));
+
+  assert.deepEqual(joined, sequential);
+  assert.equal(joined.places?.length, 2);
+  assert.deepEqual(joinLog.tables, ["albums", "photos", "album_cover_focus"], "no experiences query to wait for");
+  assert.ok(seqLog.tables.length >= 4 && seqLog.tables[0] === "experiences");
+  assert.deepEqual(
+    joinLog.eqs.filter((eq) => String(eq[0]).includes("owner_id")),
+    [["experiences.owner_id", "owner-1"], ["experiences.owner_id", "owner-1"], ["albums.experiences.owner_id", "owner-1"]],
+  );
+});
+
+test("joined loader keeps the public-only filter (visibility + status) on albums and photos", async () => {
+  const log = { tables: [] as string[], eqs: [] as unknown[][] };
+  await withMode("1", () => loadOwnerPlaceCards(dataSupabase(SAMPLE, log), "owner-1", { publicOnly: true }));
+  const publicEqs = log.eqs.filter((eq) => String(eq[0]) === "experiences.visibility" || String(eq[0]) === "experiences.status");
+  assert.deepEqual(publicEqs, [
+    ["experiences.visibility", "public"],
+    ["experiences.status", "published"],
+    ["experiences.visibility", "public"],
+    ["experiences.status", "published"],
+  ]);
+});
+
+test("when the joined read fails it falls back to the sequential loader and still answers correctly", async () => {
+  const log = { tables: [] as string[], eqs: [] as unknown[][], albumsError: true };
+  const expected = await withMode(undefined, () =>
+    loadOwnerPlaceCards(dataSupabase(SAMPLE, { tables: [], eqs: [] }), "owner-1"),
+  );
+  const result = await withMode("1", () => loadOwnerPlaceCards(dataSupabase(SAMPLE, log), "owner-1"));
+  assert.deepEqual(result, expected);
+  assert.ok(log.tables.includes("experiences"), "the sequential path ran");
+});
+
+test("compare mode returns the sequential result", async () => {
+  const sequential = await withMode(undefined, () =>
+    loadOwnerPlaceCards(dataSupabase(SAMPLE, { tables: [], eqs: [] }), "owner-1"),
+  );
+  const compared = await withMode("compare", () =>
+    loadOwnerPlaceCards(dataSupabase(SAMPLE, { tables: [], eqs: [] }), "owner-1"),
+  );
+  assert.deepEqual(compared, sequential);
+});
+
+test("compare mode logs only a verdict, and flags every kind of difference by field name", async () => {
+  const lines: string[] = [];
+  const original = console.log;
+  console.log = (...args: unknown[]) => void lines.push(args.join(" "));
+  try {
+    await withMode("compare", () => loadOwnerPlaceCards(dataSupabase(SAMPLE, { tables: [], eqs: [] }), "owner-1"));
+  } finally {
+    console.log = original;
+  }
+  assert.deepEqual(lines, ["[perf] place-cards joined=equal"]);
+
+  const card = (albumId: string, patch: Record<string, unknown> = {}) => ({
+    albumId, experienceId: "e", experienceSlug: "s", experienceTitle: "T", title: albumId, countryCode: null,
+    startsAt: null, endsAt: null, coverPhotoId: null, coverFocus: null, previewPhotoIds: [], photoCount: 1, ...patch,
+  });
+  const ok = (...cards: ReturnType<typeof card>[]) => ({ places: cards, error: null }) as never;
+  assert.equal(describePlaceCardsComparison(ok(card("a"), card("b")), ok(card("a"), card("b"))), "equal");
+  assert.equal(describePlaceCardsComparison(ok(card("a"), card("b")), ok(card("b"), card("a"))), "order-differs");
+  assert.equal(describePlaceCardsComparison(ok(card("a")), ok(card("a", { photoCount: 2, coverFocus: { x: 1, y: 2, zoom: 1 } }))), "DIFFERENT fields=coverFocus,photoCount missing=0 extra=0");
+  assert.equal(describePlaceCardsComparison(ok(card("a"), card("b")), ok(card("a"), card("c"))), "DIFFERENT fields=- missing=1 extra=1");
+  assert.equal(describePlaceCardsComparison(ok(card("a")), null), "unavailable");
+  assert.equal(describePlaceCardsComparison(ok(card("a")), ok(card("a", { title: "x", startsAt: "2024" }))), "DIFFERENT fields=startsAt,title missing=0 extra=0");
+});
+
+test("joined loader refuses a result whose albums lack the joined experience (falls back, never guesses)", async () => {
+  const broken = { ...SAMPLE, albums: SAMPLE.albums.map((album) => Object.fromEntries(Object.entries(album).filter(([key]) => key !== "experiences"))) };
+  const log = { tables: [] as string[], eqs: [] as unknown[][] };
+  const result = await withMode("1", () => loadOwnerPlaceCards(dataSupabase(broken, log), "owner-1"));
+  assert.ok(log.tables.includes("experiences"), "fell back to the sequential loader");
+  assert.equal(result.error, null);
 });

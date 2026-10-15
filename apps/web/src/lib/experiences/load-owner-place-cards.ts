@@ -8,7 +8,7 @@ import {
   resolveLocationDisplayName,
 } from "@moments-forever/shared";
 
-import { loadCoverFocusByAlbum, type CoverFocus } from "./cover-focus";
+import { clampFocus, loadCoverFocusByAlbum, type CoverFocus } from "./cover-focus";
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type ServerSupabase = NonNullable<
@@ -80,14 +80,95 @@ function toAlbumRow(row: Record<string, unknown>): AlbumRow {
   };
 }
 
-export async function loadOwnerPlaceCards(
+type AlbumStats = Map<
+  string,
+  { count: number; startsAt: string | null; endsAt: string | null }
+>;
+
+function statsFromPhotos(
+  photos: readonly { album_id?: unknown; captured_at?: unknown }[],
+): AlbumStats {
+  const statsByAlbum: AlbumStats = new Map();
+  for (const photo of photos) {
+    const albumId = photo.album_id as string | null;
+    if (!albumId) continue;
+    const capturedAt = (photo.captured_at as string | null) ?? null;
+    const current = statsByAlbum.get(albumId) ?? {
+      count: 0,
+      startsAt: null,
+      endsAt: null,
+    };
+    current.count += 1;
+    if (capturedAt) {
+      if (!current.startsAt || capturedAt < current.startsAt) {
+        current.startsAt = capturedAt;
+      }
+      if (!current.endsAt || capturedAt > current.endsAt) {
+        current.endsAt = capturedAt;
+      }
+    }
+    statsByAlbum.set(albumId, current);
+  }
+  return statsByAlbum;
+}
+
+function buildPlaceCards(input: {
+  readonly albumRows: readonly AlbumRow[];
+  readonly experienceById: ReadonlyMap<string, { slug: string; title: string }>;
+  readonly placeNameByMomentId: ReadonlyMap<string, PlaceLink>;
+  readonly statsByAlbum: AlbumStats;
+  readonly focusByAlbum: ReadonlyMap<string, CoverFocus>;
+}): OwnerPlaceCardItem[] {
+  const { albumRows, experienceById, placeNameByMomentId, statsByAlbum, focusByAlbum } = input;
+  const places: OwnerPlaceCardItem[] = albumRows.map((album) => {
+    const experienceId = album.experience_id;
+    const experience = experienceById.get(experienceId);
+    const stats = statsByAlbum.get(album.id);
+    const coverPhotoId = album.cover_photo_id;
+    const momentId = album.source_moment_id;
+    const linkedPlace = momentId ? placeNameByMomentId.get(momentId) : null;
+    const title = resolveLocationDisplayName({
+      albumName: album.name,
+      placeName: linkedPlace?.name ?? null,
+      placeConfirmedByUser: linkedPlace?.confirmed ?? false,
+    });
+    const countryCode = countryCodeFromStoredOrLabel({
+      storedCode: linkedPlace?.countryCode,
+      confirmedByUser: linkedPlace?.confirmed ?? false,
+      labels: [title, linkedPlace?.name],
+    });
+
+    return {
+      albumId: album.id,
+      experienceId,
+      experienceSlug: experience?.slug ?? "",
+      experienceTitle: experience?.title ?? title,
+      title,
+      countryCode,
+      startsAt: stats?.startsAt ?? null,
+      endsAt: stats?.endsAt ?? null,
+      coverPhotoId,
+      coverFocus: focusByAlbum.get(album.id) ?? null,
+      previewPhotoIds: coverPhotoId ? [coverPhotoId] : [],
+      photoCount: stats?.count ?? 0,
+    };
+  });
+
+  places.sort((a, b) => comparePlaceRecency(a, b));
+  return places;
+}
+
+type PlaceCardsResult =
+  | { readonly places: readonly OwnerPlaceCardItem[]; readonly error: null }
+  | { readonly places: null; readonly error: string };
+
+type PlaceCardsOptions = { readonly publicOnly?: boolean };
+
+async function loadOwnerPlaceCardsSequential(
   supabase: ServerSupabase,
   ownerId: string,
-  options?: { readonly publicOnly?: boolean },
-): Promise<
-  | { readonly places: readonly OwnerPlaceCardItem[]; readonly error: null }
-  | { readonly places: null; readonly error: string }
-> {
+  options?: PlaceCardsOptions,
+): Promise<PlaceCardsResult> {
   // Stage 1: tiny experiences list (ids + labels only).
   let experiencesQuery = supabase
     .from("experiences")
@@ -193,73 +274,211 @@ export async function loadOwnerPlaceCards(
     return { places: null, error: photosResult.error.message };
   }
 
-  const statsByAlbum = new Map<
-    string,
-    { count: number; startsAt: string | null; endsAt: string | null }
-  >();
-  for (const photo of photosResult.data ?? []) {
-    const albumId = photo.album_id as string | null;
-    if (!albumId) continue;
-    const capturedAt = (photo.captured_at as string | null) ?? null;
-    const current = statsByAlbum.get(albumId) ?? {
-      count: 0,
-      startsAt: null,
-      endsAt: null,
-    };
-    current.count += 1;
-    if (capturedAt) {
-      if (!current.startsAt || capturedAt < current.startsAt) {
-        current.startsAt = capturedAt;
-      }
-      if (!current.endsAt || capturedAt > current.endsAt) {
-        current.endsAt = capturedAt;
-      }
-    }
-    statsByAlbum.set(albumId, current);
-  }
+  const statsByAlbum = statsFromPhotos(photosResult.data ?? []);
 
   const focusByAlbum = await loadCoverFocusByAlbum(
     supabase,
     albumRows.map((album) => album.id),
   );
 
-  const places: OwnerPlaceCardItem[] = albumRows.map((album) => {
-    const experienceId = album.experience_id;
-    const experience = experienceById.get(experienceId);
-    const stats = statsByAlbum.get(album.id);
-    const coverPhotoId = album.cover_photo_id;
-    const momentId = album.source_moment_id;
-    const linkedPlace = momentId ? placeNameByMomentId.get(momentId) : null;
-    const title = resolveLocationDisplayName({
-      albumName: album.name,
-      placeName: linkedPlace?.name ?? null,
-      placeConfirmedByUser: linkedPlace?.confirmed ?? false,
-    });
-    const countryCode = countryCodeFromStoredOrLabel({
-      storedCode: linkedPlace?.countryCode,
-      confirmedByUser: linkedPlace?.confirmed ?? false,
-      labels: [title, linkedPlace?.name],
-    });
-
-    return {
-      albumId: album.id,
-      experienceId,
-      experienceSlug: experience?.slug ?? "",
-      experienceTitle: experience?.title ?? title,
-      title,
-      countryCode,
-      startsAt: stats?.startsAt ?? null,
-      endsAt: stats?.endsAt ?? null,
-      coverPhotoId,
-      coverFocus: focusByAlbum.get(album.id) ?? null,
-      previewPhotoIds: coverPhotoId ? [coverPhotoId] : [],
-      photoCount: stats?.count ?? 0,
-    };
+  const places = buildPlaceCards({
+    albumRows,
+    experienceById,
+    placeNameByMomentId,
+    statsByAlbum,
+    focusByAlbum,
   });
 
-  places.sort((a, b) => comparePlaceRecency(a, b));
-
   return { places, error: null };
+}
+
+/**
+ * Same result as the sequential loader, in ONE round of parallel queries instead of three in a row
+ * (experiences -> albums+photos -> cover focus). PostgREST joins the owner's experiences into each query
+ * (`experiences!inner` + a filter on the embedded owner), so no query has to wait for another one's ids.
+ * No SQL function or migration is involved: it only uses foreign keys that already exist.
+ *
+ * Any error, or an embed this database cannot resolve, returns null and the caller falls back to the sequential
+ * loader, which is the proven path (it also handles the databases that lack the optional columns).
+ */
+async function loadOwnerPlaceCardsJoined(
+  supabase: ServerSupabase,
+  ownerId: string,
+  options?: PlaceCardsOptions,
+): Promise<PlaceCardsResult | null> {
+  try {
+    const publicOnly = Boolean(options?.publicOnly);
+
+    let albumsQuery = supabase
+      .from("albums")
+      .select(
+        `
+        id,
+        experience_id,
+        name,
+        cover_photo_id,
+        position,
+        source_moment_id,
+        moment:moments!albums_source_moment_fkey (
+          place:places (
+            name,
+            confirmed_by_user,
+            country_code
+          )
+        ),
+        experiences!inner (
+          slug,
+          title
+        )
+      `,
+      )
+      .is("parent_album_id", null)
+      .eq("experiences.owner_id", ownerId);
+    let photosQuery = supabase
+      .from("photos")
+      .select("album_id, captured_at, experiences!inner()")
+      .eq("experiences.owner_id", ownerId);
+    if (publicOnly) {
+      albumsQuery = albumsQuery.eq("experiences.visibility", "public").eq("experiences.status", "published");
+      photosQuery = photosQuery.eq("experiences.visibility", "public").eq("experiences.status", "published");
+    }
+
+    const [albumsResult, photosResult, focusResult] = await Promise.all([
+      albumsQuery.order("position", { ascending: true }),
+      photosQuery,
+      supabase
+        .from("album_cover_focus")
+        .select("album_id, focus_x, focus_y, focus_zoom, albums!inner(experiences!inner())")
+        .eq("albums.experiences.owner_id", ownerId),
+    ]);
+
+    if (albumsResult.error || photosResult.error) return null;
+
+    const albumRows: AlbumRow[] = [];
+    const experienceById = new Map<string, { slug: string; title: string }>();
+    const placeNameByMomentId = new Map<string, PlaceLink>();
+    for (const raw of albumsResult.data ?? []) {
+      const row = raw as Record<string, unknown>;
+      const album = toAlbumRow(row);
+      albumRows.push(album);
+      const embedded = asRecord(Array.isArray(row.experiences) ? row.experiences[0] : row.experiences);
+      // An inner join always carries the experience; a row without it means the embed did not resolve as expected.
+      if (!embedded || typeof embedded.slug !== "string" || typeof embedded.title !== "string") return null;
+      if (!experienceById.has(album.experience_id)) {
+        experienceById.set(album.experience_id, { slug: embedded.slug, title: embedded.title });
+      }
+      const momentId = album.source_moment_id;
+      if (!momentId) continue;
+      const link = placeLinkFromEmbed(Array.isArray(album.moment) ? album.moment[0] : album.moment);
+      if (link) placeNameByMomentId.set(momentId, link);
+    }
+    if (albumRows.length === 0) return { places: [], error: null };
+
+    // Cover focus is optional data (and its zoom column comes from a later migration): when this joined read
+    // fails, the albums' own lookup (one more query, only in that case) gives the exact same answer.
+    const focusByAlbum = new Map<string, CoverFocus>();
+    if (focusResult.error) {
+      for (const [id, focus] of await loadCoverFocusByAlbum(supabase, albumRows.map((album) => album.id))) {
+        focusByAlbum.set(id, focus);
+      }
+    } else {
+      for (const row of (focusResult.data ?? []) as unknown as {
+        album_id: string;
+        focus_x: unknown;
+        focus_y: unknown;
+        focus_zoom?: unknown;
+      }[]) {
+        focusByAlbum.set(row.album_id, clampFocus({ x: row.focus_x, y: row.focus_y, zoom: row.focus_zoom }));
+      }
+    }
+
+    return {
+      places: buildPlaceCards({
+        albumRows,
+        experienceById,
+        placeNameByMomentId,
+        statsByAlbum: statsFromPhotos(photosResult.data ?? []),
+        focusByAlbum,
+      }),
+      error: null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Compares two loader results for the PLACE_CARDS_JOIN=compare log. It looks at EVERY field of every card (title,
+ * country, dates, cover photo and focus, preview ids, photo count, experience slug and title) and reports only names
+ * and counts, never values:
+ *   "equal"                              same cards, same order;
+ *   "order-differs"                      same cards in another order (ties with equal sort keys come back from the
+ *                                        database in no guaranteed order, so this alone is not a data problem);
+ *   "DIFFERENT fields=a,b missing=n extra=m"  the cards differ; `fields` names the card fields that changed;
+ *   "unavailable"                        the joined loader could not answer (the caller falls back in that case).
+ */
+export function describePlaceCardsComparison(
+  sequential: PlaceCardsResult,
+  joined: PlaceCardsResult | null,
+): string {
+  if (joined === null) return "unavailable";
+  if (sequential.places === null || joined.places === null) {
+    return sequential.places === null && joined.places === null && sequential.error === joined.error
+      ? "equal"
+      : "DIFFERENT fields=error missing=0 extra=0";
+  }
+  const byId = (cards: readonly OwnerPlaceCardItem[]) => new Map(cards.map((card) => [card.albumId, card]));
+  const a = byId(sequential.places);
+  const b = byId(joined.places);
+  const fields = new Set<string>();
+  let missing = 0;
+  let extra = 0;
+  for (const [id, card] of a) {
+    const other = b.get(id);
+    if (!other) {
+      missing += 1;
+      continue;
+    }
+    for (const key of Object.keys(card) as (keyof OwnerPlaceCardItem)[]) {
+      if (JSON.stringify(card[key]) !== JSON.stringify(other[key])) fields.add(key);
+    }
+  }
+  for (const id of b.keys()) if (!a.has(id)) extra += 1;
+  if (fields.size > 0 || missing > 0 || extra > 0) {
+    return `DIFFERENT fields=${[...fields].sort().join(",") || "-"} missing=${missing} extra=${extra}`;
+  }
+  const sameOrder = sequential.places.every((card, index) => card.albumId === joined.places?.[index]?.albumId);
+  return sameOrder ? "equal" : "order-differs";
+}
+
+/**
+ * PLACE_CARDS_JOIN controls which loader serves the pages (read per call):
+ *   unset / anything else  the sequential loader (the proven behaviour);
+ *   "1"                    the joined loader, falling back to the sequential one on any problem;
+ *   "compare"              runs BOTH, logs "[perf] place-cards joined=equal|DIFFERENT" (no data in the log) and
+ *                          returns the sequential result: for validating the joined loader on a Preview.
+ */
+export async function loadOwnerPlaceCards(
+  supabase: ServerSupabase,
+  ownerId: string,
+  options?: PlaceCardsOptions,
+): Promise<PlaceCardsResult> {
+  const mode = process.env.PLACE_CARDS_JOIN;
+  if (mode === "1") {
+    return (
+      (await loadOwnerPlaceCardsJoined(supabase, ownerId, options)) ??
+      loadOwnerPlaceCardsSequential(supabase, ownerId, options)
+    );
+  }
+  if (mode === "compare") {
+    const [sequential, joined] = await Promise.all([
+      loadOwnerPlaceCardsSequential(supabase, ownerId, options),
+      loadOwnerPlaceCardsJoined(supabase, ownerId, options),
+    ]);
+    console.log(`[perf] place-cards joined=${describePlaceCardsComparison(sequential, joined)}`);
+    return sequential;
+  }
+  return loadOwnerPlaceCardsSequential(supabase, ownerId, options);
 }
 
 async function loadPlaceNamesByMoment(

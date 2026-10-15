@@ -5,7 +5,7 @@ import { AppWordmark } from "@/components/app-wordmark";
 import { ProfileCarousel } from "@/app/perfil/profile-carousel";
 import { loadOwnerCarouselPhotos } from "@/lib/experiences/load-owner-carousel-photos";
 import { loadOwnerPlaceCards } from "@/lib/experiences/load-owner-place-cards";
-import { persistOwnerPlaceCountryCodes } from "@/lib/location/place-country-code";
+import { persistOwnerPlaceCountryCodesAfterResponse } from "@/lib/location/persist-after-response";
 import { LicenseGate } from "@/components/license-gate";
 import { getUserLicense } from "@/lib/licensing/get-user-license";
 import { isAdminUser } from "@/lib/licensing/require-admin";
@@ -78,8 +78,9 @@ async function ProfilePlacesBody({
   }
 
   // Owner views record the country of any place that has none yet (one-time,
-  // best-effort) so flags/stamps do not depend on how a place is named.
-  if (isOwner) await persistOwnerPlaceCountryCodes(supabase, profile.id);
+  // best-effort) so flags/stamps do not depend on how a place is named. It runs
+  // after the response so the page never waits for it.
+  if (isOwner) persistOwnerPlaceCountryCodesAfterResponse(supabase, profile.id);
 
   // Only the owner ever needs to know whether the account has a license.
   const [result, license] = await Promise.all([
@@ -159,9 +160,16 @@ export async function PublicProfileContent({
     );
   }
 
+  // The admin check only needs the viewer's id, so it starts as soon as getUser answers, in parallel with the
+  // profile lookup. Its result is used only when the viewer owns this profile (the admin link never shows on
+  // someone else's profile).
+  const userPromise = supabase.auth.getUser();
+  const adminPromise = userPromise
+    .then(({ data }) => (data.user ? isAdminUser(supabase, data.user.id) : false))
+    .catch(() => false);
   const [profile, userResult] = await Promise.all([
     lookupPublicProfile(supabase, profileSlug),
-    supabase.auth.getUser(),
+    userPromise,
   ]);
   if (!profile) {
     notFound();
@@ -171,10 +179,7 @@ export async function PublicProfileContent({
   const isOwner = Boolean(
     userResult.data.user?.id && userResult.data.user.id === profile.id,
   );
-  const isAdmin =
-    isOwner && userResult.data.user
-      ? await isAdminUser(supabase, userResult.data.user.id)
-      : false;
+  const isAdmin = isOwner ? await adminPromise : false;
   const identity = profileViewIdentity(
     profile,
     isOwner,

@@ -7,28 +7,24 @@ import { shortPlaceCaption } from "@moments-forever/shared";
 import { toneFromId } from "@/app/trip/[slug]/album-types";
 import type { ProfileCarouselPhoto } from "@/lib/experiences/load-owner-carousel-photos";
 import { useLocalPhotoObjectUrl } from "@/lib/local-photos/use-local-photo-urls";
+import {
+  polaroidAnimationNames,
+  polaroidKeyframesCss,
+  polaroidRotationDegrees,
+} from "@/lib/perfil/polaroid-keyframes";
 import { profileTripAlbumPath } from "@/lib/routes/app-routes";
 
 import styles from "./perfil.module.css";
 
 /** Photos in the stack at once. More would make each cycle too long and the stack too busy. */
 const MAX_STACK = 6;
-/** Seconds each photo spends per turn; the whole cycle is `count * SECONDS_PER_PHOTO`. */
-const SECONDS_PER_PHOTO = 2.2;
+/** Seconds per photo; the whole cycle is `count * SECONDS_PER_PHOTO` (the original: 10s for 5 photos). */
+const SECONDS_PER_PHOTO = 2;
 
 function folderHref(photo: ProfileCarouselPhoto): string | null {
   if (!photo.experienceSlug || !photo.albumId) return null;
   // Opens the trip folder grid, not the lightbox.
   return profileTripAlbumPath(photo.experienceSlug, photo.albumId);
-}
-
-/** Stable per-photo rotation in -10deg..10deg (the reference used random(30) - 15). */
-function rotationForPhoto(id: string): number {
-  let hash = 0;
-  for (let index = 0; index < id.length; index += 1) {
-    hash = (hash * 31 + id.charCodeAt(index)) % 9973;
-  }
-  return (hash % 21) - 10;
 }
 
 function PolaroidPhoto({
@@ -46,10 +42,17 @@ function PolaroidPhoto({
   const fullSrc = useLocalPhotoObjectUrl(preferFull ? photo.id : null, "full");
   const caption = shortPlaceCaption(photo.locationLabel);
   const href = folderHref(photo);
+  const names = polaroidAnimationNames(count);
   const style = {
     ["--i" as string]: index + 1,
     ["--n" as string]: count,
-    ["--r" as string]: `${rotationForPhoto(photo.id)}deg`,
+    ["--r" as string]: `${polaroidRotationDegrees(photo.id)}deg`,
+    // The last photo uses the "z-order-last" keyframes, as in the original.
+    ...(count > 1
+      ? {
+          animationName: `${names.slide}, ${index === count - 1 ? names.zLast : names.z}`,
+        }
+      : null),
   } as CSSProperties;
 
   const body = (
@@ -153,6 +156,7 @@ export function PolaroidStack({
 
   return (
     <div className={styles.polaroidStage} ref={wrapRef}>
+      {count > 1 ? <style>{polaroidKeyframesCss(count)}</style> : null}
       <div
         className={styles.polaroidStack}
         data-animate={count > 1 ? "true" : "false"}

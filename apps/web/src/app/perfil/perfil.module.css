@@ -1401,10 +1401,9 @@ html:not([data-nav-hidden="true"]) .sectionHeading[data-stuck="true"]:not(:focus
  */
 .polaroidStage {
   --pw: clamp(130px, 38vw, 220px);
-  --slide: 105%;
-  display: grid;
+    display: grid;
   justify-items: start;
-  width: calc(var(--pw) * 2.05);
+  width: calc(var(--pw) * 2.2);
   max-width: 100%;
   margin: 0 auto;
   padding: 26px 0 20px;
@@ -1437,11 +1436,12 @@ html:not([data-nav-hidden="true"]) .sectionHeading[data-stuck="true"]:not(:focus
   -webkit-tap-highlight-color: transparent;
 }
 
+/* The animation names are set per card (inline) because the keyframes depend on the number of photos. */
 .polaroidStack[data-animate="true"] .polaroidCard {
-  animation:
-    polaroidSlide var(--d) ease-in-out infinite,
-    polaroidZ var(--d) steps(1) infinite;
-  animation-delay: calc((1 - var(--i)) * var(--d) / var(--n));
+  animation-duration: var(--d), var(--d);
+  animation-iteration-count: infinite, infinite;
+  animation-timing-function: ease, steps(1);
+  animation-delay: calc((1 - var(--i)) / var(--n) * var(--d)), calc((1 - var(--i)) / var(--n) * var(--d));
   will-change: transform;
 }
 
@@ -1450,24 +1450,6 @@ html:not([data-nav-hidden="true"]) .sectionHeading[data-stuck="true"]:not(:focus
 .polaroidStack[data-animate="true"]:focus-within .polaroidCard,
 .polaroidStack[data-paused="true"] .polaroidCard {
   animation-play-state: paused;
-}
-
-@keyframes polaroidSlide {
-  0%,
-  100% {
-    transform: translateX(0%) rotate(var(--r));
-  }
-
-  50% {
-    transform: translateX(var(--slide)) rotate(var(--r));
-  }
-}
-
-@keyframes polaroidZ {
-  50%,
-  100% {
-    z-index: 1;
-  }
 }
 
 .polaroidPhoto {
@@ -1544,7 +1526,7 @@ html:not([data-nav-hidden="true"]) .sectionHeading[data-stuck="true"]:not(:focus
 /* Reduced motion: a static, slightly fanned stack with the first photo in front. */
 @media (prefers-reduced-motion: reduce) {
   .polaroidStack[data-animate="true"] .polaroidCard {
-    animation: none;
+    animation: none !important;
     z-index: calc(10 - var(--i));
     transform: translateX(calc((var(--i) - 1) * 7%)) rotate(var(--r));
   }

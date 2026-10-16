@@ -12,6 +12,7 @@ import {
 import { createPortal } from "react-dom";
 
 import { AppWordmark } from "@/components/app-wordmark";
+import { ExperienceCoverThumb } from "@/components/experience-cover-thumb";
 import { useLockPageScroll } from "@/components/use-lock-page-scroll";
 import { deleteLocalPhotoBlobs } from "@/lib/local-photos/photo-blob-store";
 import {
@@ -692,6 +693,8 @@ export function StoryDialog({
   error,
   onClose,
   onSubmit,
+  photoIds,
+  currentPhotoId = null,
 }: {
   readonly title: string;
   readonly initialStory: string;
@@ -699,9 +702,15 @@ export function StoryDialog({
   readonly busy: boolean;
   readonly error: string | null;
   readonly onClose: () => void;
-  readonly onSubmit: (story: string) => Promise<void>;
+  readonly onSubmit: (story: string, photoId: string | null) => Promise<void>;
+  /** When given, the dialog also lets the owner pick the photo shown in the story card's polaroid. */
+  readonly photoIds?: readonly string[];
+  readonly currentPhotoId?: string | null;
 }) {
   useLockPageScroll();
+  const [selectedPhotoId, setSelectedPhotoId] = useState<string | null>(
+    currentPhotoId,
+  );
 
   return (
     <div
@@ -719,7 +728,7 @@ export function StoryDialog({
           onSubmit={(event: FormEvent<HTMLFormElement>) => {
             event.preventDefault();
             const data = new FormData(event.currentTarget);
-            void onSubmit(String(data.get("story") ?? ""));
+            void onSubmit(String(data.get("story") ?? ""), selectedPhotoId);
           }}
         >
           <label htmlFor="album-story">Sobre essa viagem</label>
@@ -733,6 +742,32 @@ export function StoryDialog({
             placeholder="O que essa viagem significou para você?"
             rows={7}
           />
+          {photoIds && photoIds.length > 0 ? (
+            <fieldset className={styles.storyPhotoPicker}>
+              <legend>Foto da Polaroid</legend>
+              <div className={styles.storyPhotoGrid}>
+                {photoIds.map((photoId) => (
+                  <button
+                    aria-label="Usar esta foto na Polaroid"
+                    aria-pressed={selectedPhotoId === photoId}
+                    className={styles.storyPhotoOption}
+                    data-selected={selectedPhotoId === photoId ? "true" : "false"}
+                    disabled={busy}
+                    key={photoId}
+                    onClick={() => setSelectedPhotoId(photoId)}
+                    type="button"
+                  >
+                    <ExperienceCoverThumb
+                      coverPhotoId={photoId}
+                      imageClassName={styles.storyPhotoImage}
+                      title=""
+                      variant="thumbnail"
+                    />
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+          ) : null}
           <div className={styles.panelActions}>
             <button className="button primary" disabled={busy} type="submit">
               {busy ? "Salvando…" : confirmLabel}

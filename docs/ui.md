@@ -60,6 +60,10 @@ Referência visual: app de viagem premium, fundo escuro com acentos cobre/salmã
 
 Não reintroduzir cartão ou altura fixa no cabeçalho, nem dados de exemplo da referência: tudo vem dos dados reais.
 
+## Cartão “Sobre essa viagem”
+
+Composição editorial na página do lugar: título serifado “Sobre essa **viagem**” (última palavra em terracota), a história do usuário em serifa, localização (ícone de pino; cidade e país da viagem) e período (ícone de calendário) discretos, e o botão “Editar história” (só o dono). À direita, duas fotos **reais do próprio lugar** em moldura de Polaroid, levemente inclinadas e sobrepostas (a capa do lugar ou a primeira foto, e outra foto diferente atrás); sem foto, o cartão fica só com o texto. As fotos são decorativas (`aria-hidden`, sem interação) e não usam imagens genéricas nem dados de exemplo. Fundo escuro com brilho terracota, borda dupla sutil e o globo delicado ao fundo. Mantém duas colunas também no celular, com a Polaroid reduzida e tipografia menor.
+
 ## Conteúdo e estados
 
 Tratar explicitamente coleção vazia, memória sem GPS, EXIF ausente, upload pausado, link privado, indisponibilidade e exclusão. Nunca insinuar que análise local reconheceu um lugar com certeza quando apenas estimou um grupo.

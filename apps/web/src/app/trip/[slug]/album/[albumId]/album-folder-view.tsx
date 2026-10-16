@@ -17,6 +17,7 @@ import {
 
 import { AppBottomNav } from "@/components/app-bottom-nav";
 import { useAuth } from "@/components/auth-provider";
+import { ExperienceCoverThumb } from "@/components/experience-cover-thumb";
 import {
   deleteLocalPhotoBlob,
   deleteLocalPhotoBlobs,
@@ -614,6 +615,19 @@ export function AlbumFolderView({
   const storyLong = story.length > 220;
   const storyText =
     storyLong && !storyExpanded ? `${story.slice(0, 220).trim()}…` : story;
+  // "Sobre essa viagem" polaroids: real photos of this place (cover first, then the next different photo).
+  const aboutPhotoId = album.coverPhotoId ?? albumPhotos[0]?.id ?? null;
+  const aboutPhotoBackId =
+    albumPhotos.find((photo) => photo.id !== aboutPhotoId)?.id ?? null;
+  const aboutLocation = [experience.primaryCity, experience.primaryCountry]
+    .map((part) => part?.trim() ?? "")
+    .filter(
+      (part, index, all) =>
+        part &&
+        all.findIndex((other) => other.toLowerCase() === part.toLowerCase()) ===
+          index,
+    )
+    .join(", ");
   const fullMapHref = `${profileTripPath(experience.slug)}#trip-mapa`;
 
   return (
@@ -731,7 +745,9 @@ export function AlbumFolderView({
           >
             <AboutWorldMark />
             <div className={styles.albumAboutCopy}>
-              <p className={styles.albumAboutTitle}>Sobre essa viagem</p>
+              <p className={styles.albumAboutHeading}>
+                Sobre essa <span className={styles.albumAboutHeadingAccent}>viagem</span>
+              </p>
               {story ? (
                 <>
                   <p className={styles.albumAboutText}>{storyText}</p>
@@ -750,18 +766,63 @@ export function AlbumFolderView({
                   Escreva o que essa viagem significou para você.
                 </p>
               )}
+              {aboutLocation || period ? (
+                <ul className={styles.albumAboutFacts}>
+                  {aboutLocation ? (
+                    <li>
+                      <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
+                        <path d="M12 21s-6.5-5.6-6.5-10.8a6.5 6.5 0 0 1 13 0C18.5 15.4 12 21 12 21Z" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.7" />
+                        <circle cx="12" cy="10" r="2.3" stroke="currentColor" strokeWidth="1.7" />
+                      </svg>
+                      <span>{aboutLocation}</span>
+                    </li>
+                  ) : null}
+                  {period ? (
+                    <li>
+                      <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
+                        <rect height="15" rx="3" stroke="currentColor" strokeWidth="1.7" width="17" x="3.5" y="5.5" />
+                        <path d="M3.5 10h17M8 3.5v4M16 3.5v4" stroke="currentColor" strokeLinecap="round" strokeWidth="1.7" />
+                      </svg>
+                      <span>{period}</span>
+                    </li>
+                  ) : null}
+                </ul>
+              ) : null}
+              {isOwner ? (
+                <button
+                  className={styles.albumAboutEdit}
+                  onClick={() => {
+                    setError(null);
+                    setStoryOpen(true);
+                  }}
+                  type="button"
+                >
+                  {story ? "Editar história" : "Escrever história"}
+                </button>
+              ) : null}
             </div>
-            {isOwner ? (
-              <button
-                className={styles.albumAboutEdit}
-                onClick={() => {
-                  setError(null);
-                  setStoryOpen(true);
-                }}
-                type="button"
-              >
-                {story ? "Editar história" : "Escrever história"}
-              </button>
+            {aboutPhotoId ? (
+              <div aria-hidden="true" className={styles.albumAboutPolaroids}>
+                {aboutPhotoBackId ? (
+                  <div className={`${styles.albumAboutPolaroid} ${styles.albumAboutPolaroidBack}`}>
+                    <ExperienceCoverThumb
+                      coverPhotoId={aboutPhotoBackId}
+                      fallbackClassName={styles.albumAboutPolaroidFallback}
+                      imageClassName={styles.albumAboutPolaroidImage}
+                      title={album.displayName}
+                      variant="thumbnail"
+                    />
+                  </div>
+                ) : null}
+                <div className={`${styles.albumAboutPolaroid} ${styles.albumAboutPolaroidFront}`}>
+                  <ExperienceCoverThumb
+                    coverPhotoId={aboutPhotoId}
+                    fallbackClassName={styles.albumAboutPolaroidFallback}
+                    imageClassName={styles.albumAboutPolaroidImage}
+                    title={album.displayName}
+                  />
+                </div>
+              </div>
             ) : null}
           </section>
         ) : null}

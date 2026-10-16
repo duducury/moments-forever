@@ -236,6 +236,7 @@ export function sortAlbumPhotos(
 
 export function formatPhotoPeriod(
   photos: readonly TripPhoto[],
+  style: "long" | "numeric" = "long",
 ): string | null {
   const timestamps = photos
     .map((photo) => photo.capturedAt)
@@ -247,7 +248,12 @@ export function formatPhotoPeriod(
 
   const min = new Date(Math.min(...timestamps));
   const max = new Date(Math.max(...timestamps));
-  const formatter = new Intl.DateTimeFormat("pt-BR", { dateStyle: "long" });
+  const formatter = new Intl.DateTimeFormat(
+    "pt-BR",
+    style === "numeric"
+      ? { day: "2-digit", month: "2-digit", year: "numeric" }
+      : { dateStyle: "long" },
+  );
   if (min.toDateString() === max.toDateString()) {
     return formatter.format(min);
   }

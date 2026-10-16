@@ -26,3 +26,13 @@ test("hero without any geography has no location and no flag", () => {
   assert.equal(hero.countryCode, null);
   assert.equal(hero.locationLine, null);
 });
+
+test("place header period can be numeric (dd/mm/aaaa) while the default stays long", async () => {
+  const { formatPhotoPeriod } = await import("@/app/trip/[slug]/album-types");
+  const photos = [
+    { capturedAt: "2026-07-21T12:00:00Z" },
+    { capturedAt: "2026-08-05T12:00:00Z" },
+  ] as never;
+  assert.equal(formatPhotoPeriod(photos, "numeric"), "21/07/2026 – 05/08/2026");
+  assert.match(formatPhotoPeriod(photos) ?? "", /julho de 2026/u);
+});

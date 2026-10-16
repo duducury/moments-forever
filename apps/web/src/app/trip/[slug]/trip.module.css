@@ -2172,26 +2172,16 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 16px 20px;
+  gap: 16px 24px;
   order: 1;
-  overflow: hidden;
+  overflow: visible;
   isolation: isolate;
-  padding: 24px 22px 22px 24px;
-  border: 1px solid color-mix(in srgb, var(--accent) 34%, var(--border));
-  border-radius: 22px;
+  /* No filled card: the section blends into the page background. */
+  padding: 8px 0 4px;
+  border: 0;
   color: var(--text);
-  background:
-    radial-gradient(
-      90% 120% at 0% 0%,
-      color-mix(in srgb, var(--accent) 14%, transparent) 0%,
-      transparent 65%
-    ),
-    linear-gradient(
-      160deg,
-      color-mix(in srgb, var(--surface) 72%, var(--accent)) 0%,
-      var(--surface) 100%
-    );
-  box-shadow: 0 12px 28px var(--shadow);
+  background: none;
+  box-shadow: none;
 }
 
 .albumAboutWorld {
@@ -2203,17 +2193,7 @@
   height: 148px;
   pointer-events: none;
   color: var(--accent);
-  opacity: 0.16;
-}
-
-.albumAboutCard::before {
-  content: "";
-  position: absolute;
-  inset: 7px;
-  z-index: 1;
-  pointer-events: none;
-  border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
-  border-radius: 16px;
+  opacity: 0.12;
 }
 
 .albumAboutCopy {
@@ -2227,12 +2207,12 @@
 
 .albumAboutHeading {
   margin: 0;
-  color: var(--text);
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(1.3rem, 5.2vw, 2.3rem);
-  font-weight: 500;
-  letter-spacing: -0.02em;
-  line-height: 1.08;
+  color: var(--accent);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  line-height: 1.2;
+  text-transform: uppercase;
 }
 
 .albumAboutHeadingAccent {
@@ -2368,7 +2348,7 @@
   border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--border));
   border-radius: 999px;
   color: var(--accent);
-  background: color-mix(in srgb, var(--surface) 55%, transparent);
+  background: transparent;
   cursor: pointer;
   font: inherit;
   font-size: 0.86rem;
@@ -3360,7 +3340,7 @@
 @media (max-width: 719px) {
   .albumAboutCard {
     gap: 12px 14px;
-    padding: 18px 16px 18px 18px;
+    padding: 6px 0 2px;
   }
 
   .albumAboutText,

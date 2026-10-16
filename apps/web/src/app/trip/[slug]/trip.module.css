@@ -2439,96 +2439,15 @@
   margin: 0;
 }
 
-/*
- * Book-page stack: rotateY (turn pages), not rotateZ (tilt flat cards).
- * Same transform-origin on every slot so slot changes animate cleanly.
- */
-.albumCarouselStage {
-  position: relative;
-  /* Card height (4/5 of width) + top offset; dots sit below this box */
-  height: calc(min(52vw, 280px) * 1.25 + 28px);
-  margin-bottom: 4px;
-  overflow: visible;
-  /* Allow page scroll until a horizontal swipe locks in JS. */
-  touch-action: pan-y;
-  user-select: none;
-  -webkit-user-select: none;
-  background: transparent;
-  perspective: 1400px;
-  perspective-origin: 50% 45%;
-}
 
-.albumCarouselStage[data-dragging="true"] {
-  touch-action: none;
-  cursor: grabbing;
-}
 
-.albumCarouselCard {
-  --carousel-drag: 0px;
-  position: absolute;
-  top: 8px;
-  z-index: 1;
-  aspect-ratio: 4 / 5;
-  width: min(52vw, 280px);
-  overflow: hidden;
-  border-radius: 18px;
-  background: transparent;
-  box-shadow: 0 10px 28px color-mix(in srgb, var(--shadow) 48%, transparent);
-  transform-origin: center center;
-  /* preserve-3d breaks border-radius clipping on side cards */
-  transform-style: flat;
-  isolation: isolate;
-  transition:
-    transform 520ms cubic-bezier(0.22, 1, 0.36, 1),
-    left 520ms cubic-bezier(0.22, 1, 0.36, 1),
-    right 520ms cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 280ms ease;
-  will-change: transform, left, right, opacity;
-}
 
-.albumCarouselCard[data-slot="hidden"] {
-  left: 50%;
-  right: auto;
-  z-index: 0;
-  transform: translateX(-50%) rotateY(0deg) scale(0.86);
-  /* Don't slide across the stage while fading out */
-  transition:
-    transform 360ms cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 200ms ease,
-    left 0s,
-    right 0s;
-}
 
 /* Mobile / default: page turn on Y axis */
-.albumCarouselCard[data-slot="0"] {
-  left: 50%;
-  right: auto;
-  z-index: 5;
-  transform: translateX(calc(-50% + var(--carousel-drag))) rotateY(0deg)
-    scale(1);
-}
 
-.albumCarouselCard[data-slot="-1"] {
-  left: calc(50% - 48vw);
-  right: auto;
-  z-index: 3;
-  transform: translateX(var(--carousel-drag)) rotateY(20deg) scale(0.9);
-}
 
-.albumCarouselCard[data-slot="1"] {
-  left: calc(50% - 8vw);
-  right: auto;
-  z-index: 3;
-  transform: translateX(var(--carousel-drag)) rotateY(-20deg) scale(0.9);
-}
 
-.albumCarouselStage[data-dragging="true"] .albumCarouselCard {
-  transition: none !important;
-}
 
-.albumCarouselCard[data-active="true"] {
-  box-shadow: 0 18px 40px color-mix(in srgb, var(--shadow) 72%, transparent);
-}
 
 .albumCarouselCardButton {
   position: relative;
@@ -2544,28 +2463,6 @@
   cursor: inherit;
 }
 
-.albumCarouselCaption {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  z-index: 2;
-  padding: 28px 12px 10px;
-  color: #fff;
-  font-size: 0.88rem;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  line-height: 1.25;
-  text-align: left;
-  text-shadow: 0 1px 2px rgb(0 0 0 / 55%);
-  background: linear-gradient(
-    to top,
-    rgb(0 0 0 / 72%),
-    rgb(0 0 0 / 28%) 55%,
-    transparent
-  );
-  pointer-events: none;
-}
 
 .albumCarouselSlide {
   position: relative;
@@ -3046,37 +2943,11 @@
     margin-left: 0;
   }
 
-  .albumCarouselStage {
-    height: 400px;
-  }
 
-  .albumCarouselCard {
-    top: 28px;
-    width: min(300px, 42vw);
-    border-radius: 24px;
-  }
 
   /* Tablet (720–1099): fill the stage out toward the arrows */
-  .albumCarouselCard[data-slot="0"] {
-    left: 50%;
-    z-index: 5;
-    transform: translateX(calc(-50% + var(--carousel-drag))) rotateY(0deg)
-      scale(1);
-  }
 
-  .albumCarouselCard[data-slot="-1"] {
-    left: 6%;
-    right: auto;
-    z-index: 3;
-    transform: translateX(var(--carousel-drag)) rotateY(26deg) scale(0.9);
-  }
 
-  .albumCarouselCard[data-slot="1"] {
-    left: auto;
-    right: 6%;
-    z-index: 3;
-    transform: translateX(var(--carousel-drag)) rotateY(-26deg) scale(0.9);
-  }
 
   .albumCarouselArrow {
     width: 46px;
@@ -3203,51 +3074,12 @@
 
 /* Wide desktop: 5-page stack — spread to the arrows */
 @media (min-width: 1100px) {
-  .albumCarouselStage {
-    height: 430px;
-    min-height: 430px;
-  }
 
-  .albumCarouselCard {
-    top: 28px;
-    width: 300px;
-  }
 
-  .albumCarouselCard[data-slot="0"] {
-    left: 50%;
-    right: auto;
-    z-index: 5;
-    transform: translateX(calc(-50% + var(--carousel-drag))) rotateY(0deg)
-      scale(1);
-  }
 
-  .albumCarouselCard[data-slot="-1"] {
-    left: 18%;
-    right: auto;
-    z-index: 3;
-    transform: translateX(var(--carousel-drag)) rotateY(28deg) scale(0.9);
-  }
 
-  .albumCarouselCard[data-slot="1"] {
-    left: auto;
-    right: 18%;
-    z-index: 3;
-    transform: translateX(var(--carousel-drag)) rotateY(-28deg) scale(0.9);
-  }
 
-  .albumCarouselCard[data-slot="-2"] {
-    left: 2%;
-    right: auto;
-    z-index: 1;
-    transform: translateX(var(--carousel-drag)) rotateY(40deg) scale(0.82);
-  }
 
-  .albumCarouselCard[data-slot="2"] {
-    left: auto;
-    right: 2%;
-    z-index: 1;
-    transform: translateX(var(--carousel-drag)) rotateY(-40deg) scale(0.82);
-  }
 
   .albumCarouselArrowPrev {
     left: 4px;
@@ -3597,4 +3429,170 @@
 
 .albumAboutText {
   color: color-mix(in srgb, var(--text) 94%, #f2e4c8);
+}
+
+/*
+ * Destaques: Polaroid stack. Photos sit in ivory frames with a caption strip, overlap, tilt in the plane and swap
+ * layers halfway through the move (z-index steps after a short delay, like the reference's z-order keyframes). Slots:
+ * 0 = front, +-1 / +-2 = behind to each side, hidden = parked. Geometry comes from the variables below so every
+ * breakpoint only changes sizes. Reduced motion: no transitions and no autoplay (see album-carousel.tsx).
+ */
+.albumCarouselStage {
+  --pw: clamp(140px, 44vw, 208px);
+  --ph: calc(var(--pw) * 1.2);
+  --gap-1: 56%;
+  --gap-2: 104%;
+  position: relative;
+  height: calc(var(--ph) + 56px);
+  margin-bottom: 4px;
+  overflow: visible;
+  /* Allow page scroll until a horizontal swipe locks in JS. */
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+  background: transparent;
+}
+
+.albumCarouselStage[data-dragging="true"] {
+  touch-action: none;
+  cursor: grabbing;
+}
+
+.albumCarouselCard {
+  --carousel-drag: 0px;
+  --tilt: 0deg;
+  --slot-x: 0%;
+  --slot-r: 0deg;
+  --slot-s: 1;
+  position: absolute;
+  top: 26px;
+  left: 50%;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: var(--pw);
+  height: var(--ph);
+  /* Proportional to the photo width (a % padding would follow the stage width instead). */
+  padding: calc(var(--pw) * 0.06) calc(var(--pw) * 0.06) 0;
+  border-radius: 3px;
+  background: #f5efe3;
+  box-shadow:
+    0 10px 24px rgb(0 0 0 / 42%),
+    0 0 0 1px rgb(0 0 0 / 10%);
+  transform: translateX(calc(-50% + var(--slot-x) + var(--carousel-drag)))
+    rotate(calc(var(--slot-r) + var(--tilt))) scale(var(--slot-s));
+  transform-origin: 50% 62%;
+  isolation: isolate;
+  transition:
+    transform 700ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 420ms ease,
+    box-shadow 420ms ease,
+    z-index 0s 260ms;
+  will-change: transform;
+}
+
+.albumCarouselCard[data-slot="0"] {
+  --slot-r: -2deg;
+  z-index: 5;
+  box-shadow:
+    0 18px 38px rgb(0 0 0 / 52%),
+    0 0 0 1px rgb(0 0 0 / 10%);
+}
+
+.albumCarouselCard[data-slot="-1"] {
+  --slot-x: calc(var(--gap-1) * -1);
+  --slot-r: -9deg;
+  --slot-s: 0.9;
+  z-index: 3;
+}
+
+.albumCarouselCard[data-slot="1"] {
+  --slot-x: var(--gap-1);
+  --slot-r: 8deg;
+  --slot-s: 0.9;
+  z-index: 3;
+}
+
+.albumCarouselCard[data-slot="-2"] {
+  --slot-x: calc(var(--gap-2) * -1);
+  --slot-r: -15deg;
+  --slot-s: 0.8;
+  z-index: 1;
+}
+
+.albumCarouselCard[data-slot="2"] {
+  --slot-x: var(--gap-2);
+  --slot-r: 14deg;
+  --slot-s: 0.8;
+  z-index: 1;
+}
+
+.albumCarouselCard[data-slot="hidden"] {
+  --slot-s: 0.78;
+  z-index: 0;
+  /* Parked cards fade in place instead of crossing the stage. */
+  transition:
+    transform 360ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 200ms ease,
+    z-index 0s;
+}
+
+.albumCarouselStage[data-dragging="true"] .albumCarouselCard {
+  transition: none !important;
+}
+
+.albumCarouselCardButton {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  border-radius: 1px;
+}
+
+.albumCarouselCardButton .albumCarouselSlide {
+  flex: none;
+  height: auto;
+  aspect-ratio: 1;
+  border-radius: 1px;
+}
+
+/* Caption strip of the front polaroid: flag + destination, empty when the photo has no known destination. */
+.albumCarouselCaption {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  padding: 0 4px;
+  color: #3b3128;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(0.7rem, 2.6vw, 0.84rem);
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+  pointer-events: none;
+}
+
+@media (min-width: 720px) {
+  .albumCarouselStage {
+    --pw: clamp(190px, 26vw, 232px);
+    --gap-1: 66%;
+  }
+}
+
+/* Wide desktop: five photos, deeper spread, still centred and proportional. */
+@media (min-width: 1100px) {
+  .albumCarouselStage {
+    --pw: 244px;
+    --gap-1: 70%;
+    --gap-2: 128%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .albumCarouselCard,
+  .albumCarouselCard[data-slot="hidden"] {
+    transition: none;
+  }
 }

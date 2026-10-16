@@ -157,10 +157,20 @@ function CarouselPhoto({
   );
 }
 
-/** Drag offset only — place/rotate/scale come from CSS `data-slot`. */
+/** A small, stable per-photo tilt (-1.6deg..1.6deg) so the stack never looks mechanical. */
+function tiltForPhoto(id: string): string {
+  let hash = 0;
+  for (let index = 0; index < id.length; index += 1) {
+    hash = (hash * 31 + id.charCodeAt(index)) % 9973;
+  }
+  return `${((hash % 5) - 2) * 0.8}deg`;
+}
+
+/** Drag offset and per-photo tilt only — place/rotate/scale come from CSS `data-slot`. */
 function getStackedCardStyle(
   slot: CarouselSlot,
   offset: number,
+  photoId: string,
 ): CSSProperties {
   const drag = `${offset * DRAG_FACTOR}px`;
 
@@ -173,6 +183,7 @@ function getStackedCardStyle(
 
   return {
     ["--carousel-drag" as string]: drag,
+    ["--tilt" as string]: tiltForPhoto(photoId),
     opacity: 1,
   };
 }
@@ -211,6 +222,8 @@ export function AlbumCarousel({
   const suppressClickRef = useRef(false);
   const pointerOnCenterRef = useRef(false);
   const settleFrameRef = useRef<number | null>(null);
+  const outerRef = useRef<HTMLDivElement | null>(null);
+  const inViewRef = useRef(true);
   const lastUserActionAtRef = useRef(0);
   const ignoreClickUntilRef = useRef(0);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -227,6 +240,20 @@ export function AlbumCarousel({
       count === 0 ? 0 : Math.min(current, count - 1),
     );
   }, [count]);
+
+  // Autoplay pauses while the carousel is scrolled out of view.
+  useEffect(() => {
+    const node = outerRef.current;
+    if (!node || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        inViewRef.current = entry?.isIntersecting ?? true;
+      },
+      { threshold: 0.2 },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -256,6 +283,7 @@ export function AlbumCarousel({
     function run() {
       if (
         document.visibilityState === "hidden" ||
+        !inViewRef.current ||
         isDraggingRef.current ||
         lockAxisRef.current === "x"
       ) {
@@ -482,6 +510,7 @@ export function AlbumCarousel({
     <div
       aria-label="Carrossel do álbum"
       className={styles.albumCarouselOuter}
+      ref={outerRef}
       data-stack-depth={stackDepth}
     >
       <div className={styles.albumCarousel}>
@@ -554,7 +583,7 @@ export function AlbumCarousel({
                 data-active={isCenter ? "true" : "false"}
                 data-slot={slot}
                 key={photo.id}
-                style={getStackedCardStyle(slot, dragOffset)}
+                style={getStackedCardStyle(slot, dragOffset, photo.id)}
               >
                 {href ? (
                   <Link

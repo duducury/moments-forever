@@ -82,6 +82,15 @@ Os nomes salvos seguem “País, Localidade” (ex.: “Emirados Árabes Unidos,
 - **Bairro conhecido vira a cidade** (`coarsenTravelLabel`, usado por `resolveLocationDisplayName` em todo lugar): “Emirados Árabes Unidos, Deira” aparece como “… Dubai”. Só vale com o país certo (Deira no Quênia não muda) e a lista (`DISTRICT_CITIES`) é pequena e inequívoca; novos bairros entram ali.
 - **Ordem “Cidade, País” na página da viagem/lugar** (`placeLabelCityFirst`, aplicado em `loadTripAlbums`): “Emirados Árabes Unidos, Dubai” aparece como “Dubai, Emirados Árabes Unidos”. Só inverte quando a primeira parte é um país e a segunda não; “Cleveland, OH” e títulos escolhidos pelo dono ficam como estão. O cabeçalho, as migalhas, os cartões de lugar e o carimbo usam esse nome; `parsePlaceParts` aceita as duas ordens.
 
+## Destaques (pilha de Polaroids)
+
+O carrossel “Destaques” do perfil (`ProfileCarousel` → `AlbumCarousel`, que só é usado ali) mostra fotos reais do usuário como uma pilha de Polaroids. A seleção das fotos (`loadOwnerCarouselPhotos`: amostra aleatória entre os álbuns) e as interações não mudaram: arrastar/deslizar, setas, teclado, pontos, tocar na foto da frente para abrir a pasta da viagem e autoplay de 5,5 s.
+
+- **Visual:** cada foto tem moldura marfim (`#f5efe3`), borda inferior mais grossa, sombra suave e uma pequena inclinação própria e estável (`--tilt`, de −1,6° a 1,6°, derivada do id da foto). A da frente mostra, na faixa de legenda, a **bandeira e o nome do destino** só quando o lugar da foto é conhecido (`shortPlaceCaption`); sem destino a faixa fica vazia, nada é inventado.
+- **Pilha e animação:** posições (`data-slot`) 0 (frente), ±1 e ±2 (atrás, de cada lado), `hidden`. A geometria vem de variáveis CSS (`--pw` largura da Polaroid, `--gap-1/2` afastamento, `--slot-x/r/s`): a foto da frente vai para o lado enquanto a vizinha assume a frente, e a ordem de camadas (`z-index`) troca no meio do movimento (como os keyframes de z-order da referência). Transição de 700 ms com `cubic-bezier(.22,1,.36,1)`; ao arrastar não há transição.
+- **Responsivo:** `--pw` = `clamp(140px, 44vw, 208px)` no celular (3 fotos visíveis), `clamp(190px, 26vw, 232px)` no tablet (≥ 720 px) e 244 px no desktop largo (≥ 1100 px, 5 fotos). A altura da seção e do esqueleto de carregamento (`.carouselSkeleton`) seguem a mesma fórmula (largura × 1,2 + folga), sem deslocamento de layout. O contêiner corta o que sai da tela, sem rolagem horizontal.
+- **Acessibilidade e desempenho:** `prefers-reduced-motion` remove transições e desliga o autoplay; o autoplay também pausa com a aba oculta e quando o carrossel sai da tela (`IntersectionObserver`). Miniatura primeiro, versão grande só na foto da frente (pré-carrega as vizinhas); imagens preguiçosas, sem dependências novas.
+
 ## Conteúdo e estados
 
 Tratar explicitamente coleção vazia, memória sem GPS, EXIF ausente, upload pausado, link privado, indisponibilidade e exclusão. Nunca insinuar que análise local reconheceu um lugar com certeza quando apenas estimou um grupo.

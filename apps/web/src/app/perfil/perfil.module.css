@@ -725,20 +725,21 @@ html:not([data-nav-hidden="true"]) .sectionHeading[data-stuck="true"]:not(:focus
 /* Reserves the carousel's real height while it streams in — without this
    the section pops in after paint and pushes Viagens down (layout shift). */
 .carouselSkeleton {
-  height: calc(min(52vw, 280px) * 1.25 + 28px);
+  /* Polaroid stack height: photo width x 1.2 + room for tilt + the dots row. */
+  height: calc(clamp(140px, 44vw, 208px) * 1.2 + 84px);
   background: color-mix(in srgb, var(--surface-secondary) 70%, var(--border));
   border-radius: 24px;
 }
 
 @media (min-width: 720px) {
   .carouselSkeleton {
-    height: 400px;
+    height: calc(clamp(190px, 26vw, 232px) * 1.2 + 84px);
   }
 }
 
 @media (min-width: 1100px) {
   .carouselSkeleton {
-    height: 430px;
+    height: calc(244px * 1.2 + 84px);
   }
 }
 

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { stampLabels, stampLandmark } from "./stamp-landmark";
+import { stampLabels, stampLandmark, stampShapeKey } from "./stamp-landmark";
 
 test("known cities get their landmark, accent- and case-insensitive", () => {
   assert.equal(stampLandmark(["Dubai"]), "burj-khalifa");
@@ -32,4 +32,12 @@ test("stamp labels: city first, place as fallback, country second line", () => {
   });
   assert.equal(stampLabels({ city: "Brasil", place: "x", country: "Brasil" }).country, "");
   assert.ok(stampLabels({ city: "Santo Antônio do Pinhal de Cima", place: "x", country: "" }).name.endsWith("…"));
+});
+
+test("shape key: US state when known, otherwise the country, never a guess", () => {
+  assert.deepEqual(stampShapeKey("US", "tx"), { kind: "us-state", key: "TX" });
+  assert.deepEqual(stampShapeKey("us", null), { kind: "country", key: "US" });
+  assert.deepEqual(stampShapeKey("br", "TX"), { kind: "country", key: "BR" });
+  assert.equal(stampShapeKey(null, null), null);
+  assert.equal(stampShapeKey("Brasil", null), null);
 });

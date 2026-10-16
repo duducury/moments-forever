@@ -56,3 +56,20 @@ export function stampLabels(input: {
   const country = clip(input.country ?? "", 24);
   return { name, country: country === name ? "" : country };
 }
+
+/**
+ * Which real outline the stamp can draw for a destination: the US state when it is known, otherwise the country.
+ * Outlines come from `public/geo/stamp-shapes-v1.json` (built from the repo's own country/state data).
+ */
+export function stampShapeKey(
+  countryCode: string | null | undefined,
+  usState: string | null | undefined,
+): { readonly kind: "us-state" | "country"; readonly key: string } | null {
+  const country = countryCode?.trim().toUpperCase() ?? "";
+  if (!/^[A-Z]{2}$/u.test(country)) return null;
+  const state = usState?.trim().toUpperCase() ?? "";
+  if (country === "US" && /^[A-Z]{2}$/u.test(state)) {
+    return { kind: "us-state", key: state };
+  }
+  return { kind: "country", key: country };
+}

@@ -819,7 +819,9 @@ export function AlbumFolderView({
                 <TripStamp
                   city={experience.primaryCity}
                   country={experience.primaryCountry}
+                  countryCode={countryCode}
                   place={album.displayName}
+                  usState={placeUsState}
                 />
                 {aboutPhotoBackId ? (
                   <div className={`${styles.albumAboutPolaroid} ${styles.albumAboutPolaroidBack}`}>

@@ -1,6 +1,11 @@
-import { useId } from "react";
+import { useEffect, useId, useState } from "react";
 
-import { stampLabels, stampLandmark, type StampLandmark } from "@/lib/geo/stamp-landmark";
+import {
+  stampLabels,
+  stampLandmark,
+  stampShapeKey,
+  type StampLandmark,
+} from "@/lib/geo/stamp-landmark";
 
 import styles from "./trip.module.css";
 
@@ -11,18 +16,56 @@ import styles from "./trip.module.css";
  * destination gets a generic compass, never an invented landmark. Fine copper outlines with a distressed ink texture,
  * low opacity, `aria-hidden`, no interaction. No per-destination assets: pure SVG generated from text.
  */
+interface StampShapes {
+  readonly countries: Readonly<Record<string, string>>;
+  readonly us: Readonly<Record<string, string>>;
+}
+
+let shapesPromise: Promise<StampShapes | null> | null = null;
+
+/** The outlines file is small, static and cached; it is fetched once per page session. */
+function loadStampShapes(): Promise<StampShapes | null> {
+  shapesPromise ??= fetch("/geo/stamp-shapes-v1.json")
+    .then((response) => (response.ok ? (response.json() as Promise<StampShapes>) : null))
+    .catch(() => null);
+  return shapesPromise;
+}
+
 export function TripStamp({
   city,
   place,
   country,
+  countryCode = null,
+  usState = null,
 }: {
   readonly city: string | null | undefined;
   readonly place: string;
   readonly country: string | null | undefined;
+  /** ISO alpha-2 of the destination country, when known. */
+  readonly countryCode?: string | null;
+  /** US state abbreviation of the place, when known (only used with country US). */
+  readonly usState?: string | null;
 }) {
   const uid = useId().replace(/:/gu, "");
   const labels = stampLabels({ city, place, country });
   const landmark = stampLandmark([city, place]);
+  const shapeKey = stampShapeKey(countryCode, usState);
+  const [shapes, setShapes] = useState<StampShapes | null>(null);
+  useEffect(() => {
+    if (landmark || !shapeKey) return;
+    let active = true;
+    void loadStampShapes().then((loaded) => {
+      if (active) setShapes(loaded);
+    });
+    return () => {
+      active = false;
+    };
+  }, [landmark, shapeKey?.kind, shapeKey?.key]); // eslint-disable-line react-hooks/exhaustive-deps
+  const outline = shapeKey
+    ? shapeKey.kind === "us-state"
+      ? shapes?.us[shapeKey.key]
+      : shapes?.countries[shapeKey.key]
+    : undefined;
 
   const nameSize = labels.name.length <= 8 ? 10 : labels.name.length <= 12 ? 8.4 : 6.8;
   const nameLength = Math.min(54, labels.name.length * nameSize * 0.74);
@@ -78,7 +121,7 @@ export function TripStamp({
 
         {/* illustration window: a recognised landmark, otherwise a generic compass */}
         <path d="M18 84H70" strokeWidth="0.8" />
-        {landmark ? <Landmark kind={landmark} /> : <Compass />}
+        {landmark ? <Landmark kind={landmark} /> : outline ? <Outline d={outline} /> : <Compass />}
 
         {labels.country ? (
           <text
@@ -185,6 +228,21 @@ function Compass() {
       <circle cx="44" cy="58" r="12" strokeDasharray="1.6 2.4" strokeWidth="0.7" />
       <path d="M44 38V78M24 58H64" strokeWidth="0.7" />
       <path d="M44 41 47.5 54.5 61 58 47.5 61.5 44 75 40.5 61.5 27 58 40.5 54.5Z" fill="currentColor" fillOpacity="0.25" />
+    </g>
+  );
+}
+
+/** The real outline of the destination (state or country), fitted in the illustration window. */
+function Outline({ d }: { readonly d: string }) {
+  return (
+    <g transform="translate(19 34) scale(0.5)">
+      <path
+        d={d}
+        fill="currentColor"
+        fillOpacity="0.16"
+        strokeWidth="0.9"
+        vectorEffect="non-scaling-stroke"
+      />
     </g>
   );
 }

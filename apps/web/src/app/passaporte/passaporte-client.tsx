@@ -413,8 +413,6 @@ export function PassaporteClient({
         ) : null}
       </section>
 
-      {highlightsSlot}
-
       <section aria-labelledby="book-title" className={styles.section} data-reveal>
         <h2 className={styles.sectionTitle} id="book-title">
           Passaporte
@@ -548,6 +546,8 @@ export function PassaporteClient({
           </button>
         </div>
       </section>
+
+      {highlightsSlot}
 
       <section
         aria-labelledby="journey-title"

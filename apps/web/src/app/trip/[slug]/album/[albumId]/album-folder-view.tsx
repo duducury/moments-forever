@@ -63,6 +63,7 @@ import {
 } from "../../album-types";
 import styles from "../../trip.module.css";
 import { TripRouteArt } from "../../trip-route-art";
+import { TripStamp } from "../../trip-stamp";
 import { TripMap } from "../../trip-map";
 import { PhotoOrganizeGrid } from "./photo-organize-grid";
 
@@ -810,7 +811,16 @@ export function AlbumFolderView({
               ) : null}
             </div>
             {aboutPhotoId ? (
-              <div aria-hidden="true" className={styles.albumAboutPolaroids}>
+              <div
+                aria-hidden="true"
+                className={styles.albumAboutPolaroids}
+                data-long={storyLong ? "true" : "false"}
+              >
+                <TripStamp
+                  city={experience.primaryCity}
+                  country={experience.primaryCountry}
+                  place={album.displayName}
+                />
                 {aboutPhotoBackId ? (
                   <div className={`${styles.albumAboutPolaroid} ${styles.albumAboutPolaroidBack}`}>
                     <ExperienceCoverThumb
@@ -1251,39 +1261,6 @@ function StoryFlightRoute() {
       />
       <g fill="currentColor" transform="translate(203 12) rotate(-36) scale(0.95)">
         <path d="M15 0 6 -1.6 -3 -9.5 -6.5 -9.5 -3.2 -1.4 -10 -1 -12.5 -4.5 -15 -4.5 -13.5 0 -15 4.5 -12.5 4.5 -10 1 -3.2 1.4 -6.5 9.5 -3 9.5 6 1.6Z" />
-      </g>
-    </svg>
-  );
-}
-
-/** Generic copper postage stamp with a circular postmark and cancellation waves. No text or place names. */
-function StoryPostmark() {
-  const ticks = Array.from({ length: 24 }, (_, index) => index * 15);
-  return (
-    <svg
-      aria-hidden="true"
-      className={styles.albumAboutPostmark}
-      fill="none"
-      focusable="false"
-      viewBox="0 0 160 110"
-    >
-      <g stroke="currentColor" strokeLinecap="round">
-        {/* postage stamp with a perforated edge */}
-        <rect height="74" rx="2" strokeDasharray="1.6 2.6" strokeWidth="2.2" width="58" x="14" y="22" />
-        <rect height="62" rx="1" strokeWidth="0.9" width="46" x="20" y="28" />
-        <path d="M26 74c8-14 14-14 20 0M26 56h28M26 64h28" strokeWidth="0.9" />
-        <circle cx="42" cy="44" r="6" strokeWidth="0.9" />
-        {/* circular postmark overlapping the stamp */}
-        <g transform="translate(76 54)">
-          <circle r="30" strokeWidth="1.1" />
-          <circle r="24" strokeWidth="0.7" />
-          {ticks.map((angle) => (
-            <line key={angle} strokeWidth="0.7" transform={`rotate(${angle})`} x1="0" x2="0" y1="-30" y2="-33" />
-          ))}
-          <path d="M-14 0h28M0 -14v28" strokeWidth="0.8" />
-        </g>
-        {/* cancellation waves */}
-        <path d="M112 38c6-4 10 4 16 0s10 4 16 0M112 50c6-4 10 4 16 0s10 4 16 0M112 62c6-4 10 4 16 0s10 4 16 0" strokeWidth="1" />
       </g>
     </svg>
   );

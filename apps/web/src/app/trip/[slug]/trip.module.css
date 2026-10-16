@@ -3343,11 +3343,6 @@
     padding: 6px 0 2px;
   }
 
-  .albumAboutText,
-  .albumAboutEmpty {
-    font-size: 0.98rem;
-    line-height: 1.6;
-  }
 }
 
 /* "Foto da Polaroid" picker inside the story dialog. */
@@ -3405,4 +3400,77 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+/* "Sobre essa viagem": editorial details (route + plane, rule, postmark). Section stays transparent. */
+.albumAboutHeadRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+}
+
+.albumAboutHeadRow .albumAboutHeading {
+  flex: none;
+  white-space: nowrap;
+}
+
+.albumAboutRoute {
+  flex: 0 1 auto;
+  min-width: 0;
+  width: clamp(44px, 16vw, 120px);
+  height: auto;
+  color: var(--accent);
+  opacity: 0.8;
+}
+
+.albumAboutRule {
+  display: block;
+  width: 44px;
+  height: 1px;
+  background: color-mix(in srgb, var(--accent) 70%, transparent);
+}
+
+.albumAboutText,
+.albumAboutEmpty {
+  font-size: clamp(1.08rem, 2.6vw, 1.32rem);
+  line-height: 1.72;
+  letter-spacing: 0.005em;
+}
+
+.albumAboutPostmark {
+  position: absolute;
+  top: -16%;
+  right: -2%;
+  z-index: 0;
+  width: 66%;
+  height: auto;
+  color: var(--accent);
+  opacity: 0.38;
+  transform: rotate(12deg);
+  pointer-events: none;
+}
+
+/* Taller polaroid frames (thicker bottom border) and a roomier stack. */
+.albumAboutPolaroids {
+  aspect-ratio: 1 / 1.16;
+}
+
+.albumAboutPolaroid {
+  padding: 6px 6px 26px;
+}
+
+.albumAboutPolaroids .albumAboutPolaroid {
+  z-index: 1;
+}
+
+.albumAboutPolaroids .albumAboutPolaroidFront {
+  z-index: 3;
+  width: 80%;
+  height: 84%;
+}
+
+.albumAboutPolaroids .albumAboutPolaroidBack {
+  z-index: 2;
 }

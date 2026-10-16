@@ -753,9 +753,13 @@ export function AlbumFolderView({
           >
             <AboutWorldMark />
             <div className={styles.albumAboutCopy}>
-              <p className={styles.albumAboutHeading}>
-                Sobre essa <span className={styles.albumAboutHeadingAccent}>viagem</span>
-              </p>
+              <div className={styles.albumAboutHeadRow}>
+                <p className={styles.albumAboutHeading}>
+                  Sobre essa <span className={styles.albumAboutHeadingAccent}>viagem</span>
+                </p>
+                <StoryFlightRoute />
+              </div>
+              <span aria-hidden="true" className={styles.albumAboutRule} />
               {story ? (
                 <>
                   <p className={styles.albumAboutText}>{storyText}</p>
@@ -1218,6 +1222,63 @@ export function AlbumFolderView({
         {...moreNavProps}
       />
     </>
+  );
+}
+
+/** Small dashed copper route that ends in an aeroplane, set beside the section label. Decorative. */
+function StoryFlightRoute() {
+  return (
+    <svg
+      aria-hidden="true"
+      className={styles.albumAboutRoute}
+      fill="none"
+      focusable="false"
+      viewBox="0 0 120 44"
+    >
+      <path
+        d="M4 38C34 40 62 34 84 20"
+        stroke="currentColor"
+        strokeDasharray="3 5"
+        strokeLinecap="round"
+        strokeWidth="1.3"
+      />
+      <g fill="currentColor" transform="translate(94 15) rotate(-34) scale(0.78)">
+        <path d="M15 0 6 -1.6 -3 -9.5 -6.5 -9.5 -3.2 -1.4 -10 -1 -12.5 -4.5 -15 -4.5 -13.5 0 -15 4.5 -12.5 4.5 -10 1 -3.2 1.4 -6.5 9.5 -3 9.5 6 1.6Z" />
+      </g>
+    </svg>
+  );
+}
+
+/** Generic copper postmark (rings, ticks, dotted core) behind the polaroids. No text or place names. */
+function StoryPostmark() {
+  const ticks = Array.from({ length: 36 }, (_, index) => index * 10);
+  return (
+    <svg
+      aria-hidden="true"
+      className={styles.albumAboutPostmark}
+      fill="none"
+      focusable="false"
+      viewBox="0 0 100 100"
+    >
+      <g stroke="currentColor" strokeLinecap="round">
+        <circle cx="50" cy="50" r="44" strokeWidth="1.2" />
+        <circle cx="50" cy="50" r="36" strokeWidth="0.8" />
+        <circle cx="50" cy="50" r="20" strokeDasharray="2 3" strokeWidth="0.8" />
+        {ticks.map((angle) => (
+          <line
+            key={angle}
+            strokeWidth="0.7"
+            transform={`rotate(${angle} 50 50)`}
+            x1="50"
+            x2="50"
+            y1="6"
+            y2="9.5"
+          />
+        ))}
+        <path d="M40 50h20M50 40v20" strokeWidth="0.9" />
+        <path d="M22 78c8 4 14-4 22 0M58 78c8 4 14-4 22 0" strokeWidth="0.9" />
+      </g>
+    </svg>
   );
 }
 

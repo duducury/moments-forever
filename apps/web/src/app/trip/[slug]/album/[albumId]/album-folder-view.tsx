@@ -625,8 +625,15 @@ export function AlbumFolderView({
     storyLong && !storyExpanded ? `${story.slice(0, 220).trim()}…` : story;
   // "Sobre essa viagem" polaroids: real photos of this place (cover first, then the next different photo).
   const aboutPhotoId = heroCoverId;
-  const aboutPhotoBackId =
-    albumPhotos.find((photo) => photo.id !== aboutPhotoId)?.id ?? null;
+  // Up to two more distinct photos of the place layered behind the main one.
+  const aboutExtraPhotoIds = albumPhotos
+    .map((photo) => photo.id)
+    .filter((id) => id !== aboutPhotoId)
+    .slice(0, 2);
+  const aboutPhotoBackId = aboutExtraPhotoIds[0] ?? null;
+  const aboutPhotoThirdId = aboutExtraPhotoIds[1] ?? null;
+  const aboutPolaroidCount =
+    (aboutPhotoId ? 1 : 0) + (aboutPhotoBackId ? 1 : 0) + (aboutPhotoThirdId ? 1 : 0);
   const aboutLocation = [experience.primaryCity, experience.primaryCountry]
     .map((part) => part?.trim() ?? "")
     .filter(
@@ -801,7 +808,23 @@ export function AlbumFolderView({
               ) : null}
             </div>
             {aboutPhotoId ? (
-              <div aria-hidden="true" className={styles.albumAboutPolaroids}>
+              <div
+                aria-hidden="true"
+                className={styles.albumAboutPolaroids}
+                data-count={aboutPolaroidCount}
+                data-long={storyLong ? "true" : "false"}
+              >
+                {aboutPhotoThirdId ? (
+                  <div className={`${styles.albumAboutPolaroid} ${styles.albumAboutPolaroidThird}`}>
+                    <ExperienceCoverThumb
+                      coverPhotoId={aboutPhotoThirdId}
+                      fallbackClassName={styles.albumAboutPolaroidFallback}
+                      imageClassName={styles.albumAboutPolaroidImage}
+                      title={album.displayName}
+                      variant="thumbnail"
+                    />
+                  </div>
+                ) : null}
                 {aboutPhotoBackId ? (
                   <div className={`${styles.albumAboutPolaroid} ${styles.albumAboutPolaroidBack}`}>
                     <ExperienceCoverThumb

@@ -37,6 +37,7 @@ export function TripStamp({
   country,
   countryCode = null,
   usState = null,
+  coordinates = null,
 }: {
   readonly city: string | null | undefined;
   readonly place: string;
@@ -45,10 +46,15 @@ export function TripStamp({
   readonly countryCode?: string | null;
   /** US state abbreviation of the place, when known (only used with country US). */
   readonly usState?: string | null;
+  /** GPS centre of the place's photos, when any have GPS. */
+  readonly coordinates?: {
+    readonly latitude: number;
+    readonly longitude: number;
+  } | null;
 }) {
   const uid = useId().replace(/:/gu, "");
   const labels = stampLabels({ city, place, country });
-  const landmark = stampLandmark([city, place]);
+  const landmark = stampLandmark([city, place], { countryCode, coordinates });
   const shapeKey = stampShapeKey(countryCode, usState);
   const [shapes, setShapes] = useState<StampShapes | null>(null);
   useEffect(() => {

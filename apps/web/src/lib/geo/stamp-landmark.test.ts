@@ -14,10 +14,41 @@ test("a known city as the first word of a short place name still matches", () =>
   assert.equal(stampLandmark(["Dubai Marina"]), "burj-khalifa");
 });
 
+test("a place title like 'Emirados Árabes Unidos, Deira' matches through its comma parts and district", () => {
+  assert.equal(
+    stampLandmark(["Emirados Árabes Unidos, Deira"], { countryCode: "AE" }),
+    "burj-khalifa",
+  );
+  assert.equal(stampLandmark(["Paris, França"]), "eiffel-tower");
+});
+
+test("districts only count in the right country", () => {
+  assert.equal(stampLandmark(["Soho"], { countryCode: "GB" }), "big-ben");
+  assert.equal(stampLandmark(["Soho"], { countryCode: "US" }), null);
+  assert.equal(stampLandmark(["Soho"]), null);
+  assert.equal(stampLandmark(["Deira"], { countryCode: "BR" }), null);
+});
+
+test("photo GPS inside a known city decides on its own", () => {
+  assert.equal(
+    stampLandmark(["Algum bairro"], { coordinates: { latitude: 25.2697, longitude: 55.3095 } }),
+    "burj-khalifa",
+  );
+  assert.equal(
+    stampLandmark([], { coordinates: { latitude: 48.8584, longitude: 2.2945 } }),
+    "eiffel-tower",
+  );
+  // Sharjah and Abu Dhabi are not Dubai.
+  assert.equal(stampLandmark([], { coordinates: { latitude: 25.3463, longitude: 55.4209 } }), null);
+  assert.equal(stampLandmark([], { coordinates: { latitude: 24.4539, longitude: 54.3773 } }), null);
+});
+
 test("unknown or ambiguous destinations never get a landmark", () => {
   assert.equal(stampLandmark(["Texas"]), null);
   assert.equal(stampLandmark(["Emirados Árabes Unidos"]), null);
-  assert.equal(stampLandmark(["Paris, Texas Road Trip Across The State"]), null);
+  assert.equal(stampLandmark(["Paris, Texas"], { countryCode: "US" }), null);
+  assert.equal(stampLandmark(["Paris, Texas Road Trip Across The State"], { countryCode: "US" }), null);
+  assert.equal(stampLandmark(["Dubai"], { countryCode: "BR" }), null);
   assert.equal(stampLandmark([undefined, ""]), null);
 });
 

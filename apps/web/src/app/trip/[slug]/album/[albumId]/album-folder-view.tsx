@@ -819,6 +819,7 @@ export function AlbumFolderView({
                 <TripStamp
                   city={experience.primaryCity}
                   country={experience.primaryCountry}
+                  coordinates={gpsCenter(albumPhotos)}
                   countryCode={countryCode}
                   place={album.displayName}
                   usState={placeUsState}

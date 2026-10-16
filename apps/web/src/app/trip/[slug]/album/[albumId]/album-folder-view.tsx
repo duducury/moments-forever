@@ -35,7 +35,6 @@ import {
 } from "@/lib/privacy/remove-location";
 import {
   profilePath,
-  profileTripPath,
   visitorMoreNavProps,
 } from "@/lib/routes/app-routes";
 
@@ -219,11 +218,6 @@ export function AlbumFolderView({
 
   const period = useMemo(
     () => formatPhotoPeriod(albumPhotos, "numeric"),
-    [albumPhotos],
-  );
-
-  const placeGpsCount = useMemo(
-    () => photosWithGps(albumPhotos).length,
     [albumPhotos],
   );
 
@@ -637,7 +631,6 @@ export function AlbumFolderView({
           index,
     )
     .join(", ");
-  const fullMapHref = `${profileTripPath(experience.slug)}#trip-mapa`;
 
   return (
     <>
@@ -737,11 +730,6 @@ export function AlbumFolderView({
               photos={albumPhotos}
               variant="featured"
             />
-            {placeGpsCount > 0 ? (
-              <Link className={styles.albumMapFullLink} href={fullMapHref}>
-                Ver mapa completo
-              </Link>
-            ) : null}
           </section>
         </div>
 

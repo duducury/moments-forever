@@ -2146,27 +2146,6 @@
   aspect-ratio: auto;
 }
 
-.albumMapFullLink {
-  position: absolute;
-  right: 10px;
-  bottom: 10px;
-  z-index: 650;
-  display: inline-flex;
-  align-items: center;
-  min-height: 36px;
-  padding: 0 12px;
-  border-radius: 999px;
-  color: #fff;
-  background: rgb(8 10 14 / 72%);
-  box-shadow: 0 6px 16px rgb(0 0 0 / 28%);
-  font-size: 0.78rem;
-  font-weight: 650;
-}
-
-.albumMapFullLink:hover {
-  background: rgb(8 10 14 / 86%);
-}
-
 .albumAboutCard {
   position: relative;
   display: grid;
@@ -2837,14 +2816,6 @@
   .albumMapCard {
     min-height: clamp(148px, 44vw, 220px);
     height: clamp(148px, 44vw, 220px);
-  }
-
-  .albumMapFullLink {
-    right: 6px;
-    bottom: 6px;
-    min-height: 28px;
-    padding: 0 8px;
-    font-size: 0.68rem;
   }
 
   .albumAboutCard {

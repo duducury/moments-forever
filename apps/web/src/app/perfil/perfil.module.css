@@ -722,24 +722,17 @@ html:not([data-nav-hidden="true"]) .sectionHeading[data-stuck="true"]:not(:focus
   margin: 8px 0 36px;
 }
 
-/* Reserves the carousel's real height while it streams in — without this
-   the section pops in after paint and pushes Viagens down (layout shift). */
+/* Reserves the stack's real height while it streams in — without this the section pops in after paint and pushes
+   Viagens down (layout shift). Same sizes as .polaroidStack: photo width x 1.2 + room for tilt and the slide. */
 .carouselSkeleton {
-  /* Polaroid stack height: photo width x 1.2 + room for tilt + the dots row. */
-  height: calc(clamp(140px, 44vw, 208px) * 1.2 + 84px);
+  height: calc(clamp(130px, 38vw, 220px) * 1.2 + 64px);
   background: color-mix(in srgb, var(--surface-secondary) 70%, var(--border));
   border-radius: 24px;
 }
 
 @media (min-width: 720px) {
   .carouselSkeleton {
-    height: calc(clamp(190px, 26vw, 232px) * 1.2 + 84px);
-  }
-}
-
-@media (min-width: 1100px) {
-  .carouselSkeleton {
-    height: calc(244px * 1.2 + 84px);
+    height: calc(clamp(190px, 24vw, 236px) * 1.2 + 64px);
   }
 }
 
@@ -1398,4 +1391,161 @@ html:not([data-nav-hidden="true"]) .sectionHeading[data-stuck="true"]:not(:focus
   display: grid;
   justify-items: start;
   gap: 8px;
+}
+
+/*
+ * Destaques: stacked Polaroids. All cards share one grid cell; each slides out to the side and back in a loop, and its
+ * z-index drops to 1 for the second half of the cycle (behind the others) and returns to 2 — the "stacked photos"
+ * animation, as plain CSS. Each card's delay is offset by its position (--i of --n) so the turns follow one another.
+ * Sizes use clamp() on the viewport; the whole slide range (stack width + slide distance) stays inside the page width.
+ */
+.polaroidStage {
+  --pw: clamp(130px, 38vw, 220px);
+  --slide: 105%;
+  display: grid;
+  justify-items: start;
+  width: calc(var(--pw) * 2.05);
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 26px 0 20px;
+}
+
+.polaroidStack {
+  --d: 10s;
+  display: grid;
+  width: var(--pw);
+}
+
+.polaroidCard {
+  --r: 0deg;
+  grid-area: 1 / 1;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: 100%;
+  aspect-ratio: 1 / 1.2;
+  padding: 7% 7% 0;
+  border-radius: 3px;
+  color: #3b3128;
+  text-decoration: none;
+  background: #f5efe3;
+  box-shadow:
+    0 10px 24px rgb(0 0 0 / 42%),
+    0 0 0 1px rgb(0 0 0 / 10%);
+  transform: rotate(var(--r));
+  -webkit-tap-highlight-color: transparent;
+}
+
+.polaroidStack[data-animate="true"] .polaroidCard {
+  animation:
+    polaroidSlide var(--d) ease-in-out infinite,
+    polaroidZ var(--d) steps(1) infinite;
+  animation-delay: calc((1 - var(--i)) * var(--d) / var(--n));
+  will-change: transform;
+}
+
+/* Hovered/focused (so a tap or click lands on a steady photo) or scrolled out of view: hold still. */
+.polaroidStack[data-animate="true"]:hover .polaroidCard,
+.polaroidStack[data-animate="true"]:focus-within .polaroidCard,
+.polaroidStack[data-paused="true"] .polaroidCard {
+  animation-play-state: paused;
+}
+
+@keyframes polaroidSlide {
+  0%,
+  100% {
+    transform: translateX(0%) rotate(var(--r));
+  }
+
+  50% {
+    transform: translateX(var(--slide)) rotate(var(--r));
+  }
+}
+
+@keyframes polaroidZ {
+  50%,
+  100% {
+    z-index: 1;
+  }
+}
+
+.polaroidPhoto {
+  position: relative;
+  display: block;
+  flex: none;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 1px;
+  background:
+    linear-gradient(160deg, rgb(255 255 255 / 14%), transparent 45%),
+    linear-gradient(135deg, #e8dccf, #c4a488 55%, #8f6d54);
+}
+
+.polaroidPhoto[data-has-image="true"] {
+  background: #d9d2c6;
+}
+
+.polaroidPhoto[data-tone="1"] {
+  background:
+    linear-gradient(160deg, rgb(255 255 255 / 14%), transparent 45%),
+    linear-gradient(145deg, #d7e0d8, #8fa396, #5f7167);
+}
+
+.polaroidPhoto[data-tone="2"] {
+  background:
+    linear-gradient(160deg, rgb(255 255 255 / 14%), transparent 45%),
+    linear-gradient(150deg, #f0e2d4, #d0a58a, #9d4e35);
+}
+
+.polaroidPhoto[data-tone="3"] {
+  background:
+    linear-gradient(160deg, rgb(255 255 255 / 14%), transparent 45%),
+    linear-gradient(155deg, #e5ddd2, #a89988, #6b5b4d);
+}
+
+.polaroidImage {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  image-orientation: from-image;
+  user-select: none;
+  -webkit-user-drag: none;
+  pointer-events: none;
+}
+
+.polaroidImageFull {
+  z-index: 1;
+}
+
+/* Caption strip: flag + destination when the photo's place is known, otherwise empty (nothing invented). */
+.polaroidCaption {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  padding: 0 4px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(0.68rem, 2.4vw, 0.82rem);
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+}
+
+@media (min-width: 720px) {
+  .polaroidStage {
+    --pw: clamp(190px, 24vw, 236px);
+  }
+}
+
+/* Reduced motion: a static, slightly fanned stack with the first photo in front. */
+@media (prefers-reduced-motion: reduce) {
+  .polaroidStack[data-animate="true"] .polaroidCard {
+    animation: none;
+    z-index: calc(10 - var(--i));
+    transform: translateX(calc((var(--i) - 1) * 7%)) rotate(var(--r));
+  }
 }

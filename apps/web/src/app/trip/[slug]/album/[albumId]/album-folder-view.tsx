@@ -343,7 +343,7 @@ export function AlbumFolderView({
     }
   }
 
-  async function saveStory(story: string) {
+  async function saveStory(story: string, photoId: string | null) {
     if (!album) return;
     setBusy(true);
     setError(null);
@@ -368,6 +368,10 @@ export function AlbumFolderView({
             : item,
         ),
       );
+      // The polaroid shows the place's cover photo, so picking a photo here sets it (same API as before).
+      if (photoId && photoId !== heroCoverId) {
+        await applyAlbumCover(photoId);
+      }
       setStoryOpen(false);
       router.refresh();
     } catch (err) {
@@ -411,24 +415,28 @@ export function AlbumFolderView({
     }
   }
 
+  async function applyAlbumCover(photoId: string) {
+    const response = await fetch(`/api/photos/${photoId}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ set_as_cover: "album" }),
+    });
+    const payload = (await response.json()) as { readonly error?: string };
+    if (!response.ok) {
+      throw new Error(payload.error ?? "Não foi possível definir a foto.");
+    }
+    setAlbums((current) =>
+      current.map((item) =>
+        item.id === albumId ? { ...item, coverPhotoId: photoId } : item,
+      ),
+    );
+  }
+
   async function setAlbumCover(photoId: string) {
     setBusy(true);
     setError(null);
     try {
-      const response = await fetch(`/api/photos/${photoId}`, {
-        method: "PATCH",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ set_as_cover: "album" }),
-      });
-      const payload = (await response.json()) as { readonly error?: string };
-      if (!response.ok) {
-        throw new Error(payload.error ?? "Não foi possível definir a capa.");
-      }
-      setAlbums((current) =>
-        current.map((item) =>
-          item.id === albumId ? { ...item, coverPhotoId: photoId } : item,
-        ),
-      );
+      await applyAlbumCover(photoId);
       setCoverPickerOpen(false);
       router.refresh();
     } catch (err) {
@@ -616,7 +624,7 @@ export function AlbumFolderView({
   const storyText =
     storyLong && !storyExpanded ? `${story.slice(0, 220).trim()}…` : story;
   // "Sobre essa viagem" polaroids: real photos of this place (cover first, then the next different photo).
-  const aboutPhotoId = album.coverPhotoId ?? albumPhotos[0]?.id ?? null;
+  const aboutPhotoId = heroCoverId;
   const aboutPhotoBackId =
     albumPhotos.find((photo) => photo.id !== aboutPhotoId)?.id ?? null;
   const aboutLocation = [experience.primaryCity, experience.primaryCountry]
@@ -1114,9 +1122,11 @@ export function AlbumFolderView({
           busy={busy}
           confirmLabel="Salvar"
           error={error}
+          currentPhotoId={heroCoverId}
           initialStory={story}
           onClose={() => setStoryOpen(false)}
           onSubmit={saveStory}
+          photoIds={carouselPhotos.map((photo) => photo.id)}
           title="Sobre essa viagem"
         />
       ) : null}

@@ -3369,3 +3369,60 @@
     line-height: 1.6;
   }
 }
+
+/* "Foto da Polaroid" picker inside the story dialog. */
+.storyPhotoPicker {
+  margin: 14px 0 0;
+  padding: 0;
+  border: 0;
+}
+
+.storyPhotoPicker legend {
+  margin-bottom: 8px;
+  padding: 0;
+  color: var(--text);
+  font-weight: 650;
+}
+
+.storyPhotoGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+  gap: 8px;
+  max-height: 188px;
+  overflow-y: auto;
+  padding: 3px;
+}
+
+.storyPhotoOption {
+  position: relative;
+  aspect-ratio: 1;
+  overflow: hidden;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  background: var(--surface-secondary);
+  cursor: pointer;
+}
+
+.storyPhotoOption > * {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.storyPhotoOption[data-selected="true"] {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.storyPhotoOption:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.storyPhotoImage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}

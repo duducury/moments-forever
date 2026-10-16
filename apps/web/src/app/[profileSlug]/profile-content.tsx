@@ -101,11 +101,14 @@ async function ProfilePlacesBody({
           <Suspense
             fallback={
               <section
-                aria-label="Destaques"
+                aria-label="Cada foto conta uma história"
                 className={perfilStyles.carouselSection}
               >
                 <div className={perfilStyles.mapHeader}>
-                  <h2 className={perfilStyles.sectionTitle}>Destaques</h2>
+                  <h2 className={perfilStyles.highlightsTitle}>
+          Cada foto conta uma{" "}
+          <span className={perfilStyles.highlightsTitleAccent}>história</span>
+        </h2>
                 </div>
                 <div
                   aria-hidden="true"

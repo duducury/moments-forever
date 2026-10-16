@@ -454,6 +454,25 @@ html:not([data-nav-hidden="true"]) .sectionHeading[data-stuck="true"]:not(:focus
   letter-spacing: -0.02em;
 }
 
+/* "Cada foto conta uma história": an editorial italic serif (Iowan Old Style / Palatino on Apple devices), the last
+   word in the copper accent. System fonts only, so it adds no download. */
+.highlightsTitle {
+  margin: 0;
+  font-family:
+    "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia,
+    "Times New Roman", serif;
+  font-size: clamp(1.55rem, 5.6vw, 2.1rem);
+  font-style: italic;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  line-height: 1.15;
+  text-wrap: balance;
+}
+
+.highlightsTitleAccent {
+  color: var(--accent);
+}
+
 .empty {
   display: grid;
   gap: 16px;

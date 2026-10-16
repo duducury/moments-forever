@@ -13,9 +13,12 @@ export function ProfileCarousel({
   if (photos.length === 0) return null;
 
   return (
-    <section aria-label="Destaques" className={styles.carouselSection} data-reveal>
+    <section aria-label="Cada foto conta uma história" className={styles.carouselSection} data-reveal>
       <div className={styles.mapHeader}>
-        <h2 className={styles.sectionTitle}>Destaques</h2>
+        <h2 className={styles.highlightsTitle}>
+          Cada foto conta uma{" "}
+          <span className={styles.highlightsTitleAccent}>história</span>
+        </h2>
       </div>
       <PolaroidStack photos={photos} />
     </section>

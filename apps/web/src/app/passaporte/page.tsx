@@ -19,6 +19,7 @@ import { peekSessionUserId } from "@/lib/supabase/session-user-id";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import { PassaporteClient } from "./passaporte-client";
+import { PassportHighlights } from "./passport-highlights";
 
 export const dynamic = "force-dynamic";
 
@@ -123,6 +124,7 @@ export default async function PassaportePage() {
           }
           bio={profile.bio ?? null}
           displayName={displayName}
+          highlightsSlot={<PassportHighlights ownerId={user.id} />}
           ownerId={user.id}
           passport={passport}
         />

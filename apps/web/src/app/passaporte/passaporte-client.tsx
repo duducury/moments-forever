@@ -230,6 +230,7 @@ export function PassaporteClient({
   avatarPhotoId,
   avatarRemoteSrc = null,
   passport,
+  highlightsSlot = null,
 }: {
   readonly ownerId: string;
   readonly displayName: string;
@@ -237,6 +238,8 @@ export function PassaporteClient({
   readonly avatarPhotoId: string | null;
   readonly avatarRemoteSrc?: string | null;
   readonly passport: PassportData;
+  /** Streamed "Cada foto conta uma história" section, shown before "Conquistas". */
+  readonly highlightsSlot?: ReactNode;
 }) {
   const [selectedCode, setSelectedCode] = useState<string | null>(null);
 
@@ -672,6 +675,8 @@ export function PassaporteClient({
 
         <JourneyWavyBridge className={styles.journeyTransitionBottom} side="into-page" />
       </section>
+
+      {highlightsSlot}
 
       <section aria-labelledby="ach-title" className={styles.section} data-reveal>
         <h2 className={styles.sectionTitle} id="ach-title">

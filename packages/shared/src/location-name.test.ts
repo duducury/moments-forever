@@ -5,8 +5,10 @@ import {
   canApplySuggestedPlaceName,
   cleanLocationLabel,
   isGenericLocationLabel,
+  coarsenTravelLabel,
   resolveLocationDisplayName,
 } from "./location-name.ts";
+import { placeLabelCityFirst } from "./country-flag.ts";
 
 test("cleanLocationLabel strips rounded coordinate suffix", () => {
   assert.equal(
@@ -118,4 +120,23 @@ test("canApplySuggestedPlaceName blocks confirmed real names", () => {
     }),
     true,
   );
+});
+
+test("known districts display as their city, only in the right country", () => {
+  assert.equal(
+    coarsenTravelLabel("Emirados Árabes Unidos, Deira"),
+    "Emirados Árabes Unidos, Dubai",
+  );
+  assert.equal(coarsenTravelLabel("Deira, Emirados Árabes Unidos"), "Dubai, Emirados Árabes Unidos");
+  assert.equal(coarsenTravelLabel("Quênia, Deira"), "Quênia, Deira");
+  assert.equal(coarsenTravelLabel("Itália, Roma"), "Itália, Roma");
+});
+
+test("display order is city first, only when the first part is a country", () => {
+  assert.equal(placeLabelCityFirst("Emirados Árabes Unidos, Dubai"), "Dubai, Emirados Árabes Unidos");
+  assert.equal(placeLabelCityFirst("Itália, Roma"), "Roma, Itália");
+  assert.equal(placeLabelCityFirst("Cleveland, OH"), "Cleveland, OH");
+  assert.equal(placeLabelCityFirst("Dubai, Emirados Árabes Unidos"), "Dubai, Emirados Árabes Unidos");
+  assert.equal(placeLabelCityFirst("Minha viagem especial"), "Minha viagem especial");
+  assert.equal(placeLabelCityFirst("Itália, Roma, Lazio"), "Itália, Roma, Lazio");
 });

@@ -1,3 +1,5 @@
+import { placeLabelCityFirst } from "@moments-forever/shared";
+
 /**
  * Destination-aware data for the decorative travel stamp in "Sobre essa viagem".
  *
@@ -141,7 +143,9 @@ export function stampLabels(input: {
     const text = value.trim().replace(/\s+/gu, " ").toLocaleUpperCase("pt-BR");
     return text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text;
   };
-  const name = clip(input.city?.trim() || input.place, 18);
+  // A place title is "Cidade, País" (or a legacy "País, Localidade"): the stamp prints only the city part.
+  const placeCity = placeLabelCityFirst(input.place).split(",")[0] ?? input.place;
+  const name = clip(input.city?.trim() || placeCity, 18);
   const country = clip(input.country ?? "", 24);
   return { name, country: country === name ? "" : country };
 }

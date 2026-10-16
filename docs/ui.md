@@ -75,6 +75,13 @@ Experimento de design (em teste no Preview; decidir se fica antes de ir ao ar). 
   Nada de destino fixo no componente; sem imagem por destino.
 - **Responsivo:** rótulo e rota ocupam a largura toda; texto à esquerda e Polaroids à direita (≈ 41 % da largura, menos quando a história é longa); o carimbo desce no celular para não tocar no texto. Dois temas via variáveis. A galeria Instagram não é afetada.
 
+## Nomes dos lugares (pastas)
+
+Os nomes salvos seguem “País, Localidade” (ex.: “Emirados Árabes Unidos, Dubai”) e vários módulos (passaporte, perfil, jornada) dependem desse formato; ele não muda. A **exibição** sofre dois ajustes centrais em `packages/shared`:
+
+- **Bairro conhecido vira a cidade** (`coarsenTravelLabel`, usado por `resolveLocationDisplayName` em todo lugar): “Emirados Árabes Unidos, Deira” aparece como “… Dubai”. Só vale com o país certo (Deira no Quênia não muda) e a lista (`DISTRICT_CITIES`) é pequena e inequívoca; novos bairros entram ali.
+- **Ordem “Cidade, País” na página da viagem/lugar** (`placeLabelCityFirst`, aplicado em `loadTripAlbums`): “Emirados Árabes Unidos, Dubai” aparece como “Dubai, Emirados Árabes Unidos”. Só inverte quando a primeira parte é um país e a segunda não; “Cleveland, OH” e títulos escolhidos pelo dono ficam como estão. O cabeçalho, as migalhas, os cartões de lugar e o carimbo usam esse nome; `parsePlaceParts` aceita as duas ordens.
+
 ## Conteúdo e estados
 
 Tratar explicitamente coleção vazia, memória sem GPS, EXIF ausente, upload pausado, link privado, indisponibilidade e exclusão. Nunca insinuar que análise local reconheceu um lugar com certeza quando apenas estimou um grupo.

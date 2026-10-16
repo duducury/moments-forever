@@ -54,6 +54,7 @@ export {
   countryCodeFromStoredOrLabel,
   countryNameFromCode,
   normalizeCountryCode,
+  placeLabelCityFirst,
   countryCodeFromPlaceLabel,
   countryFlagFromPlaceLabel,
   countryNameFromPlaceLabel,

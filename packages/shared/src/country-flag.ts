@@ -738,3 +738,29 @@ export function shortPlaceCaption(
     shortLabel: titleCaseWords(cleaned).slice(0, 22),
   };
 }
+
+/**
+ * Display order "Cidade, País": turns the stored "País, Localidade" (e.g. "Emirados Árabes Unidos, Dubai") into
+ * "Dubai, Emirados Árabes Unidos". Only swaps when the first part is a known country and the second is not, so labels
+ * like "Cleveland, OH" or a user's own title are left untouched. Display only: stored names keep their format.
+ */
+export function placeLabelCityFirst(label: string): string {
+  const cleaned = cleanLocationLabel(label);
+  const comma = cleaned.indexOf(",");
+  if (comma <= 0) return cleaned;
+  const first = cleaned.slice(0, comma).trim();
+  const rest = cleaned.slice(comma + 1).trim();
+  if (!first || !rest || rest.includes(",")) return cleaned;
+  // "Dubai" is also a lookup alias for the UAE, so "is the second part a country" means: its canonical name.
+  const isCountryName = (value: string): boolean => {
+    const code = countryCodeFromName(value);
+    const canonical = code ? countryNameFromCode(code) : null;
+    return Boolean(
+      canonical && normalizeCountryKey(canonical) === normalizeCountryKey(value),
+    );
+  };
+  if (countryCodeFromName(first) && !isCountryName(rest)) {
+    return `${rest}, ${first}`;
+  }
+  return cleaned;
+}

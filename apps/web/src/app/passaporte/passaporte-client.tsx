@@ -413,68 +413,7 @@ export function PassaporteClient({
         ) : null}
       </section>
 
-      <section aria-labelledby="mundo-title" className={styles.section} data-reveal>
-        <h2 className={styles.sectionTitle} id="mundo-title">
-          Meu mundo
-        </h2>
-        <div className={styles.worldCard}>
-          {exploreCopy ? (
-            <p className={styles.worldExplore}>
-              <span className={styles.worldExploreLead}>
-                Você conhece{" "}
-                <em className={styles.worldExplorePct}>{exploreCopy.known}%</em>{" "}
-                do mundo.
-              </span>
-              <span className={styles.worldExploreRest}>
-                Os outros {exploreCopy.remaining}% ainda estão esperando para
-                fazer parte da sua história.
-              </span>
-              <span aria-hidden="true" className={styles.worldExploreStar}>
-                ★
-              </span>
-            </p>
-          ) : null}
-          <div className={styles.worldMapFrame}>
-            {visitedCodes.length > 0 ? (
-              <DeferredPassportWorldMap
-                onSelectCountry={setSelectedCode}
-                visitedCodes={visitedCodes}
-              />
-            ) : (
-              <p className={styles.empty}>
-                Importe fotos com destino para ver seus países no mapa.
-              </p>
-            )}
-          </div>
-        </div>
-        {selected ? (
-          <article className={styles.countryPanel}>
-            <h3 className={styles.countryName}>
-              <CountryFlag code={selected.code} size={22} />
-              {selected.name}
-            </h3>
-            <p className={styles.countryMeta}>
-              {selected.tripCount}{" "}
-              {selected.tripCount === 1 ? "viagem" : "viagens"} ·{" "}
-              {selected.photoCount} foto{selected.photoCount === 1 ? "" : "s"}
-              {formatCountryYears(selected.years)
-                ? ` · ${formatCountryYears(selected.years)}`
-                : selected.lastVisitAt
-                  ? ` · ${formatMonthYear(selected.lastVisitAt)}`
-                  : ""}
-            </p>
-            {selected.albumHrefs.length > 0 ? (
-              <div className={styles.albumLinks}>
-                {selected.albumHrefs.map((album) => (
-                  <Link className={styles.albumChip} href={album.href} key={album.href}>
-                    {album.title}
-                  </Link>
-                ))}
-              </div>
-            ) : null}
-          </article>
-        ) : null}
-      </section>
+      {highlightsSlot}
 
       <section aria-labelledby="book-title" className={styles.section} data-reveal>
         <h2 className={styles.sectionTitle} id="book-title">
@@ -676,7 +615,68 @@ export function PassaporteClient({
         <JourneyWavyBridge className={styles.journeyTransitionBottom} side="into-page" />
       </section>
 
-      {highlightsSlot}
+      <section aria-labelledby="mundo-title" className={styles.section} data-reveal>
+        <h2 className={styles.sectionTitle} id="mundo-title">
+          Meu mundo
+        </h2>
+        <div className={styles.worldCard}>
+          {exploreCopy ? (
+            <p className={styles.worldExplore}>
+              <span className={styles.worldExploreLead}>
+                Você conhece{" "}
+                <em className={styles.worldExplorePct}>{exploreCopy.known}%</em>{" "}
+                do mundo.
+              </span>
+              <span className={styles.worldExploreRest}>
+                Os outros {exploreCopy.remaining}% ainda estão esperando para
+                fazer parte da sua história.
+              </span>
+              <span aria-hidden="true" className={styles.worldExploreStar}>
+                ★
+              </span>
+            </p>
+          ) : null}
+          <div className={styles.worldMapFrame}>
+            {visitedCodes.length > 0 ? (
+              <DeferredPassportWorldMap
+                onSelectCountry={setSelectedCode}
+                visitedCodes={visitedCodes}
+              />
+            ) : (
+              <p className={styles.empty}>
+                Importe fotos com destino para ver seus países no mapa.
+              </p>
+            )}
+          </div>
+        </div>
+        {selected ? (
+          <article className={styles.countryPanel}>
+            <h3 className={styles.countryName}>
+              <CountryFlag code={selected.code} size={22} />
+              {selected.name}
+            </h3>
+            <p className={styles.countryMeta}>
+              {selected.tripCount}{" "}
+              {selected.tripCount === 1 ? "viagem" : "viagens"} ·{" "}
+              {selected.photoCount} foto{selected.photoCount === 1 ? "" : "s"}
+              {formatCountryYears(selected.years)
+                ? ` · ${formatCountryYears(selected.years)}`
+                : selected.lastVisitAt
+                  ? ` · ${formatMonthYear(selected.lastVisitAt)}`
+                  : ""}
+            </p>
+            {selected.albumHrefs.length > 0 ? (
+              <div className={styles.albumLinks}>
+                {selected.albumHrefs.map((album) => (
+                  <Link className={styles.albumChip} href={album.href} key={album.href}>
+                    {album.title}
+                  </Link>
+                ))}
+              </div>
+            ) : null}
+          </article>
+        ) : null}
+      </section>
 
       <section aria-labelledby="ach-title" className={styles.section} data-reveal>
         <h2 className={styles.sectionTitle} id="ach-title">

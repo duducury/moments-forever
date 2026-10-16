@@ -16,6 +16,7 @@ import { visitorMoreNavProps } from "@/lib/routes/app-routes";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import { PassaporteClient } from "../../passaporte/passaporte-client";
+import { PassportHighlights } from "../../passaporte/passport-highlights";
 
 export const dynamic = "force-dynamic";
 
@@ -81,6 +82,7 @@ export default async function PublicProfilePassportPage({
           }
           bio={profile.bio ?? null}
           displayName={displayName}
+          highlightsSlot={<PassportHighlights ownerId={profile.id} />}
           ownerId={profile.id}
           passport={passport}
         />

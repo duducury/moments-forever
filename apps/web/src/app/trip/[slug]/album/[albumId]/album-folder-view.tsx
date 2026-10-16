@@ -63,6 +63,7 @@ import {
 } from "../../album-types";
 import styles from "../../trip.module.css";
 import { TripRouteArt } from "../../trip-route-art";
+import { TripStamp } from "../../trip-stamp";
 import { TripMap } from "../../trip-map";
 import { PhotoOrganizeGrid } from "./photo-organize-grid";
 
@@ -752,13 +753,18 @@ export function AlbumFolderView({
             data-reveal
           >
             <AboutWorldMark />
-            <div className={styles.albumAboutCopy}>
+            <div className={styles.albumAboutHeadRow}>
               <p className={styles.albumAboutHeading}>
                 Sobre essa <span className={styles.albumAboutHeadingAccent}>viagem</span>
               </p>
+              <StoryFlightRoute />
+            </div>
+            <div className={styles.albumAboutCopy}>
               {story ? (
                 <>
-                  <p className={styles.albumAboutText}>{storyText}</p>
+                  {storyText ? (
+                    <p className={styles.albumAboutText}>{storyText}</p>
+                  ) : null}
                   {storyLong ? (
                     <button
                       className={styles.albumAboutMore}
@@ -796,12 +802,28 @@ export function AlbumFolderView({
                   }}
                   type="button"
                 >
-                  {story ? "Editar história" : "Escrever história"}
+                  <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
+                  <path d="m4 20 1-4L16.5 4.5a2.1 2.1 0 0 1 3 3L8 19l-4 1Z" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.6" />
+                  <path d="m14.5 6.5 3 3" stroke="currentColor" strokeLinecap="round" strokeWidth="1.6" />
+                </svg>
+                {story ? "Editar história" : "Escrever história"}
                 </button>
               ) : null}
             </div>
             {aboutPhotoId ? (
-              <div aria-hidden="true" className={styles.albumAboutPolaroids}>
+              <div
+                aria-hidden="true"
+                className={styles.albumAboutPolaroids}
+                data-long={storyLong ? "true" : "false"}
+              >
+                <TripStamp
+                  city={experience.primaryCity}
+                  country={experience.primaryCountry}
+                  coordinates={gpsCenter(albumPhotos)}
+                  countryCode={countryCode}
+                  place={album.displayName}
+                  usState={placeUsState}
+                />
                 {aboutPhotoBackId ? (
                   <div className={`${styles.albumAboutPolaroid} ${styles.albumAboutPolaroidBack}`}>
                     <ExperienceCoverThumb
@@ -1218,6 +1240,32 @@ export function AlbumFolderView({
         {...moreNavProps}
       />
     </>
+  );
+}
+
+/** Long dashed copper route that leaves the section label and ends in an aeroplane. Decorative. */
+function StoryFlightRoute() {
+  return (
+    <svg
+      aria-hidden="true"
+      className={styles.albumAboutRoute}
+      fill="none"
+      focusable="false"
+      preserveAspectRatio="xMaxYMid meet"
+      viewBox="0 0 220 44"
+    >
+      <path
+        d="M2 30C40 38 70 14 110 24S168 32 194 15"
+        stroke="currentColor"
+        strokeDasharray="3 5"
+        strokeLinecap="round"
+        strokeWidth="1.2"
+        opacity="0.8"
+      />
+      <g fill="currentColor" transform="translate(203 12) rotate(-36) scale(0.95)">
+        <path d="M15 0 6 -1.6 -3 -9.5 -6.5 -9.5 -3.2 -1.4 -10 -1 -12.5 -4.5 -15 -4.5 -13.5 0 -15 4.5 -12.5 4.5 -10 1 -3.2 1.4 -6.5 9.5 -3 9.5 6 1.6Z" />
+      </g>
+    </svg>
   );
 }
 

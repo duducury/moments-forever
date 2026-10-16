@@ -62,6 +62,7 @@ import {
   type TripPhoto,
 } from "../../album-types";
 import styles from "../../trip.module.css";
+import { TripRouteArt } from "../../trip-route-art";
 import { TripMap } from "../../trip-map";
 import { PhotoOrganizeGrid } from "./photo-organize-grid";
 
@@ -263,7 +264,15 @@ export function AlbumFolderView({
     albumPhotos.length === 1 ? "" : "s"
   }`;
 
-  const metaLine = [period, photoCountLabel].filter(Boolean).join(" · ");
+  // The last word of the place name is set in the accent colour (title only).
+  const heroTitleName = album?.displayName ?? "";
+  const heroTitleWords = heroTitleName.trim().split(/\s+/u);
+  const heroTitleLast =
+    heroTitleWords.length > 1 ? (heroTitleWords.at(-1) ?? "") : "";
+  const heroTitleLead =
+    heroTitleWords.length > 1
+      ? heroTitleWords.slice(0, -1).join(" ")
+      : heroTitleName;
 
   const countryCode = useMemo(() => {
     // Prefer the place title ("Cleveland, OH") so US states get the USA flag
@@ -648,22 +657,7 @@ export function AlbumFolderView({
       <div className={styles.albumStory}>
         <div className={styles.albumSplit} data-reveal>
           <header className={styles.albumHeroHeader}>
-            {isOwner ? (
-              <div className={styles.albumHeroActions}>
-                <button
-                  className={styles.albumHeroCoverButton}
-                  disabled={busy || albumPhotos.length === 0}
-                  onClick={() => {
-                    setError(null);
-                    setCoverPickerOpen(true);
-                  }}
-                  type="button"
-                >
-                  Escolher capa
-                </button>
-              </div>
-            ) : null}
-
+            <TripRouteArt />
             <div className={styles.albumHeroCopy}>
               <div className={styles.albumHeroTitleRow}>
                 {countryCode ? (
@@ -677,7 +671,15 @@ export function AlbumFolderView({
                     width={30}
                   />
                 ) : null}
-                <h1 className={styles.albumHeroTitle}>{album.displayName}</h1>
+                <h1 className={styles.albumHeroTitle}>
+                  {heroTitleLead}
+                  {heroTitleLast ? (
+                    <span className={styles.albumHeroTitleAccent}>
+                      {heroTitleLead ? " " : ""}
+                      {heroTitleLast}
+                    </span>
+                  ) : null}
+                </h1>
               </div>
               {placeUsState ? (
                 <p className={styles.albumHeroCountry}>{placeUsState}</p>
@@ -686,9 +688,25 @@ export function AlbumFolderView({
                   {experience.primaryCountry}
                 </p>
               ) : null}
-              {metaLine ? (
-                <p className={styles.albumHeroMeta}>{metaLine}</p>
-              ) : null}
+              <ul className={styles.albumHeroFacts}>
+                {period ? (
+                  <li>
+                    <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
+                      <rect height="15" rx="3" stroke="currentColor" strokeWidth="1.6" width="17" x="3.5" y="5.5" />
+                      <path d="M3.5 10h17M8 3.5v4M16 3.5v4" stroke="currentColor" strokeLinecap="round" strokeWidth="1.6" />
+                    </svg>
+                    <span>{period}</span>
+                  </li>
+                ) : null}
+                <li>
+                  <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
+                    <rect height="15" rx="3" stroke="currentColor" strokeWidth="1.6" width="17" x="3.5" y="4.5" />
+                    <path d="m5 17 4.5-4.5 3.5 3.5 2.5-2.5L19 17" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.6" />
+                    <circle cx="9" cy="9" fill="currentColor" r="1.3" />
+                  </svg>
+                  <span>{photoCountLabel}</span>
+                </li>
+              </ul>
             </div>
           </header>
 

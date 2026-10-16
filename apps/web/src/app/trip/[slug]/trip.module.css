@@ -14,35 +14,16 @@
 }
 
 .hero {
-  position: relative;
-  overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: 28px;
+  margin: 0 0 20px;
+  padding: 0 0 18px;
+  border-bottom: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border));
   color: var(--text);
-  background:
-    radial-gradient(
-      120% 140% at 0% 0%,
-      color-mix(in srgb, var(--accent) 22%, transparent) 0%,
-      transparent 60%
-    ),
-    var(--surface);
-  box-shadow: 0 24px 60px var(--shadow);
-}
-
-.hero::before {
-  content: "";
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: 3px;
-  background: linear-gradient(90deg, var(--accent), transparent 80%);
 }
 
 .heroContent {
-  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: clamp(24px, 5vw, 44px) clamp(20px, 4vw, 36px);
+  gap: 10px;
 }
 
 .heroFlag {
@@ -1829,51 +1810,57 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
-  overflow: hidden;
+  justify-content: center;
+  min-width: 0;
   width: 100%;
-  min-height: clamp(148px, 44vw, 220px);
-  margin-bottom: 0;
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  background:
-    radial-gradient(
-      120% 140% at 0% 0%,
-      color-mix(in srgb, var(--accent) 24%, transparent) 0%,
-      transparent 62%
-    ),
-    var(--surface);
-  box-shadow: 0 12px 28px var(--shadow);
   isolation: isolate;
 }
 
-.albumHeroHeader::before {
-  content: "";
+/* World-map backdrop behind the title (see trip-route-art.tsx): decorative, never intercepts taps or text. */
+.albumHeroRoute {
+  --route-1: var(--accent);
+  --route-2: color-mix(in srgb, var(--accent) 65%, #6a4020);
+  --route-3: color-mix(in srgb, var(--accent) 55%, #ffb48e);
+
   position: absolute;
-  inset: 0 0 auto 0;
-  height: 3px;
-  background: linear-gradient(90deg, var(--accent), transparent 80%);
+  inset: -22px -16px;
+  z-index: -1;
+  width: calc(100% + 32px);
+  height: calc(100% + 44px);
+  opacity: 1;
+  pointer-events: none;
+  /* Strongest around the title, fading toward every edge. */
+  -webkit-mask-image: radial-gradient(ellipse 50% 68% at 44% 50%, #000 30%, rgb(0 0 0 / 0%) 100%);
+  mask-image: radial-gradient(ellipse 50% 68% at 44% 50%, #000 30%, rgb(0 0 0 / 0%) 100%);
+}
+
+:global(html[data-resolved-theme="light"]) .albumHeroRoute {
+  --route-1: color-mix(in srgb, var(--accent) 80%, #4a2412);
+  --route-2: color-mix(in srgb, var(--accent) 60%, #7a5a3a);
+  --route-3: color-mix(in srgb, var(--accent) 85%, #b85a35);
+
+  opacity: 0.6;
 }
 
 .albumHeroCopy {
-  position: relative;
-  z-index: 2;
   display: grid;
   gap: 6px;
   min-width: 0;
-  padding: 16px 16px 14px;
+  padding: 0;
 }
 
 .albumHeroTitleRow {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  align-items: flex-start;
+  gap: 14px;
   min-width: 0;
 }
 
 .albumHeroFlag {
   flex: 0 0 auto;
-  width: 30px;
+  align-self: flex-start;
+  margin-top: 0.5em;
+  width: 36px;
   height: auto;
   border-radius: 3px;
   box-shadow: 0 0 0 1px rgb(255 255 255 / 28%);
@@ -1884,57 +1871,52 @@
   margin: 0;
   min-width: 0;
   color: var(--text);
-  font-size: clamp(1.55rem, 6.2vw, 2.2rem);
-  line-height: 1.08;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(2rem, 4.4vw, 3.4rem);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 1.04;
   overflow-wrap: anywhere;
+  text-wrap: balance;
 }
 
-.albumHeroCountry {
-  margin: 0;
+.albumHeroTitleAccent {
   color: var(--accent);
-  font-size: 0.92rem;
-  font-weight: 650;
-  line-height: 1.3;
 }
 
-.albumHeroMeta {
-  margin: 0;
-  color: var(--text-secondary);
-  font-size: 0.88rem;
+.albumHeroFacts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 22px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.albumHeroFacts li {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+  font-size: 0.95rem;
   line-height: 1.35;
 }
 
-.albumHeroActions {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  z-index: 3;
-  display: flex;
-  gap: 8px;
+.albumHeroFacts svg {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  color: var(--accent);
 }
 
-.albumHeroCoverButton {
-  min-height: 34px;
-  padding: 0 12px;
-  border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--border));
-  border-radius: 999px;
-  color: var(--text);
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  cursor: pointer;
-  font: inherit;
+.albumHeroCountry {
+  margin: 4px 0 0;
+  color: var(--accent);
   font-size: 0.78rem;
-  font-weight: 600;
-}
-
-.albumHeroCoverButton:hover {
-  background: color-mix(in srgb, var(--accent) 24%, transparent);
-}
-
-.albumHeroCoverButton:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  line-height: 1.3;
+  text-transform: uppercase;
 }
 
 .albumHeroError {
@@ -2068,19 +2050,18 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   margin: 0;
   padding: 2px 0 2px;
 }
 
 .albumToolButton {
-  min-height: 40px;
-  border: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
+  min-height: 42px;
+  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
   border-radius: 999px;
-  padding: 0 14px;
+  padding: 0 16px;
   color: var(--text);
-  background: color-mix(in srgb, var(--surface) 92%, transparent);
-  box-shadow: 0 1px 0 color-mix(in srgb, var(--shadow) 55%, transparent);
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
   cursor: pointer;
   font: inherit;
   font-size: 0.88rem;
@@ -2108,7 +2089,8 @@
   border-color: color-mix(in srgb, var(--accent) 55%, transparent);
   color: white;
   background: var(--accent);
-  box-shadow: 0 8px 18px color-mix(in srgb, var(--accent) 28%, transparent);
+  font-weight: 700;
+  box-shadow: 0 10px 22px color-mix(in srgb, var(--accent) 34%, transparent);
 }
 
 .albumToolPrimary:hover {
@@ -2150,7 +2132,9 @@
   overflow: hidden;
   min-height: clamp(148px, 44vw, 220px);
   height: clamp(148px, 44vw, 220px);
-  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+  border-radius: 22px;
+  box-shadow: 0 18px 40px var(--shadow);
 }
 
 .albumSplit .mapLayoutFeatured,
@@ -2197,6 +2181,11 @@
   border-radius: 22px;
   color: var(--text);
   background:
+    radial-gradient(
+      90% 120% at 0% 0%,
+      color-mix(in srgb, var(--accent) 14%, transparent) 0%,
+      transparent 65%
+    ),
     linear-gradient(
       160deg,
       color-mix(in srgb, var(--surface) 72%, var(--accent)) 0%,
@@ -2842,39 +2831,32 @@
     gap: 12px;
   }
 
-  /* Cover + map → about → actions → photos */
+  /* Mobile: title/details stacked above the map, gallery stays edge to edge. */
   .albumSplit {
     order: 0;
-    gap: 8px;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
   }
 
-  .albumHeroHeader {
-    min-height: clamp(148px, 44vw, 220px);
+  .albumHeroTitleRow {
+    gap: 10px;
+  }
+
+  .albumHeroFlag {
+    width: 30px;
+  }
+
+  .albumHeroTitle {
+    font-size: clamp(1.9rem, 8.6vw, 2.5rem);
+  }
+
+  .albumHeroRoute {
+    opacity: 0.85;
   }
 
   .albumMapCard {
     min-height: clamp(148px, 44vw, 220px);
     height: clamp(148px, 44vw, 220px);
-  }
-
-  .albumHeroCopy {
-    gap: 4px;
-    padding: 10px 10px 8px;
-  }
-
-  .albumHeroTitle {
-    font-size: clamp(0.95rem, 3.8vw, 1.25rem);
-  }
-
-  .albumHeroCountry,
-  .albumHeroMeta {
-    font-size: 0.72rem;
-  }
-
-  .albumHeroCoverButton {
-    min-height: 28px;
-    padding: 0 8px;
-    font-size: 0.72rem;
   }
 
   .albumMapFullLink {
@@ -3054,11 +3036,6 @@
     margin-bottom: 14px;
   }
 
-  .albumHeroHeader {
-    margin-bottom: 0;
-    min-height: 280px;
-  }
-
   .albumSplit {
     gap: 12px;
   }
@@ -3068,17 +3045,6 @@
     min-height: 280px;
   }
 
-  .albumHeroTitle {
-    font-size: clamp(1.75rem, 3vw, 2.35rem);
-  }
-
-  .albumHeroCountry {
-    font-size: 1rem;
-  }
-
-  .albumHeroMeta {
-    font-size: 0.92rem;
-  }
 
   .coverPickerGrid {
     grid-template-columns: repeat(4, minmax(0, 1fr));

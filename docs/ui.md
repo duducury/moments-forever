@@ -40,6 +40,10 @@ No atalho da tela inicial do iPhone, o primeiro quadro é a marca escura (ícone
 
 A capa e primeiras thumbnails têm prioridade. Grid usa carregamento virtualizado e imagens responsivas. A galeria e o lightbox seguem a ordem de posição; a capa fica só no hero, sem pular para o início da grelha. Em tela cheia só a foto tocada está visível até o gesto; as vizinhas não ficam no DOM em descanso (isso fazia a primeira abrir a segunda e a última a penúltima no iPhone). Mapa só busca dados do viewport e nível de zoom. Na página de álbum, o HTML crítico (capa + galeria) não espera o bloco “Veja também”; MapLibre do mapa em destaque entra após idle para não competir com as primeiras fotos. No perfil (`/{nome}`), Destaques entram com o grid; só o mapa inferior faz stream e o MapLibre carrega perto do viewport.
 
+## Cartão “Sobre essa viagem”
+
+Composição editorial na página do lugar: título serifado “Sobre essa **viagem**” (última palavra em terracota), a história do usuário em serifa, localização (ícone de pino; cidade e país da viagem) e período (ícone de calendário) discretos, e o botão “Editar história” (só o dono). À direita, duas fotos **reais do próprio lugar** em moldura de Polaroid, levemente inclinadas e sobrepostas (a capa do lugar ou a primeira foto, e outra foto diferente atrás); sem foto, o cartão fica só com o texto. As fotos são decorativas (`aria-hidden`, sem interação) e não usam imagens genéricas nem dados de exemplo. Fundo escuro com brilho terracota, borda dupla sutil e o globo delicado ao fundo. Mantém duas colunas também no celular, com a Polaroid reduzida e tipografia menor.
+
 ## Conteúdo e estados
 
 Tratar explicitamente coleção vazia, memória sem GPS, EXIF ausente, upload pausado, link privado, indisponibilidade e exclusão. Nunca insinuar que análise local reconheceu um lugar com certeza quando apenas estimou um grupo.

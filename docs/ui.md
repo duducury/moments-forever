@@ -53,7 +53,7 @@ Referência visual: app de viagem premium, fundo escuro com acentos cobre/salmã
   - Regras: `aria-hidden`, `pointer-events: none`, `z-index: -1`, sem animação e sem dependências; um único filtro de desfoque estático.
 - Mapa: cantos de 22 px, borda cobre sutil e sombra; funções preservadas (marcadores de fotos, zoom, “Ver mapa completo”).
 - Galeria: **não faz parte deste design e não deve ser alterada**. Segue o estilo Instagram (3 colunas, quadros quadrados cortados em cover, 2 px de espaço, sem cantos arredondados, de ponta a ponta no celular), com as mesmas interações e o mesmo carregamento.
-- Cartão “Sobre essa viagem”: borda cobre sutil, brilho quente no canto, globo delicado ao fundo, texto em serifa, “Editar história” como pílula cobre (só o dono). Botões de ação: “+ Adicionar fotos” é a ação primária (preenchida em cobre, com sombra quente); as demais são pílulas discretas de 42 px, com o mesmo espaçamento; ações e permissões não mudaram.
+- Botões de ação (o cartão “Sobre essa viagem” está descrito na seção própria abaixo): “+ Adicionar fotos” é a ação primária (preenchida em cobre, com sombra quente); as demais são pílulas discretas de 42 px, com o mesmo espaçamento; ações e permissões não mudaram.
 - O botão “Escolher capa” não é exibido dentro da viagem nem do lugar. A foto de capa continua nos dados e nos cartões do perfil.
 
 **Viagem (`/trip/{slug}`, `/perfil/{viagem}`)**: bandeira + “Cidade, País”, título grande e etiquetas de data, fotos e lugares, com um fio fino cobre/salmão embaixo.

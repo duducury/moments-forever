@@ -27,6 +27,13 @@ function folderHref(photo: ProfileCarouselPhoto): string | null {
   return profileTripAlbumPath(photo.experienceSlug, photo.albumId);
 }
 
+/** Year the photo was taken, from its real capture date; null when unknown. */
+function captureYear(capturedAt: string | null): number | null {
+  if (!capturedAt) return null;
+  const year = new Date(capturedAt).getFullYear();
+  return Number.isFinite(year) ? year : null;
+}
+
 function PolaroidPhoto({
   photo,
   index,
@@ -42,6 +49,7 @@ function PolaroidPhoto({
   const fullSrc = useLocalPhotoObjectUrl(preferFull ? photo.id : null, "full");
   const caption = shortPlaceCaption(photo.locationLabel);
   const href = folderHref(photo);
+  const year = captureYear(photo.capturedAt);
   const names = polaroidAnimationNames(count);
   const style = {
     ["--i" as string]: index + 1,
@@ -101,12 +109,13 @@ function PolaroidPhoto({
             <span>{caption.shortLabel}</span>
           </span>
         ) : null}
+        {year ? <span className={styles.polaroidYear}>{year}</span> : null}
       </span>
     </>
   );
 
   const label = caption
-    ? `Abrir pasta desta viagem: ${caption.shortLabel}`
+    ? `Abrir pasta desta viagem: ${caption.shortLabel}${year ? `, ${year}` : ""}`
     : "Abrir pasta desta viagem";
 
   // A plain link: a hard navigation is more reliable than router.push in an iOS standalone PWA.

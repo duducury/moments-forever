@@ -725,14 +725,14 @@ html:not([data-nav-hidden="true"]) .sectionHeading[data-stuck="true"]:not(:focus
 /* Reserves the stack's real height while it streams in — without this the section pops in after paint and pushes
    Viagens down (layout shift). Same sizes as .polaroidStack: photo width x 1.2 + room for tilt and the slide. */
 .carouselSkeleton {
-  height: calc(clamp(130px, 38vw, 220px) * 1.2 + 64px);
+  height: calc(clamp(128px, 40vw, 232px) * 1.2 + 64px);
   background: color-mix(in srgb, var(--surface-secondary) 70%, var(--border));
   border-radius: 24px;
 }
 
 @media (min-width: 720px) {
   .carouselSkeleton {
-    height: calc(clamp(190px, 24vw, 236px) * 1.2 + 64px);
+    height: calc(clamp(210px, 26vw, 264px) * 1.2 + 64px);
   }
 }
 
@@ -1400,7 +1400,7 @@ html:not([data-nav-hidden="true"]) .sectionHeading[data-stuck="true"]:not(:focus
  * Sizes use clamp() on the viewport; the whole slide range (stack width + slide distance) stays inside the page width.
  */
 .polaroidStage {
-  --pw: clamp(130px, 38vw, 220px);
+  --pw: clamp(128px, 40vw, 232px);
     display: grid;
   justify-items: start;
   width: calc(var(--pw) * 2.2);
@@ -1506,8 +1506,10 @@ html:not([data-nav-hidden="true"]) .sectionHeading[data-stuck="true"]:not(:focus
 .polaroidCaption {
   display: flex;
   flex: 1;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: center;
+  gap: 6px;
   min-height: 0;
   padding: 0 4px;
   font-family: Georgia, "Times New Roman", serif;
@@ -1519,8 +1521,17 @@ html:not([data-nav-hidden="true"]) .sectionHeading[data-stuck="true"]:not(:focus
 
 @media (min-width: 720px) {
   .polaroidStage {
-    --pw: clamp(190px, 24vw, 236px);
+    --pw: clamp(210px, 26vw, 264px);
   }
+}
+
+/* Year of the photo, beside the place: smaller and lighter than the place name. */
+.polaroidYear {
+  flex: none;
+  color: #8a7d6d;
+  font-size: 0.86em;
+  font-weight: 400;
+  letter-spacing: 0.02em;
 }
 
 /* Reduced motion: a static, slightly fanned stack with the first photo in front. */

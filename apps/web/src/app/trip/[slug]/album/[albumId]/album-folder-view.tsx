@@ -18,7 +18,6 @@ import {
 import { AppBottomNav } from "@/components/app-bottom-nav";
 import { useAuth } from "@/components/auth-provider";
 import { ExperienceCoverThumb } from "@/components/experience-cover-thumb";
-import { splitStoryHeadline } from "@/lib/experiences/story-headline";
 import {
   deleteLocalPhotoBlob,
   deleteLocalPhotoBlobs,
@@ -621,14 +620,9 @@ export function AlbumFolderView({
 
   const heroCoverId = album.coverPhotoId ?? carouselPhotos[0]?.id ?? null;
   const story = album.description?.trim() ?? "";
-  // Display-only split: a short opening line/sentence becomes the large headline, the rest is the body.
-  const storyParts = splitStoryHeadline(story);
-  const storyBody = storyParts ? storyParts.body : story;
-  const storyLong = storyBody.length > 220;
+  const storyLong = story.length > 220;
   const storyText =
-    storyLong && !storyExpanded
-      ? `${storyBody.slice(0, 220).trim()}…`
-      : storyBody;
+    storyLong && !storyExpanded ? `${story.slice(0, 220).trim()}…` : story;
   // "Sobre essa viagem" polaroids: real photos of this place (cover first, then the next different photo).
   const aboutPhotoId = heroCoverId;
   const aboutPhotoBackId =
@@ -767,15 +761,6 @@ export function AlbumFolderView({
             <div className={styles.albumAboutCopy}>
               {story ? (
                 <>
-                  {storyParts ? (
-                    <p className={styles.albumAboutLead}>
-                      {storyParts.lead}
-                      {storyParts.lead ? " " : ""}
-                      <span className={styles.albumAboutLeadAccent}>
-                        {storyParts.accent}
-                      </span>
-                    </p>
-                  ) : null}
                   {storyText ? (
                     <p className={styles.albumAboutText}>{storyText}</p>
                   ) : null}

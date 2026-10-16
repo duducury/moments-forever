@@ -65,6 +65,17 @@ test("stamp labels: city first, place as fallback, country second line", () => {
   assert.ok(stampLabels({ city: "Santo Antônio do Pinhal de Cima", place: "x", country: "" }).name.endsWith("…"));
 });
 
+test("stamp name from a city-first place title uses only the city part", () => {
+  assert.equal(
+    stampLabels({ city: null, place: "Dubai, Emirados Árabes Unidos", country: "Emirados Árabes Unidos" }).name,
+    "DUBAI",
+  );
+  assert.equal(
+    stampLabels({ city: null, place: "Emirados Árabes Unidos, Dubai", country: "Emirados Árabes Unidos" }).name,
+    "DUBAI",
+  );
+});
+
 test("shape key: US state when known, otherwise the country, never a guess", () => {
   assert.deepEqual(stampShapeKey("US", "tx"), { kind: "us-state", key: "TX" });
   assert.deepEqual(stampShapeKey("us", null), { kind: "country", key: "US" });

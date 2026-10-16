@@ -54,12 +54,13 @@ function parsePlaceParts(label: string): {
   }
   const comma = cleaned.indexOf(",");
   if (comma > 0) {
-    const country = cleaned.slice(0, comma).trim();
-    const locality = cleaned.slice(comma + 1).trim();
-    return {
-      country: country || null,
-      locality: locality || null,
-    };
+    const first = cleaned.slice(0, comma).trim();
+    const rest = cleaned.slice(comma + 1).trim();
+    // Stored labels are "País, Localidade"; the display order is "Cidade, País". Accept both.
+    if (!countryCodeFromName(first) && countryCodeFromName(rest)) {
+      return { country: rest || null, locality: first || null };
+    }
+    return { country: first || null, locality: rest || null };
   }
   return { country: null, locality: cleaned };
 }

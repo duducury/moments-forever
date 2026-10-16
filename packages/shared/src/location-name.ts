@@ -92,8 +92,49 @@ function foldLabelKey(value: string): string {
     .trim();
 }
 
+/**
+ * Districts that people know by their city: "Deira" is Dubai. Keyed by the folded district name, and only applied when
+ * the label's country part matches, so the same name elsewhere is never rewritten.
+ */
+const DISTRICT_CITIES: ReadonlyMap<
+  string,
+  { readonly country: string; readonly city: string }
+> = new Map(
+  [
+    ["deira", "Dubai"],
+    ["bur dubai", "Dubai"],
+    ["jumeirah", "Dubai"],
+    ["jumeira", "Dubai"],
+    ["business bay", "Dubai"],
+    ["al barsha", "Dubai"],
+  ].map(([district, city]) => [
+    district as string,
+    { country: "emirados arabes unidos", city: city as string },
+  ]),
+);
+
+function districtToCity(label: string): string | null {
+  const comma = label.indexOf(",");
+  if (comma <= 0) return null;
+  const first = label.slice(0, comma).trim();
+  const second = label.slice(comma + 1).trim();
+  const pairs: readonly [string, string, boolean][] = [
+    [first, second, true],
+    [second, first, false],
+  ];
+  for (const [country, locality, countryFirst] of pairs) {
+    const entry = DISTRICT_CITIES.get(foldLabelKey(locality));
+    if (entry && foldLabelKey(country) === entry.country) {
+      return countryFirst ? `${country}, ${entry.city}` : `${entry.city}, ${country}`;
+    }
+  }
+  return null;
+}
+
 export function coarsenTravelLabel(label: string): string {
   const cleaned = cleanLocationLabel(label);
+  const district = districtToCity(cleaned);
+  if (district) return district;
   const fullKey = foldLabelKey(cleaned);
   if (TRAVEL_LABEL_ALIASES[fullKey]) return TRAVEL_LABEL_ALIASES[fullKey];
   if (fullKey.includes("kesiman")) return "Bali";

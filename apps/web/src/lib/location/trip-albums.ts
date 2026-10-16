@@ -1,4 +1,7 @@
-import { resolveLocationDisplayName } from "@moments-forever/shared";
+import {
+  placeLabelCityFirst,
+  resolveLocationDisplayName,
+} from "@moments-forever/shared";
 
 import { loadCoverFocusByAlbum } from "@/lib/experiences/cover-focus";
 import type { TripAlbum, TripPhoto } from "@/app/trip/[slug]/album-types";
@@ -109,12 +112,15 @@ export async function loadTripAlbums(
       experienceId: album.experience_id,
       parentAlbumId: album.parent_album_id,
       name: album.name,
-      displayName: resolveLocationDisplayName({
-        albumName: album.name,
-        placeName,
-        placeConfirmedByUser,
-        fallbackIndex: album.position,
-      }),
+      // Shown as "Cidade, País" (stored names keep "País, Localidade"); display only.
+      displayName: placeLabelCityFirst(
+        resolveLocationDisplayName({
+          albumName: album.name,
+          placeName,
+          placeConfirmedByUser,
+          fallbackIndex: album.position,
+        }),
+      ),
       description: album.description,
       coverPhotoId: album.cover_photo_id,
       coverFocus: focusByAlbum.get(album.id) ?? null,

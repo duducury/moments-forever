@@ -217,7 +217,7 @@ export function AlbumFolderView({
   }, []);
 
   const period = useMemo(
-    () => formatPhotoPeriod(albumPhotos),
+    () => formatPhotoPeriod(albumPhotos, "numeric"),
     [albumPhotos],
   );
 
@@ -766,7 +766,7 @@ export function AlbumFolderView({
                   Escreva o que essa viagem significou para você.
                 </p>
               )}
-              {aboutLocation || period ? (
+              {aboutLocation ? (
                 <ul className={styles.albumAboutFacts}>
                   {aboutLocation ? (
                     <li>
@@ -775,15 +775,6 @@ export function AlbumFolderView({
                         <circle cx="12" cy="10" r="2.3" stroke="currentColor" strokeWidth="1.7" />
                       </svg>
                       <span>{aboutLocation}</span>
-                    </li>
-                  ) : null}
-                  {period ? (
-                    <li>
-                      <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
-                        <rect height="15" rx="3" stroke="currentColor" strokeWidth="1.7" width="17" x="3.5" y="5.5" />
-                        <path d="M3.5 10h17M8 3.5v4M16 3.5v4" stroke="currentColor" strokeLinecap="round" strokeWidth="1.7" />
-                      </svg>
-                      <span>{period}</span>
                     </li>
                   ) : null}
                 </ul>

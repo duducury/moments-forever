@@ -3425,31 +3425,11 @@
   opacity: 0.8;
 }
 
-.albumAboutRule {
-  display: block;
-  width: 44px;
-  height: 1px;
-  background: color-mix(in srgb, var(--accent) 70%, transparent);
-}
-
 .albumAboutText,
 .albumAboutEmpty {
   font-size: clamp(1.08rem, 2.6vw, 1.32rem);
   line-height: 1.72;
   letter-spacing: 0.005em;
-}
-
-.albumAboutPostmark {
-  position: absolute;
-  top: -16%;
-  right: -2%;
-  z-index: 0;
-  width: 66%;
-  height: auto;
-  color: var(--accent);
-  opacity: 0.38;
-  transform: rotate(12deg);
-  pointer-events: none;
 }
 
 /* Taller polaroid frames (thicker bottom border) and a roomier stack. */
@@ -3473,4 +3453,149 @@
 
 .albumAboutPolaroids .albumAboutPolaroidBack {
   z-index: 2;
+}
+
+/* Story section v3: headline + body, long route to the plane, pencil on the edit button, taped polaroid, postage stamp. */
+.albumAboutHeadRow {
+  gap: 8px;
+}
+
+.albumAboutRoute {
+  flex: 1 1 auto;
+  width: auto;
+  max-width: 250px;
+  height: 34px;
+  opacity: 0.95;
+}
+
+.albumAboutLead {
+  margin: 4px 0 0;
+  color: var(--text);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.7rem, 6.4vw, 2.7rem);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 1.08;
+  text-wrap: balance;
+}
+
+.albumAboutLeadAccent {
+  color: var(--accent);
+}
+
+.albumAboutText,
+.albumAboutEmpty {
+  font-size: clamp(1rem, 2.4vw, 1.22rem);
+  line-height: 1.6;
+  color: color-mix(in srgb, var(--text) 92%, transparent);
+}
+
+.albumAboutEdit {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.albumAboutEdit svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+}
+
+.albumAboutPolaroids {
+  align-self: start;
+  width: clamp(150px, 46vw, 300px);
+  aspect-ratio: 1 / 1.1;
+  margin-top: 6px;
+}
+
+.albumAboutPolaroids[data-long="true"] {
+  width: clamp(132px, 40vw, 260px);
+}
+
+.albumAboutPolaroids .albumAboutPolaroidFront {
+  width: 82%;
+  height: 88%;
+  transform: rotate(-3deg);
+  overflow: visible;
+}
+
+/* Strip of tape holding the front polaroid. */
+.albumAboutPolaroids .albumAboutPolaroidFront::after {
+  content: "";
+  position: absolute;
+  top: -9px;
+  left: 50%;
+  width: 34%;
+  height: 16px;
+  transform: translateX(-50%) rotate(-2deg);
+  background: color-mix(in srgb, #d9c7a8 78%, transparent);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 25%);
+}
+
+.albumAboutPolaroids .albumAboutPolaroidFront > * {
+  overflow: hidden;
+}
+
+.albumAboutPolaroids .albumAboutPolaroidBack {
+  width: 62%;
+  height: 66%;
+  transform: rotate(6deg);
+  filter: brightness(0.86);
+}
+
+.albumAboutPostmark {
+  position: absolute;
+  bottom: -20%;
+  left: -34%;
+  z-index: 0;
+  width: 80%;
+  height: auto;
+  color: var(--accent);
+  opacity: 0.3;
+  transform: rotate(-8deg);
+  pointer-events: none;
+}
+
+/* v3 layout: label + long route span the full width above the copy and the polaroids. */
+.albumAboutCard {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+}
+
+.albumAboutHeadRow {
+  grid-column: 1 / -1;
+}
+
+.albumAboutRoute {
+  max-width: 340px;
+}
+
+.albumAboutEdit {
+  white-space: nowrap;
+}
+
+.albumAboutPolaroids {
+  width: clamp(132px, 41vw, 280px);
+  margin-top: 0;
+  margin-left: -10%;
+}
+
+.albumAboutPolaroids[data-long="true"] {
+  width: clamp(120px, 37vw, 250px);
+}
+
+.albumAboutPostmark {
+  bottom: -30%;
+  left: -62%;
+  width: 104%;
+  opacity: 0.34;
+}
+
+@media (max-width: 719px) {
+  .albumAboutPostmark {
+    bottom: -44%;
+    left: -56%;
+    width: 96%;
+  }
 }

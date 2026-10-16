@@ -18,6 +18,7 @@ import {
 import { AppBottomNav } from "@/components/app-bottom-nav";
 import { useAuth } from "@/components/auth-provider";
 import { ExperienceCoverThumb } from "@/components/experience-cover-thumb";
+import { splitStoryHeadline } from "@/lib/experiences/story-headline";
 import {
   deleteLocalPhotoBlob,
   deleteLocalPhotoBlobs,
@@ -620,9 +621,14 @@ export function AlbumFolderView({
 
   const heroCoverId = album.coverPhotoId ?? carouselPhotos[0]?.id ?? null;
   const story = album.description?.trim() ?? "";
-  const storyLong = story.length > 220;
+  // Display-only split: a short opening line/sentence becomes the large headline, the rest is the body.
+  const storyParts = splitStoryHeadline(story);
+  const storyBody = storyParts ? storyParts.body : story;
+  const storyLong = storyBody.length > 220;
   const storyText =
-    storyLong && !storyExpanded ? `${story.slice(0, 220).trim()}…` : story;
+    storyLong && !storyExpanded
+      ? `${storyBody.slice(0, 220).trim()}…`
+      : storyBody;
   // "Sobre essa viagem" polaroids: real photos of this place (cover first, then the next different photo).
   const aboutPhotoId = heroCoverId;
   const aboutPhotoBackId =
@@ -752,17 +758,27 @@ export function AlbumFolderView({
             data-reveal
           >
             <AboutWorldMark />
+            <div className={styles.albumAboutHeadRow}>
+              <p className={styles.albumAboutHeading}>
+                Sobre essa <span className={styles.albumAboutHeadingAccent}>viagem</span>
+              </p>
+              <StoryFlightRoute />
+            </div>
             <div className={styles.albumAboutCopy}>
-              <div className={styles.albumAboutHeadRow}>
-                <p className={styles.albumAboutHeading}>
-                  Sobre essa <span className={styles.albumAboutHeadingAccent}>viagem</span>
-                </p>
-                <StoryFlightRoute />
-              </div>
-              <span aria-hidden="true" className={styles.albumAboutRule} />
               {story ? (
                 <>
-                  <p className={styles.albumAboutText}>{storyText}</p>
+                  {storyParts ? (
+                    <p className={styles.albumAboutLead}>
+                      {storyParts.lead}
+                      {storyParts.lead ? " " : ""}
+                      <span className={styles.albumAboutLeadAccent}>
+                        {storyParts.accent}
+                      </span>
+                    </p>
+                  ) : null}
+                  {storyText ? (
+                    <p className={styles.albumAboutText}>{storyText}</p>
+                  ) : null}
                   {storyLong ? (
                     <button
                       className={styles.albumAboutMore}
@@ -800,7 +816,11 @@ export function AlbumFolderView({
                   }}
                   type="button"
                 >
-                  {story ? "Editar história" : "Escrever história"}
+                  <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
+                  <path d="m4 20 1-4L16.5 4.5a2.1 2.1 0 0 1 3 3L8 19l-4 1Z" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.6" />
+                  <path d="m14.5 6.5 3 3" stroke="currentColor" strokeLinecap="round" strokeWidth="1.6" />
+                </svg>
+                {story ? "Editar história" : "Escrever história"}
                 </button>
               ) : null}
             </div>
@@ -1225,7 +1245,7 @@ export function AlbumFolderView({
   );
 }
 
-/** Small dashed copper route that ends in an aeroplane, set beside the section label. Decorative. */
+/** Long dashed copper route that leaves the section label and ends in an aeroplane. Decorative. */
 function StoryFlightRoute() {
   return (
     <svg
@@ -1233,50 +1253,52 @@ function StoryFlightRoute() {
       className={styles.albumAboutRoute}
       fill="none"
       focusable="false"
-      viewBox="0 0 120 44"
+      preserveAspectRatio="xMaxYMid meet"
+      viewBox="0 0 220 44"
     >
       <path
-        d="M4 38C34 40 62 34 84 20"
+        d="M2 30C40 38 70 14 110 24S168 32 194 15"
         stroke="currentColor"
         strokeDasharray="3 5"
         strokeLinecap="round"
-        strokeWidth="1.3"
+        strokeWidth="1.2"
+        opacity="0.8"
       />
-      <g fill="currentColor" transform="translate(94 15) rotate(-34) scale(0.78)">
+      <g fill="currentColor" transform="translate(203 12) rotate(-36) scale(0.95)">
         <path d="M15 0 6 -1.6 -3 -9.5 -6.5 -9.5 -3.2 -1.4 -10 -1 -12.5 -4.5 -15 -4.5 -13.5 0 -15 4.5 -12.5 4.5 -10 1 -3.2 1.4 -6.5 9.5 -3 9.5 6 1.6Z" />
       </g>
     </svg>
   );
 }
 
-/** Generic copper postmark (rings, ticks, dotted core) behind the polaroids. No text or place names. */
+/** Generic copper postage stamp with a circular postmark and cancellation waves. No text or place names. */
 function StoryPostmark() {
-  const ticks = Array.from({ length: 36 }, (_, index) => index * 10);
+  const ticks = Array.from({ length: 24 }, (_, index) => index * 15);
   return (
     <svg
       aria-hidden="true"
       className={styles.albumAboutPostmark}
       fill="none"
       focusable="false"
-      viewBox="0 0 100 100"
+      viewBox="0 0 160 110"
     >
       <g stroke="currentColor" strokeLinecap="round">
-        <circle cx="50" cy="50" r="44" strokeWidth="1.2" />
-        <circle cx="50" cy="50" r="36" strokeWidth="0.8" />
-        <circle cx="50" cy="50" r="20" strokeDasharray="2 3" strokeWidth="0.8" />
-        {ticks.map((angle) => (
-          <line
-            key={angle}
-            strokeWidth="0.7"
-            transform={`rotate(${angle} 50 50)`}
-            x1="50"
-            x2="50"
-            y1="6"
-            y2="9.5"
-          />
-        ))}
-        <path d="M40 50h20M50 40v20" strokeWidth="0.9" />
-        <path d="M22 78c8 4 14-4 22 0M58 78c8 4 14-4 22 0" strokeWidth="0.9" />
+        {/* postage stamp with a perforated edge */}
+        <rect height="74" rx="2" strokeDasharray="1.6 2.6" strokeWidth="2.2" width="58" x="14" y="22" />
+        <rect height="62" rx="1" strokeWidth="0.9" width="46" x="20" y="28" />
+        <path d="M26 74c8-14 14-14 20 0M26 56h28M26 64h28" strokeWidth="0.9" />
+        <circle cx="42" cy="44" r="6" strokeWidth="0.9" />
+        {/* circular postmark overlapping the stamp */}
+        <g transform="translate(76 54)">
+          <circle r="30" strokeWidth="1.1" />
+          <circle r="24" strokeWidth="0.7" />
+          {ticks.map((angle) => (
+            <line key={angle} strokeWidth="0.7" transform={`rotate(${angle})`} x1="0" x2="0" y1="-30" y2="-33" />
+          ))}
+          <path d="M-14 0h28M0 -14v28" strokeWidth="0.8" />
+        </g>
+        {/* cancellation waves */}
+        <path d="M112 38c6-4 10 4 16 0s10 4 16 0M112 50c6-4 10 4 16 0s10 4 16 0M112 62c6-4 10 4 16 0s10 4 16 0" strokeWidth="1" />
       </g>
     </svg>
   );

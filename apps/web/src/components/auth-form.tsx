@@ -104,7 +104,11 @@ export function AuthForm() {
     const result =
       mode === "sign-in"
         ? await authClient.auth.signInWithPassword({ email, password })
-        : await authClient.auth.signUp({ email, password });
+        : await authClient.auth.signUp({
+            email,
+            password,
+            options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+          });
 
     if (result.error) {
       setMessage(authErrorMessage(mode, result.error));
@@ -120,7 +124,7 @@ export function AuthForm() {
 
     setMessage(
       mode === "sign-up"
-        ? "Conta criada. Verifique seu e-mail, se solicitado."
+        ? "Conta criada. Enviamos um link de confirmação para o seu e-mail — confira também a caixa de spam. Pode levar alguns minutos."
         : "Sessão iniciada.",
     );
     setBusy(false);

@@ -5,6 +5,7 @@ import { useState } from "react";
 import { EditProfileDialog } from "./edit-profile-dialog";
 import { ProfileAvatar } from "./profile-avatar";
 import styles from "./perfil.module.css";
+import { CountryFlagImage } from "@/components/country-flag-image";
 
 export const DEFAULT_BIO = "Nossas viagens e momentos pelo mundo.";
 
@@ -108,14 +109,12 @@ export function ProfileHeader({
             >
               {countryCodes.map((code) => (
                 <li key={code}>
-                  {/* eslint-disable-next-line @next/next/no-img-element -- small flag CDN asset */}
-                  <img
+                  <CountryFlagImage
+                    code={code}
                     alt={code}
                     className={styles.profileCountryFlag}
-                    decoding="async"
                     height={14}
                     loading="lazy"
-                    src={`https://flagcdn.com/w40/${code.toLowerCase()}.png`}
                     title={code}
                     width={20}
                   />

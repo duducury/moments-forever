@@ -11,6 +11,7 @@ import type { PassportData } from "@/lib/passport/build-passport";
 
 import { PageWatermark } from "./passport-page-watermark";
 import styles from "./passaporte.module.css";
+import { CountryFlagImage } from "@/components/country-flag-image";
 
 const PassportWorldMap = dynamic(
   () => import("./passport-world-map").then((mod) => mod.PassportWorldMap),
@@ -866,13 +867,11 @@ function CountryFlag({
   readonly className?: string;
 }) {
   return (
-    // eslint-disable-next-line @next/next/no-img-element -- small flag CDN asset
-    <img
+    <CountryFlagImage
+      code={code}
       alt=""
       className={`${styles.flag} ${className ?? ""}`.trim()}
-      decoding="async"
       height={Math.round(size * (14 / 18))}
-      src={`https://flagcdn.com/w40/${code.toLowerCase()}.png`}
       width={size}
     />
   );

@@ -4,6 +4,12 @@
  */
 
 import { COUNTRY_NAMES_BY_ISO } from "./country-names.generated";
+import {
+  COUNTRY_NAME_ALIASES,
+  PT_BR_NAME_OVERRIDES,
+  SHORT_NAME_BY_CODE,
+  TERRITORY_PARENT,
+} from "./country-registry";
 import { cleanLocationLabel } from "./location-name";
 
 /**
@@ -323,6 +329,14 @@ function normalizeCountryKey(value: string): string {
     .toLowerCase();
 }
 
+const AMBIGUOUS_GEORGIA_KEY = "georgia";
+
+/** Cities whose "…, Georgia" is the country, not the US state. */
+const GEORGIAN_CITY_KEYS: ReadonlySet<string> = new Set([
+  "tbilisi", "batumi", "kutaisi", "mestia", "stepantsminda", "kazbegi", "gori", "telavi", "sighnaghi", "signagi",
+  "borjomi", "mtskheta", "kobuleti", "zugdidi", "rustavi", "poti", "ushguli",
+]);
+
 /** Spellings that differ from the ICU display names (OSM, ISO long forms, local names). */
 const COUNTRY_ALIASES: Readonly<Record<string, readonly string[]>> = {
   TZ: [
@@ -387,6 +401,14 @@ const COUNTRY_ISO_BY_NAME: Readonly<Record<string, string>> = (() => {
       if (key && !(key in table)) table[key] = code;
     }
   }
+  for (const [code, name] of Object.entries(PT_BR_NAME_OVERRIDES)) {
+    table[normalizeCountryKey(name)] = code;
+  }
+  for (const [code, names] of Object.entries(COUNTRY_NAME_ALIASES)) {
+    for (const name of names) {
+      table[normalizeCountryKey(name)] = code;
+    }
+  }
   for (const [code, names] of Object.entries(COUNTRY_ALIASES)) {
     for (const name of names) {
       table[normalizeCountryKey(name)] = code;
@@ -412,19 +434,6 @@ export function normalizeCountryCode(
   const code = raw?.trim().toUpperCase() ?? "";
   return COUNTRY_NAMES_BY_ISO[code] ? code : null;
 }
-
-/**
- * Territories with their own ISO 3166-1 code and flag that geocoders and place names often file under the
- * sovereign country ("Estados Unidos, Porto Rico"). When a label names both, the territory is the destination.
- */
-const TERRITORY_PARENT: Readonly<Record<string, string>> = {
-  PR: "US", GU: "US", VI: "US", AS: "US", MP: "US", UM: "US",
-  AI: "GB", BM: "GB", FK: "GB", GI: "GB", KY: "GB", MS: "GB", TC: "GB", VG: "GB",
-  GF: "FR", GP: "FR", MQ: "FR", NC: "FR", PF: "FR", PM: "FR", RE: "FR", YT: "FR", BL: "FR", MF: "FR", WF: "FR",
-  AW: "NL", CW: "NL", SX: "NL", BQ: "NL",
-  HK: "CN", MO: "CN",
-  FO: "DK", GL: "DK",
-};
 
 /** USPS abbreviations of US territories, accepted after a comma ("San Juan, PR"). */
 const US_TERRITORY_ABBREVIATIONS: ReadonlySet<string> = new Set(["PR", "GU", "VI", "AS", "MP"]);
@@ -461,9 +470,27 @@ export function countryCodeFromStoredOrLabel(input: {
  * code is not a known country. Works for every ISO country.
  */
 export function countryNameFromCode(code: string): string | null {
-  const names = COUNTRY_NAMES_BY_ISO[code.trim().toUpperCase()];
+  const upper = code.trim().toUpperCase();
+  const names = COUNTRY_NAMES_BY_ISO[upper];
   if (!names) return null;
-  return names[1] ?? names[0] ?? null;
+  return PT_BR_NAME_OVERRIDES[upper] ?? names[1] ?? names[0] ?? null;
+}
+
+/**
+ * Short pt-BR name for captions ("Hong Kong", "Ilhas Virgens (EUA)"): the curated short name when there is one,
+ * else the full name. Never longer than 22 characters.
+ */
+export function countryShortNameFromCode(code: string): string | null {
+  const upper = code.trim().toUpperCase();
+  const short = SHORT_NAME_BY_CODE[upper];
+  if (short) return short;
+  const full = countryNameFromCode(upper);
+  return full ? (full.length > 22 ? `${full.slice(0, 21).trimEnd()}…` : full) : null;
+}
+
+/** Territory (own ISO code and flag) → its sovereign country, e.g. PR → US. Null for everything else. */
+export function sovereignCountryOf(code: string): string | null {
+  return TERRITORY_PARENT[code.trim().toUpperCase()] ?? null;
 }
 
 function usStateCodeFromToken(token: string): string | null {
@@ -496,12 +523,23 @@ export function usStateCodeFromPlaceLabel(
     const last = parts[parts.length - 1];
     if (last) {
       const fromLast = usStateCodeFromToken(last);
+      if (fromLast === "GA" && normalizeCountryKey(last) === AMBIGUOUS_GEORGIA_KEY) {
+        // "Tbilisi, Georgia" / "Georgia, Tbilisi"-style labels name the country; "Atlanta, Georgia" the state.
+        const rest = parts.slice(0, -1);
+        const georgian = rest.some((part) => {
+          const key = normalizeCountryKey(part);
+          return GEORGIAN_CITY_KEYS.has(key) || countryCodeFromName(part) !== null;
+        });
+        return georgian ? null : fromLast;
+      }
       if (fromLast) return fromLast;
     }
   }
 
-  // Bare full state name only (not "MA"/"CA" alone — those collide with ISO use).
-  return US_STATE_CODE_BY_NAME[normalizeCountryKey(cleaned)] ?? null;
+  // Bare full state name only (not "MA"/"CA" alone — those collide with ISO use). Bare "Georgia" is the country.
+  const bare = normalizeCountryKey(cleaned);
+  if (bare === AMBIGUOUS_GEORGIA_KEY) return null;
+  return US_STATE_CODE_BY_NAME[bare] ?? null;
 }
 
 /** English display name of a US state from its USPS code ("PA" → "Pennsylvania"), or null. */
@@ -520,6 +558,9 @@ export function usStateNameFromCode(code: string | null | undefined): string | n
 export function countryCodeFromName(countryName: string): string | null {
   const key = normalizeCountryKey(countryName);
   if (!key) return null;
+  // "Georgia"/"Geórgia" is the country by itself; the US state only shows up as the tail of "Atlanta, Georgia"
+  // (see usStateCodeFromPlaceLabel).
+  if (key === AMBIGUOUS_GEORGIA_KEY) return "GE";
   if (US_STATE_CODE_BY_NAME[key]) return "US";
   return COUNTRY_ISO_BY_NAME[key] ?? null;
 }
@@ -654,31 +695,6 @@ const SHORT_PLACE_LABELS: Readonly<Record<string, string>> = {
   tailandia: "Tailândia",
 };
 
-const COUNTRY_SHORT_BY_CODE: Readonly<Record<string, string>> = {
-  US: "USA",
-  ID: "Indonésia",
-  BR: "Brasil",
-  AE: "Emirados",
-  PT: "Portugal",
-  ES: "Espanha",
-  FR: "França",
-  IT: "Itália",
-  JP: "Japão",
-  TH: "Tailândia",
-  GB: "UK",
-  DE: "Alemanha",
-  MX: "México",
-  AR: "Argentina",
-  CL: "Chile",
-  CO: "Colômbia",
-  CA: "Canadá",
-  AU: "Austrália",
-  NL: "Holanda",
-  QA: "Catar",
-  SG: "Singapura",
-  JM: "Jamaica",
-  PR: "Porto Rico",
-};
 
 export type ShortPlaceCaption = {
   readonly countryCode: string | null;
@@ -738,7 +754,7 @@ export function shortPlaceCaption(
     ) {
       return {
         countryCode,
-        shortLabel: COUNTRY_SHORT_BY_CODE[countryCode] ?? countryNameFromCode(countryCode) ?? countryPart,
+        shortLabel: countryShortNameFromCode(countryCode) ?? countryPart,
       };
     }
 
@@ -754,10 +770,10 @@ export function shortPlaceCaption(
         shortLabel: SHORT_PLACE_LABELS[countryKey],
       };
     }
-    if (countryCode && COUNTRY_SHORT_BY_CODE[countryCode]) {
+    if (countryCode && SHORT_NAME_BY_CODE[countryCode]) {
       return {
         countryCode,
-        shortLabel: COUNTRY_SHORT_BY_CODE[countryCode],
+        shortLabel: SHORT_NAME_BY_CODE[countryCode],
       };
     }
     return {
@@ -766,13 +782,13 @@ export function shortPlaceCaption(
     };
   }
 
-  if (countryCode && COUNTRY_SHORT_BY_CODE[countryCode]) {
-    // Known city/state alias → keep short place name; country name → ISO short.
+  if (countryCode) {
+    // Known city/state alias → keep short place name; country name → canonical short name (never cut mid-word).
     const isCountryName = countryCodeFromName(cleaned) === countryCode;
     if (isCountryName) {
       return {
         countryCode,
-        shortLabel: COUNTRY_SHORT_BY_CODE[countryCode],
+        shortLabel: countryShortNameFromCode(countryCode) ?? titleCaseWords(cleaned).slice(0, 22),
       };
     }
     return {

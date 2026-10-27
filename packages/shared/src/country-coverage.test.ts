@@ -14,6 +14,7 @@ import {
   flagEmojiFromCountryCode,
 } from "./country-flag";
 import { COUNTRY_NAMES_BY_ISO } from "./country-names.generated";
+import { PT_BR_NAME_OVERRIDES } from "./country-registry";
 
 // "Georgia" is also a US state; the state reading wins for bare names (existing
 // behaviour), so the country is only reachable via its other spellings.
@@ -88,7 +89,7 @@ test("countryNameFromCode returns the pt-BR name for every country, even when it
     assert.equal(countryNameFromCode(code), ptBr.of(code), code);
   }
   for (const code of KNOWN_COUNTRY_CODES) {
-    const expected = ptBr.of(code);
+    const expected = PT_BR_NAME_OVERRIDES[code] ?? ptBr.of(code);
     if (expected && expected !== code) {
       assert.equal(countryNameFromCode(code), expected, code);
     }

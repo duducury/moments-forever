@@ -53,6 +53,8 @@ export {
   countryCodeFromName,
   countryCodeFromStoredOrLabel,
   countryNameFromCode,
+  countryShortNameFromCode,
+  sovereignCountryOf,
   normalizeCountryCode,
   placeLabelCityFirst,
   countryCodeFromPlaceLabel,
@@ -1205,3 +1207,10 @@ export function assertSupabaseUrl(url: string): string {
   }
   return trimmed;
 }
+
+export {
+  COUNTRY_NAME_ALIASES,
+  PT_BR_NAME_OVERRIDES,
+  SHORT_NAME_BY_CODE,
+  TERRITORY_PARENT,
+} from "./country-registry";

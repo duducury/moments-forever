@@ -19,6 +19,7 @@ import { countryCodeFromPlaceLabel } from "@moments-forever/shared";
 
 import type { TripAlbum } from "./album-types";
 import styles from "./trip.module.css";
+import { CountryFlagImage } from "@/components/country-flag-image";
 
 const NEW_ALBUM_VALUE = "__new__";
 
@@ -230,13 +231,11 @@ export function AddPhotosPanel({
                   <span className={styles.addPhotosPickCopy}>
                     <strong>
                       {countryCode ? (
-                        // eslint-disable-next-line @next/next/no-img-element -- small flag CDN asset
-                        <img
+                        <CountryFlagImage
+                          code={countryCode}
                           alt=""
                           className={styles.addPhotosPickFlag}
-                          decoding="async"
                           height={15}
-                          src={`https://flagcdn.com/w40/${countryCode.toLowerCase()}.png`}
                           width={20}
                         />
                       ) : null}

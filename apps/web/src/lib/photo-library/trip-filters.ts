@@ -3,6 +3,8 @@
  * Pure: chips only narrow what is SHOWN — what is ticked, reviewed or imported is untouched.
  */
 
+import { countryShortNameFromCode } from "@moments-forever/shared";
+
 import type { Candidate } from "./selection";
 
 export type TripFilterId = "all" | "new" | "other" | `country:${string}`;
@@ -20,13 +22,9 @@ export function candidateCountry(candidate: Candidate): string | null {
   return candidate.countryCode ?? candidate.quickCountryCode ?? null;
 }
 
-export function countryChipLabel(code: string, regionNames?: Intl.DisplayNames): string {
+export function countryChipLabel(code: string): string {
   if (code === "US") return "EUA";
-  try {
-    return regionNames?.of(code) ?? code;
-  } catch {
-    return code;
-  }
+  return countryShortNameFromCode(code) ?? code;
 }
 
 /**
@@ -35,7 +33,6 @@ export function countryChipLabel(code: string, regionNames?: Intl.DisplayNames):
  */
 export function buildFilterChips(
   candidates: readonly Candidate[],
-  regionNames?: Intl.DisplayNames,
 ): readonly TripFilterChip[] {
   const total = candidates.length;
   const chips: TripFilterChip[] = [{ id: "all", label: "Todas", count: total, countryCode: null }];
@@ -58,7 +55,7 @@ export function buildFilterChips(
     if (inMain < total) {
       chips.push({
         id: `country:${main}`,
-        label: countryChipLabel(main, regionNames),
+        label: countryChipLabel(main),
         count: inMain,
         countryCode: main,
       });

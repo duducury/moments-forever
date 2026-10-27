@@ -214,16 +214,9 @@ export function FindTripsFlow({
 
   // Filter chips only narrow what is shown; ticks, review and import still see every trip.
   const [filter, setFilter] = useState<TripFilterId>("all");
-  const regionNames = useMemo(() => {
-    try {
-      return new Intl.DisplayNames(["pt-BR"], { type: "region" });
-    } catch {
-      return undefined;
-    }
-  }, []);
   const chips = useMemo(
-    () => buildFilterChips([...fresh, ...existing], regionNames),
-    [fresh, existing, regionNames],
+    () => buildFilterChips([...fresh, ...existing]),
+    [fresh, existing],
   );
   const activeFilter = chips.some((chip) => chip.id === filter) ? filter : "all";
   const mainCountry = mainCountryOf(chips);

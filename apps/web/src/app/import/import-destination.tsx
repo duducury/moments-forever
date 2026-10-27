@@ -24,6 +24,7 @@ import { uploadFilesToAlbum } from "@/lib/photos/upload-files-to-album";
 import { profileTripAlbumPath } from "@/lib/routes/app-routes";
 
 import styles from "./photo-import.module.css";
+import { CountryFlagImage } from "@/components/country-flag-image";
 
 /** Only the first files are checked — a single-place trip's GPS shows up fast. */
 const MAX_FILES_TO_SCAN_FOR_GPS = 15;
@@ -607,13 +608,11 @@ export function ImportDestination({
             <label htmlFor="new-album-name">Nome do álbum</label>
             <div className={styles.destinationNameField}>
               {detectedCountryCode ? (
-                // eslint-disable-next-line @next/next/no-img-element -- small flag CDN asset
-                <img
+                <CountryFlagImage
+                  code={detectedCountryCode}
                   alt=""
                   className={styles.destinationNameFlag}
-                  decoding="async"
                   height={15}
-                  src={`https://flagcdn.com/w40/${detectedCountryCode.toLowerCase()}.png`}
                   width={20}
                 />
               ) : null}
@@ -686,13 +685,11 @@ export function ImportDestination({
                     <span className={styles.destinationAlbumCopy}>
                       <strong>
                         {album.countryCode ? (
-                          // eslint-disable-next-line @next/next/no-img-element -- small flag CDN asset
-                          <img
+                          <CountryFlagImage
+                            code={album.countryCode}
                             alt=""
                             className={styles.destinationFlag}
-                            decoding="async"
                             height={15}
-                            src={`https://flagcdn.com/w40/${album.countryCode.toLowerCase()}.png`}
                             width={20}
                           />
                         ) : null}

@@ -9,6 +9,7 @@
  * guessed from the nearest centroid would sometimes be the wrong region.
  */
 
+import { countryNameFromCode } from "@moments-forever/shared";
 import { nearestKnownCity, type KnownCity } from "./place-fallback";
 import type { GeoPoint } from "./types";
 
@@ -116,7 +117,7 @@ function placeAt(point: GeoPoint, geo: AdminGeo): Omit<QuickPlace, "city"> | nul
     return { label: state?.a ? `${state.a}, USA` : "USA", countryCode: "US" };
   }
 
-  return { label: country.n ?? country.c, countryCode: country.c };
+  return { label: countryNameFromCode(country.c) ?? country.n ?? country.c, countryCode: country.c };
 }
 
 /**

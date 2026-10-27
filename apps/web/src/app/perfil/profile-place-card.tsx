@@ -16,6 +16,7 @@ import { profileTripAlbumPath } from "@/lib/routes/app-routes";
 import { EditPlaceDialog } from "./edit-place-dialog";
 import { MergePlacesDialog } from "./merge-places-dialog";
 import styles from "./perfil.module.css";
+import { CountryFlagImage } from "@/components/country-flag-image";
 
 const shortMonthFormatter = new Intl.DateTimeFormat("pt-BR", {
   month: "short",
@@ -89,14 +90,12 @@ export function ProfilePlaceCard({
         <div className={styles.cardFooterRow}>
           <p className={styles.cardCountryLine}>
             {countryCode ? (
-              // eslint-disable-next-line @next/next/no-img-element -- small flag CDN asset
-              <img
+              <CountryFlagImage
+                code={countryCode}
                 alt=""
                 className={styles.cardFlag}
-                decoding="async"
                 height={15}
                 loading="lazy"
-                src={`https://flagcdn.com/w40/${countryCode.toLowerCase()}.png`}
                 width={20}
               />
             ) : null}

@@ -102,3 +102,12 @@ Tratar explicitamente coleção vazia, memória sem GPS, EXIF ausente, upload pa
 ## Validação antes de código
 
 Prototipar e testar: toque NFC até primeira foto, navegação com uma mão, revisão de 500 fotos, memória privada e mapa sem geolocalização completa.
+
+## Países e territórios (nomes e bandeiras)
+
+- Fonte única em `packages/shared`: nomes pt-BR do ICU (`country-names.generated.ts`, índice 0 = inglês, índice 1 = pt-BR sempre) + `country-registry.ts` (nomes pt-BR que substituem o ICU, nomes curtos para legendas, aliases/grafias antigas e o mapa território → soberano). Tudo é lido por `country-flag.ts`: `countryNameFromCode`, `countryShortNameFromCode`, `countryCodeFromName`, `countryCodeFromPlaceLabel`, `countryCodeFromStoredOrLabel`.
+- Passaporte, Mapa/GPS (`quick-place.ts` usa o nome canônico, não o `n` de `admin-v1.json`), álbuns, importação, NFC, filtros e imagem de compartilhamento usam esses helpers. As geometrias de `admin-v1.json` não mudam.
+- Territórios com código próprio (PR, GU, VI, AS, MP, GL, FO, AW, CW, HK, MO, BM, KY, NC, PF…) nunca viram o país soberano: um rótulo que cita os dois ("Estados Unidos, Porto Rico") é o território, e um `country_code` salvo como soberano cede ao nome do território.
+- "Geórgia/Georgia": sozinha ou com cidade georgiana é o país (GE); só "Cidade, Georgia" (ou ", GA") é o estado americano.
+- Legendas curtas cabem em 22 caracteres (`SHORT_NAME_BY_CODE`), sem cortar palavra.
+- Bandeiras: `CountryFlagImage` (flagcdn.com, um PNG por código ISO). Se a imagem não carregar, mostra um selo com o código ISO no mesmo tamanho.

@@ -477,6 +477,24 @@ export function countryNameFromCode(code: string): string | null {
 }
 
 /**
+ * True when `part` is a name OF the country itself (any language, official long form or alias) — not a city or a
+ * place that merely belongs to it ("Miami" is not a name of the United States).
+ */
+export function isCountryNameOf(part: string, code: string): boolean {
+  const upper = code.trim().toUpperCase();
+  const key = normalizeCountryKey(part);
+  if (!key) return false;
+  const names: string[] = [
+    ...(COUNTRY_NAMES_BY_ISO[upper] ?? []),
+    ...(COUNTRY_NAME_ALIASES[upper] ?? []),
+    ...(COUNTRY_ALIASES[upper] ?? []),
+    PT_BR_NAME_OVERRIDES[upper] ?? "",
+    SHORT_NAME_BY_CODE[upper] ?? "",
+  ];
+  return names.some((name) => normalizeCountryKey(name) === key);
+}
+
+/**
  * Short pt-BR name for captions ("Hong Kong", "Ilhas Virgens (EUA)"): the curated short name when there is one,
  * else the full name. Never longer than 22 characters.
  */

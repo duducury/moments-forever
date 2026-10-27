@@ -64,6 +64,7 @@ export const SHORT_NAME_BY_CODE: Readonly<Record<string, string>> = {
  * case-insensitively. Never used for display.
  */
 export const COUNTRY_NAME_ALIASES: Readonly<Record<string, readonly string[]>> = {
+  US: ["Estados Unidos da América", "Estados Unidos da America", "United States of America", "USA"],
   GL: ["Gronelândia", "Groenlandia", "Kalaallit Nunaat"],
   KY: ["Ilhas Caimão", "Ilhas Cayman", "Cayman Islands"],
   NC: ["Nova Caledónia"],

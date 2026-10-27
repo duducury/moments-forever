@@ -9,7 +9,7 @@
  * guessed from the nearest centroid would sometimes be the wrong region.
  */
 
-import { countryNameFromCode } from "@moments-forever/shared";
+import { countryNameFromCode, usTerritoryAtCoordinates } from "@moments-forever/shared";
 import { nearestKnownCity, type KnownCity } from "./place-fallback";
 import type { GeoPoint } from "./types";
 
@@ -110,7 +110,14 @@ function placeAt(point: GeoPoint, geo: AdminGeo): Omit<QuickPlace, "city"> | nul
   const x = Math.round(point.longitude * 100);
   const y = Math.round(point.latitude * 100);
   const country = areaAt(geo.countries, x, y);
-  if (!country?.c) return null;
+  if (!country?.c) {
+    // The shipped outlines are coarse: Vieques and Culebra fall between them. A US territory's own islands are
+    // still that territory (never the open sea, never the United States).
+    const territory = usTerritoryAtCoordinates(point.latitude, point.longitude);
+    return territory
+      ? { label: countryNameFromCode(territory) ?? territory, countryCode: territory }
+      : null;
+  }
 
   if (country.c === "US") {
     const state = areaAt(geo.us, x, y);

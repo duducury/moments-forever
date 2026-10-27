@@ -38,6 +38,8 @@ export {
   geocodeCacheKey,
   localizeCountryName,
   pickTravelPlaceName,
+  usTerritoryOfReverseResult,
+  asUsTerritoryResult,
   type GeocodeTarget,
   type NominatimAddress,
   type NominatimReverseLike,
@@ -54,6 +56,7 @@ export {
   countryCodeFromStoredOrLabel,
   countryNameFromCode,
   countryShortNameFromCode,
+  relabelForTerritory,
   sovereignCountryOf,
   normalizeCountryCode,
   placeLabelCityFirst,
@@ -1210,6 +1213,8 @@ export function assertSupabaseUrl(url: string): string {
 
 export {
   COUNTRY_NAME_ALIASES,
+  usTerritoryAtCoordinates,
+  usTerritoryFromIso3166Subdivision,
   PT_BR_NAME_OVERRIDES,
   SHORT_NAME_BY_CODE,
   TERRITORY_PARENT,

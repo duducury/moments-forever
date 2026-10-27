@@ -90,3 +90,70 @@ test("User-Agent identifies Moments Forever", async () => {
   assert.match(seenAgent, /MomentsForever/u);
   assert.equal(seenAgent, NOMINATIM_USER_AGENT);
 });
+
+function clientAnswering(address: Record<string, string>, extra: Record<string, string> = {}) {
+  return createNominatimClient({
+    minIntervalMs: 0,
+    sleep: async () => undefined,
+    fetchImpl: async () =>
+      new Response(JSON.stringify({ addresstype: "city", ...extra, address }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }),
+  });
+}
+
+test("Puerto Rico, filed by Nominatim under the United States, is answered as PR (ISO subdivision)", async () => {
+  const places: [string, number, number, string][] = [
+    ["San Juan", 18.4655, -66.1057, "San Juan"],
+    ["Vieques", 18.1263, -65.4401, "Vieques"],
+    ["Culebra", 18.3, -65.3, "Culebra"],
+  ];
+  for (const [name, lat, lon, locality] of places) {
+    const result = await clientAnswering(
+      {
+        city: name,
+        state: "Porto Rico",
+        "ISO3166-2-lvl4": "US-PR",
+        country: "Estados Unidos da América",
+        country_code: "us",
+      },
+      { name },
+    ).reverseGeocode(lat, lon);
+    assert.equal(result.countryCode, "PR", name);
+    assert.equal(result.label, `Porto Rico, ${locality}`, name);
+  }
+});
+
+test("Puerto Rico is recognised by its coordinates when the answer carries no ISO subdivision", async () => {
+  const result = await clientAnswering({
+    city: "San Juan",
+    state: "Porto Rico",
+    country: "Estados Unidos da América",
+    country_code: "us",
+  }).reverseGeocode(18.4655, -66.1057);
+  assert.equal(result.countryCode, "PR");
+  assert.equal(result.label, "Porto Rico, San Juan");
+});
+
+test("a real US place stays US, with the country name normalised", async () => {
+  const miami = await clientAnswering({
+    city: "Miami",
+    state: "Flórida",
+    "ISO3166-2-lvl4": "US-FL",
+    country: "Estados Unidos da América",
+    country_code: "us",
+  }).reverseGeocode(25.7617, -80.1918);
+  assert.equal(miami.countryCode, "US");
+  assert.equal(miami.label, "Estados Unidos, Miami");
+
+  // Same country, outside every territory box (Key West is the closest US land to Cuba/Caribbean).
+  const keyWest = await clientAnswering({ city: "Key West", state: "Flórida", country: "Estados Unidos", country_code: "us" }).reverseGeocode(24.5551, -81.78);
+  assert.equal(keyWest.countryCode, "US");
+  assert.equal(keyWest.label, "Estados Unidos, Key West");
+});
+
+test("a place the geocoder files under another country is never turned into a US territory", async () => {
+  const tortola = await clientAnswering({ island: "Tortola", country: "Ilhas Virgens Britânicas", country_code: "vg" }).reverseGeocode(18.43, -64.62);
+  assert.equal(tortola.countryCode, "VG");
+});

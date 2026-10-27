@@ -5,6 +5,8 @@
 
 import {
   countryCodeFromStoredOrLabel,
+  relabelForTerritory,
+  usTerritoryAtCoordinates,
   resolveLocationDisplayName,
 } from "@moments-forever/shared";
 
@@ -38,7 +40,23 @@ type PlaceLink = {
   readonly confirmed: boolean;
   /** Stored `places.country_code` (null until resolved / pre-migration). */
   readonly countryCode: string | null;
+  /**
+   * US territory (own ISO code) the place's coordinates sit in, for places the geocoder filed under the United
+   * States (Nominatim answers "us" for Porto Rico). Computed here and never sent to the client.
+   */
+  readonly territory: string | null;
 };
+
+/** Territory of a place that is not user-confirmed and is filed as (or not yet resolved from) the US. */
+function usTerritoryOfPlaceRow(place: Record<string, unknown>): string | null {
+  if (place.confirmed_by_user) return null;
+  const stored = typeof place.country_code === "string" ? place.country_code.trim().toUpperCase() : "";
+  if (stored && stored !== "US") return null;
+  return usTerritoryAtCoordinates(
+    typeof place.exact_latitude === "number" ? place.exact_latitude : null,
+    typeof place.exact_longitude === "number" ? place.exact_longitude : null,
+  );
+}
 
 type AlbumRow = {
   readonly id: string;
@@ -66,6 +84,7 @@ function placeLinkFromEmbed(momentEmbed: unknown): PlaceLink | null {
     confirmed: Boolean(place.confirmed_by_user),
     countryCode:
       typeof place.country_code === "string" ? place.country_code : null,
+    territory: usTerritoryOfPlaceRow(place),
   };
 }
 
@@ -128,16 +147,23 @@ function buildPlaceCards(input: {
     const coverPhotoId = album.cover_photo_id;
     const momentId = album.source_moment_id;
     const linkedPlace = momentId ? placeNameByMomentId.get(momentId) : null;
-    const title = resolveLocationDisplayName({
+    let title = resolveLocationDisplayName({
       albumName: album.name,
       placeName: linkedPlace?.name ?? null,
       placeConfirmedByUser: linkedPlace?.confirmed ?? false,
     });
-    const countryCode = countryCodeFromStoredOrLabel({
+    let countryCode = countryCodeFromStoredOrLabel({
       storedCode: linkedPlace?.countryCode,
       confirmedByUser: linkedPlace?.confirmed ?? false,
       labels: [title, linkedPlace?.name],
     });
+    // Saved before territories were told apart: the geocoder filed Porto Rico under "us". The coordinates prove
+    // it is the territory, so the card, flag and caption agree on PR (the stored row is not touched).
+    const territory = linkedPlace?.territory ?? null;
+    if (territory && (countryCode === "US" || countryCode === null)) {
+      countryCode = territory;
+      title = relabelForTerritory(title, territory);
+    }
 
     return {
       albumId: album.id,
@@ -220,7 +246,9 @@ export async function loadOwnerPlaceCardsSequential(
           place:places (
             name,
             confirmed_by_user,
-            country_code
+            country_code,
+            exact_latitude,
+            exact_longitude
           )
         )
       `,
@@ -327,7 +355,9 @@ export async function loadOwnerPlaceCardsJoined(
           place:places (
             name,
             confirmed_by_user,
-            country_code
+            country_code,
+            exact_latitude,
+            exact_longitude
           )
         ),
         experiences!inner (
@@ -518,14 +548,15 @@ async function loadPlaceNamesByMoment(
 
   const places = await supabase
     .from("places")
-    .select("id, name, confirmed_by_user")
+    .select("id, name, confirmed_by_user, country_code, exact_latitude, exact_longitude")
     .in("id", placeIds);
   const placesById = new Map<string, PlaceLink>();
   for (const place of places.data ?? []) {
     placesById.set(place.id as string, {
       name: place.name as string,
       confirmed: Boolean(place.confirmed_by_user),
-      countryCode: null,
+      countryCode: typeof place.country_code === "string" ? place.country_code : null,
+      territory: usTerritoryOfPlaceRow(place as Record<string, unknown>),
     });
   }
   for (const moment of moments.data ?? []) {

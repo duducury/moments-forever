@@ -219,3 +219,36 @@ test("joined loader refuses a result whose albums lack the joined experience (fa
   assert.ok(log.tables.includes("experiences"), "fell back to the sequential loader");
   assert.equal(result.error, null);
 });
+
+// ---- Porto Rico saved under "us" (regression: card showed the US flag and "USA") ----
+
+const SAN_JUAN_ROW = { exact_latitude: 18.4655, exact_longitude: -66.1057 };
+const MIAMI_ROW = { exact_latitude: 25.7617, exact_longitude: -80.1918 };
+
+const US_FILED = {
+  albums: [
+    { id: "pr", experience_id: "ex1", name: "Local 1", cover_photo_id: null, position: 0, source_moment_id: "m1", moment: { place: { name: "Estados Unidos da América, San Juan", confirmed_by_user: false, country_code: "us", ...SAN_JUAN_ROW } }, experiences: { slug: "viagem", title: "Viagem" } },
+    { id: "mia", experience_id: "ex1", name: "Local 1", cover_photo_id: null, position: 1, source_moment_id: "m2", moment: { place: { name: "Estados Unidos, Miami", confirmed_by_user: false, country_code: "us", ...MIAMI_ROW } }, experiences: { slug: "viagem", title: "Viagem" } },
+    { id: "own", experience_id: "ex1", name: "Local 1", cover_photo_id: null, position: 2, source_moment_id: "m3", moment: { place: { name: "Estados Unidos, San Juan", confirmed_by_user: true, country_code: "us", ...SAN_JUAN_ROW } }, experiences: { slug: "viagem", title: "Viagem" } },
+    { id: "fr", experience_id: "ex1", name: "Local 1", cover_photo_id: null, position: 3, source_moment_id: "m4", moment: { place: { name: "França, Paris", confirmed_by_user: false, country_code: "fr", ...SAN_JUAN_ROW } }, experiences: { slug: "viagem", title: "Viagem" } },
+  ],
+  photos: [],
+  focus: [],
+};
+
+for (const mode of [undefined, "1"] as const) {
+  test(`place cards (${mode ? "joined" : "sequential"}): a US-filed place inside Porto Rico is PR; Miami stays US; the person's own name and other countries are untouched`, async () => {
+    const log = { tables: [] as string[], eqs: [] as unknown[][] };
+    const result = await withMode(mode, () => loadOwnerPlaceCards(dataSupabase(US_FILED, log), "owner-1"));
+    const byId = Object.fromEntries((result.places ?? []).map((card) => [card.albumId, card]));
+    assert.equal(byId.pr?.countryCode, "PR");
+    assert.equal(byId.pr?.title, "Porto Rico, San Juan");
+    assert.equal(byId.mia?.countryCode, "US");
+    assert.equal(byId.mia?.title, "Estados Unidos, Miami");
+    assert.equal(byId.own?.countryCode, "US", "a name the person confirmed is theirs");
+    assert.equal(byId.own?.title, "Estados Unidos, San Juan");
+    assert.equal(byId.fr?.countryCode, "FR", "a place with another stored country is never reassigned");
+    assert.ok(!JSON.stringify(result).includes("exact_"), "coordinates never leave the loader");
+    assert.ok(!JSON.stringify(result).includes("18.4655"));
+  });
+}

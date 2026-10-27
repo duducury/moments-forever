@@ -488,6 +488,23 @@ export function countryShortNameFromCode(code: string): string | null {
   return full ? (full.length > 22 ? `${full.slice(0, 21).trimEnd()}…` : full) : null;
 }
 
+/**
+ * A place label re-stated for a territory the place is proven to be in: "Estados Unidos da América, San Juan" →
+ * "Porto Rico, San Juan". Only the sovereign country part is swapped; a label that already names the territory
+ * (or names neither) is returned as it was.
+ */
+export function relabelForTerritory(label: string, territoryCode: string): string {
+  const parent = TERRITORY_PARENT[territoryCode.trim().toUpperCase()];
+  const name = countryNameFromCode(territoryCode);
+  const cleaned = cleanLocationLabel(label);
+  if (!parent || !name || !cleaned) return label;
+  const parts = cleaned.split(",").map((part) => part.trim()).filter(Boolean);
+  if (parts.length === 0 || parts[0] === undefined) return label;
+  if (countryCodeFromName(parts[0]) !== parent) return label;
+  const rest = parts.slice(1).filter((part) => countryCodeFromName(part) !== territoryCode);
+  return [name, ...rest].join(", ");
+}
+
 /** Territory (own ISO code and flag) → its sovereign country, e.g. PR → US. Null for everything else. */
 export function sovereignCountryOf(code: string): string | null {
   return TERRITORY_PARENT[code.trim().toUpperCase()] ?? null;

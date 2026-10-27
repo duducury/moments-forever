@@ -53,3 +53,22 @@ test("countries that were never hand-listed still get a stamp", () => {
     assert.notEqual(country.name, country.code);
   }
 });
+
+test("passport stamps show the pt-BR name: Jamaica (never Jamaïque) and territories on their own", () => {
+  const passport = buildPassport(
+    [
+      card("Jamaica, Montego Bay", "j"),
+      card("Estados Unidos, Porto Rico", "p"),
+      card("Estados Unidos, Miami", "m"),
+      card("Chile, Santiago", "c"),
+    ],
+    null,
+  );
+  const names = Object.fromEntries(passport.countries.map((country) => [country.code, country.name]));
+  assert.equal(names.JM, "Jamaica");
+  assert.equal(names.PR, "Porto Rico");
+  assert.equal(names.US, "Estados Unidos");
+  assert.equal(names.CL, "Chile");
+  assert.equal(passport.countryCount, 4);
+  for (const name of Object.values(names)) assert.ok(!/ï|Chili/u.test(name), name);
+});

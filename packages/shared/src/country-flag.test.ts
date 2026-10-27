@@ -4,6 +4,8 @@ import test from "node:test";
 import {
   countryCodeFromName,
   countryCodeFromPlaceLabel,
+  countryCodeFromStoredOrLabel,
+  countryNameFromCode,
   countryFlagFromPlaceLabel,
   flagEmojiFromCountryCode,
   shortPlaceCaption,
@@ -108,4 +110,42 @@ test("US city, state labels resolve to USA flag and state short label", () => {
   // Country name still wins over a bare colliding token elsewhere.
   assert.equal(countryCodeFromPlaceLabel("Marrocos"), "MA");
   assert.equal(countryCodeFromPlaceLabel("Canada"), "CA");
+});
+
+test("Porto Rico é um destino próprio (🇵🇷), separado dos Estados Unidos (🇺🇸)", () => {
+  for (const label of [
+    "Porto Rico",
+    "Puerto Rico",
+    "San Juan, Porto Rico",
+    "Porto Rico, San Juan",
+    "San Juan, PR",
+    "Estados Unidos, Porto Rico",
+    "Porto Rico, Estados Unidos",
+    "United States, Puerto Rico",
+    "Culebra, Porto Rico, Estados Unidos",
+    "San Juan, Puerto Rico, United States",
+  ]) {
+    assert.equal(countryCodeFromPlaceLabel(label), "PR", label);
+    assert.equal(countryFlagFromPlaceLabel(label), "🇵🇷", label);
+  }
+  for (const label of ["Estados Unidos", "United States", "Estados Unidos, Miami", "Cleveland, OH", "Estados Unidos, Flórida"]) {
+    assert.equal(countryCodeFromPlaceLabel(label), "US", label);
+  }
+  assert.equal(shortPlaceCaption("Estados Unidos, Porto Rico")?.shortLabel, "Porto Rico");
+  assert.equal(shortPlaceCaption("Puerto Rico, United States")?.shortLabel, "Porto Rico");
+  assert.equal(countryNameFromCode("PR"), "Porto Rico");
+  assert.equal(countryNameFromCode("US"), "Estados Unidos");
+  // O geocoder pode arquivar Porto Rico como "us": o nome do lugar, mais específico, vence.
+  assert.equal(
+    countryCodeFromStoredOrLabel({ storedCode: "us", confirmedByUser: false, labels: ["Estados Unidos, Porto Rico"] }),
+    "PR",
+  );
+  assert.equal(
+    countryCodeFromStoredOrLabel({ storedCode: "us", confirmedByUser: false, labels: ["Estados Unidos, Miami"] }),
+    "US",
+  );
+  assert.equal(
+    countryCodeFromStoredOrLabel({ storedCode: "pr", confirmedByUser: false, labels: ["Estados Unidos, Porto Rico"] }),
+    "PR",
+  );
 });

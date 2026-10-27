@@ -414,6 +414,22 @@ export function normalizeCountryCode(
 }
 
 /**
+ * Territories with their own ISO 3166-1 code and flag that geocoders and place names often file under the
+ * sovereign country ("Estados Unidos, Porto Rico"). When a label names both, the territory is the destination.
+ */
+const TERRITORY_PARENT: Readonly<Record<string, string>> = {
+  PR: "US", GU: "US", VI: "US", AS: "US", MP: "US", UM: "US",
+  AI: "GB", BM: "GB", FK: "GB", GI: "GB", KY: "GB", MS: "GB", TC: "GB", VG: "GB",
+  GF: "FR", GP: "FR", MQ: "FR", NC: "FR", PF: "FR", PM: "FR", RE: "FR", YT: "FR", BL: "FR", MF: "FR", WF: "FR",
+  AW: "NL", CW: "NL", SX: "NL", BQ: "NL",
+  HK: "CN", MO: "CN",
+  FO: "DK", GL: "DK",
+};
+
+/** USPS abbreviations of US territories, accepted after a comma ("San Juan, PR"). */
+const US_TERRITORY_ABBREVIATIONS: ReadonlySet<string> = new Set(["PR", "GU", "VI", "AS", "MP"]);
+
+/**
  * Country of a place from its stored `country_code` and its labels (see order below).
  * Pure.
  */
@@ -432,7 +448,12 @@ export function countryCodeFromStoredOrLabel(input: {
   };
   // A place the user renamed on purpose wins over what the geocoder said then.
   if (input.confirmedByUser) return fromLabel() ?? stored;
-  return stored ?? fromLabel();
+  if (!stored) return fromLabel();
+  // The geocoder may file a territory under its sovereign country ("us" for Porto Rico): a label that names the
+  // territory itself is more specific.
+  const labelCode = fromLabel();
+  if (labelCode && TERRITORY_PARENT[labelCode] === stored) return labelCode;
+  return stored;
 }
 
 /**
@@ -541,11 +562,24 @@ export function countryCodeFromPlaceLabel(
   const comma = cleaned.indexOf(",");
   if (comma <= 0) return null;
 
-  const countryPart = cleaned.slice(0, comma).trim();
-  const localityPart = cleaned.slice(comma + 1).trim();
-  return (
-    countryCodeFromName(countryPart) ?? countryCodeFromName(localityPart)
-  );
+  const parts = cleaned
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const codes = parts.map((part, index) => {
+    const named = countryCodeFromName(part);
+    if (named) return named;
+    // "San Juan, PR": only the last part, and only for the USPS territory abbreviations.
+    const abbreviation = part.toUpperCase();
+    return index === parts.length - 1 && index > 0 && US_TERRITORY_ABBREVIATIONS.has(abbreviation)
+      ? abbreviation
+      : null;
+  });
+  // A territory named next to its sovereign country wins ("Estados Unidos, Porto Rico" → PR, not US).
+  for (const code of codes) {
+    if (code && TERRITORY_PARENT[code] && codes.includes(TERRITORY_PARENT[code] ?? null)) return code;
+  }
+  return codes[0] ?? codes.find((code) => code !== null) ?? null;
 }
 
 /**
@@ -643,6 +677,7 @@ const COUNTRY_SHORT_BY_CODE: Readonly<Record<string, string>> = {
   QA: "Catar",
   SG: "Singapura",
   JM: "Jamaica",
+  PR: "Porto Rico",
 };
 
 export type ShortPlaceCaption = {
@@ -693,6 +728,19 @@ export function shortPlaceCaption(
     const localityPart = cleaned.slice(comma + 1).trim();
     const localityKey = normalizeCountryKey(localityPart);
     const countryKey = normalizeCountryKey(countryPart);
+
+    // "Estados Unidos, Porto Rico": the caption names the territory, not "USA".
+    if (
+      countryCode &&
+      TERRITORY_PARENT[countryCode] &&
+      (countryCodeFromName(countryPart) === TERRITORY_PARENT[countryCode] ||
+        countryCodeFromName(localityPart) === TERRITORY_PARENT[countryCode])
+    ) {
+      return {
+        countryCode,
+        shortLabel: COUNTRY_SHORT_BY_CODE[countryCode] ?? countryNameFromCode(countryCode) ?? countryPart,
+      };
+    }
 
     if (SHORT_PLACE_LABELS[localityKey]) {
       return {

@@ -75,14 +75,6 @@ export function IconShare(props: IconProps) {
     </Svg>
   );
 }
-export function IconInfo(props: IconProps) {
-  return (
-    <Svg {...props}>
-      <circle cx="12" cy="12" r="9" />
-      <path d="M12 11v5M12 8h.01" />
-    </Svg>
-  );
-}
 export function IconLocationOff(props: IconProps) {
   return (
     <Svg {...props}>
@@ -292,52 +284,6 @@ export function LightboxThumbStrip({
           position={start + offset + 1}
         />
       ))}
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------ info sheet */
-
-export interface LightboxInfoRow {
-  readonly label: string;
-  readonly value: string;
-}
-
-export function LightboxInfoSheet({
-  rows,
-  onClose,
-}: {
-  readonly rows: readonly LightboxInfoRow[];
-  readonly onClose: () => void;
-}) {
-  return (
-    <div
-      className={styles.lightboxSheetBackdrop}
-      onClick={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
-    >
-      <section aria-label="Informações da foto" className={styles.lightboxSheet} role="dialog">
-        <header className={styles.lightboxSheetHead}>
-          <h3>Informações</h3>
-          <button
-            aria-label="Fechar informações"
-            className={styles.lightboxSheetClose}
-            onClick={onClose}
-            type="button"
-          >
-            ✕
-          </button>
-        </header>
-        <dl className={styles.lightboxSheetList}>
-          {rows.map((row) => (
-            <div key={row.label}>
-              <dt>{row.label}</dt>
-              <dd>{row.value}</dd>
-            </div>
-          ))}
-        </dl>
-      </section>
     </div>
   );
 }

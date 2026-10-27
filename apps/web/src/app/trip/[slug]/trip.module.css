@@ -1357,7 +1357,7 @@
 
 .lightboxNotice {
   position: absolute;
-  bottom: calc(var(--lb-footer) + 70px);
+  bottom: calc(var(--lb-footer) + 128px);
   left: 50%;
   z-index: 6;
   margin: 0;
@@ -1369,81 +1369,6 @@
   font-weight: 600;
   transform: translateX(-50%);
   pointer-events: none;
-}
-
-.lightboxSheetBackdrop {
-  position: absolute;
-  inset: 0;
-  z-index: 7;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  background: rgb(0 0 0 / 46%);
-}
-
-.lightboxSheet {
-  width: min(100%, 520px);
-  max-height: 72dvh;
-  overflow-y: auto;
-  box-sizing: border-box;
-  border-radius: 22px 22px 0 0;
-  padding: 16px 20px calc(20px + env(safe-area-inset-bottom));
-  color: #f5f2ec;
-  background: rgb(22 22 22 / 96%);
-  box-shadow: 0 -12px 40px rgb(0 0 0 / 50%);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  touch-action: pan-y;
-}
-
-.lightboxSheetHead {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
-}
-
-.lightboxSheetHead h3 {
-  margin: 0;
-  font-family: var(--lb-serif);
-  font-size: 1.3rem;
-  font-weight: 500;
-}
-
-.lightboxSheetClose {
-  display: grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  border: 0;
-  border-radius: 999px;
-  color: inherit;
-  background: rgb(255 255 255 / 8%);
-  cursor: pointer;
-}
-
-.lightboxSheetList {
-  display: grid;
-  margin: 0;
-}
-
-.lightboxSheetList > div {
-  display: grid;
-  grid-template-columns: 110px minmax(0, 1fr);
-  gap: 12px;
-  border-top: 1px solid rgb(255 255 255 / 9%);
-  padding: 12px 0;
-}
-
-.lightboxSheetList dt {
-  color: rgb(245 242 236 / 58%);
-  font-size: 0.84rem;
-}
-
-.lightboxSheetList dd {
-  margin: 0;
-  font-size: 0.95rem;
-  overflow-wrap: anywhere;
 }
 
 @media (max-width: 719px) {

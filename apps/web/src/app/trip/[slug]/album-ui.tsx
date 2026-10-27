@@ -28,6 +28,12 @@ import { isDecodedImageUrl, mediaProxyUrl } from "@/lib/media/media-url";
 import { lightboxHeading } from "@/lib/photos/lightbox-heading";
 import { hasValidCoordinates } from "@/lib/photos/lightbox-map";
 import { lightboxNeighborIds } from "@/lib/photos/lightbox-neighbors";
+import {
+  fetchAlbumShareLink,
+  NO_PUBLIC_ALBUM_LINK_MESSAGE,
+  SHARE_LINK_ERROR_MESSAGE,
+  type AlbumShareLink,
+} from "@/lib/share/album-share-link";
 import { shareLink } from "@/lib/share/share-link";
 import { countryCodeFromPlaceLabel } from "@moments-forever/shared";
 
@@ -40,18 +46,15 @@ import {
   type TripPhoto,
 } from "./album-types";
 import {
-  IconInfo,
   IconLocationOff,
   IconMore,
   IconPin,
   IconShare,
   IconTrash,
   LightboxHeader,
-  LightboxInfoSheet,
   LightboxMiniMap,
   LightboxThumbStrip,
   IconChevronRight,
-  type LightboxInfoRow,
 } from "./lightbox-chrome";
 import { LightboxZoomStage } from "./lightbox-zoom-stage";
 import styles from "./trip.module.css";
@@ -291,16 +294,39 @@ export function PhotoLightbox({
   const [deleting, setDeleting] = useState(false);
   const [dismissDragY, setDismissDragY] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [infoOpen, setInfoOpen] = useState(false);
   const [chromeHidden, setChromeHidden] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const tapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const noticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Album id → its share link (or why there is none), fetched when the album's photos are on screen.
+  const shareLinksRef = useRef(new Map<string, AlbumShareLink>());
+  const shareLookupsRef = useRef(new Map<string, Promise<AlbumShareLink>>());
+  const currentAlbumId = photo?.albumId ?? null;
+
+  function ensureShareLink(albumId: string | null): Promise<AlbumShareLink> {
+    if (!albumId) return Promise.resolve({ status: "unavailable" });
+    const known = shareLinksRef.current.get(albumId);
+    if (known) return Promise.resolve(known);
+    let pending = shareLookupsRef.current.get(albumId);
+    if (!pending) {
+      pending = fetchAlbumShareLink(albumId).then((result) => {
+        // A failed lookup is not remembered, so the next tap tries again.
+        if (result.status !== "error") shareLinksRef.current.set(albumId, result);
+        shareLookupsRef.current.delete(albumId);
+        return result;
+      });
+      shareLookupsRef.current.set(albumId, pending);
+    }
+    return pending;
+  }
+
+  useEffect(() => {
+    if (currentAlbumId) void ensureShareLink(currentAlbumId);
+  }, [currentAlbumId]);
 
   useEffect(() => {
     setDismissDragY(0);
     setMenuOpen(false);
-    setInfoOpen(false);
   }, [photoId]);
 
   useEffect(
@@ -326,8 +352,7 @@ export function PhotoLightbox({
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
-        if (infoOpen) setInfoOpen(false);
-        else onClose();
+        onClose();
         return;
       }
       if (!photo || photos.length < 2) return;
@@ -342,7 +367,7 @@ export function PhotoLightbox({
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [index, infoOpen, onClose, onSelect, photo, photos]);
+  }, [index, onClose, onSelect, photo, photos]);
 
   useEffect(() => {
     const previous = document.body.style.overflow;
@@ -398,19 +423,6 @@ export function PhotoLightbox({
   const showRemoveLocation =
     canRemoveLocation && Boolean(onRemoveLocation) && hasGpsHint(currentPhoto);
   const showDelete = canDelete && Boolean(onDelete);
-  const infoRows: LightboxInfoRow[] = [
-    { label: "Data e hora", value: capturedLabel ?? "Sem data" },
-    { label: "Destino", value: heading.title },
-    ...(heading.subtitle ? [{ label: "Roteiro", value: heading.subtitle }] : []),
-    ...(tripLabel && tripLabel !== heading.title ? [{ label: "Viagem", value: tripLabel }] : []),
-    { label: "Local", value: pinLabel ?? "Sem local" },
-    { label: "Localização", value: gps ? "Com localização no mapa" : "Sem localização" },
-    ...(currentPhoto.width && currentPhoto.height
-      ? [{ label: "Dimensões", value: `${currentPhoto.width} × ${currentPhoto.height}` }]
-      : []),
-    { label: "Posição", value: `Foto ${index + 1} de ${photos.length}` },
-  ];
-
   function flashNotice(message: string) {
     setNotice(message);
     if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
@@ -419,14 +431,26 @@ export function PhotoLightbox({
 
   async function handleShare() {
     setMenuOpen(false);
-    const url = window.location.href;
+    const albumId = currentPhoto.albumId;
+    // A photo has no page of its own: what is shared is the album's real link (/a/{code}), already fetched ahead
+    // of the tap so the share sheet opens inside the tap (iOS refuses it after a network wait).
+    const cached = albumId ? shareLinksRef.current.get(albumId) : undefined;
+    const link = cached ?? (await ensureShareLink(albumId));
+    if (link.status === "unavailable") {
+      flashNotice(NO_PUBLIC_ALBUM_LINK_MESSAGE);
+      return;
+    }
+    if (link.status === "error") {
+      flashNotice(SHARE_LINK_ERROR_MESSAGE);
+      return;
+    }
     const result = await shareLink({
-      url,
+      url: link.url,
       title: heading.title,
       text: "Veja esta viagem no Moments Forever.",
     });
     if (result === "copied") flashNotice("Link copiado");
-    else if (result === "failed") window.prompt("Copie o link:", url);
+    else if (result === "failed") window.prompt("Copie o link:", link.url);
     // "shared" / "cancelled": the system sheet already handled it.
   }
 
@@ -516,16 +540,6 @@ export function PhotoLightbox({
                 <div className={styles.lightboxMenuPanel} role="menu">
                   <button onClick={() => void handleShare()} role="menuitem" type="button">
                     <IconShare /> Compartilhar
-                  </button>
-                  <button
-                    onClick={() => {
-                      setMenuOpen(false);
-                      setInfoOpen(true);
-                    }}
-                    role="menuitem"
-                    type="button"
-                  >
-                    <IconInfo /> Informações
                   </button>
                   {showRemoveLocation ? (
                     <button
@@ -658,9 +672,6 @@ export function PhotoLightbox({
         </p>
       ) : null}
 
-      {infoOpen ? (
-        <LightboxInfoSheet onClose={() => setInfoOpen(false)} rows={infoRows} />
-      ) : null}
     </div>
   );
 

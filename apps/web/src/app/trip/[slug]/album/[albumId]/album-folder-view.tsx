@@ -1101,6 +1101,7 @@ export function AlbumFolderView({
       {lightboxId ? (
         <PhotoLightbox
           albumLabel={album.displayName}
+          countryCode={countryCode}
           canDelete={isOwner}
           canRemoveLocation={isOwner}
           experienceTitle={experience.title}

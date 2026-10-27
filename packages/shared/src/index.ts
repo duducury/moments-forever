@@ -57,6 +57,7 @@ export {
   countryNameFromCode,
   countryShortNameFromCode,
   relabelForTerritory,
+  isCountryNameOf,
   sovereignCountryOf,
   normalizeCountryCode,
   placeLabelCityFirst,

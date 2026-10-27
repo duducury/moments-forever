@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
   type FormEvent,
   type ReactNode,
@@ -24,7 +25,17 @@ import {
 } from "@/lib/local-photos/local-photo-object-url-cache";
 import { useLocalPhotoObjectUrl } from "@/lib/local-photos/use-local-photo-urls";
 import { isDecodedImageUrl, mediaProxyUrl } from "@/lib/media/media-url";
+import { lightboxHeading } from "@/lib/photos/lightbox-heading";
+import { hasValidCoordinates } from "@/lib/photos/lightbox-map";
 import { lightboxNeighborIds } from "@/lib/photos/lightbox-neighbors";
+import {
+  fetchAlbumShareLink,
+  NO_PUBLIC_ALBUM_LINK_MESSAGE,
+  SHARE_LINK_ERROR_MESSAGE,
+  type AlbumShareLink,
+} from "@/lib/share/album-share-link";
+import { shareLink } from "@/lib/share/share-link";
+import { countryCodeFromPlaceLabel } from "@moments-forever/shared";
 
 import {
   buildAlbumCards,
@@ -34,6 +45,17 @@ import {
   type TripAlbum,
   type TripPhoto,
 } from "./album-types";
+import {
+  IconLocationOff,
+  IconMore,
+  IconPin,
+  IconShare,
+  IconTrash,
+  LightboxHeader,
+  LightboxMiniMap,
+  LightboxThumbStrip,
+  IconChevronRight,
+} from "./lightbox-chrome";
 import { LightboxZoomStage } from "./lightbox-zoom-stage";
 import styles from "./trip.module.css";
 
@@ -46,54 +68,6 @@ function formatLightboxCapturedAt(value: string | null): string | null {
     dateStyle: "long",
     ...(includeTime ? { timeStyle: "short" as const } : {}),
   }).format(date);
-}
-
-/** Instagram-style dots — window around the active photo when the album is long. */
-function LightboxDots({
-  count,
-  index,
-  onSelectIndex,
-}: {
-  readonly count: number;
-  readonly index: number;
-  readonly onSelectIndex: (nextIndex: number) => void;
-}) {
-  if (count < 2) return null;
-
-  const maxVisible = 15;
-  let start = 0;
-  let end = count;
-  if (count > maxVisible) {
-    const half = Math.floor(maxVisible / 2);
-    start = Math.max(0, Math.min(index - half, count - maxVisible));
-    end = start + maxVisible;
-  }
-
-  const dots = [];
-  for (let i = start; i < end; i += 1) {
-    dots.push(i);
-  }
-
-  return (
-    <div
-      aria-label={`Foto ${index + 1} de ${count}`}
-      className={styles.lightboxDots}
-      role="tablist"
-    >
-      {dots.map((dotIndex) => (
-        <button
-          aria-current={dotIndex === index ? "true" : undefined}
-          aria-label={`Ir para foto ${dotIndex + 1}`}
-          className={styles.lightboxDot}
-          data-active={dotIndex === index ? "true" : "false"}
-          key={dotIndex}
-          onClick={() => onSelectIndex(dotIndex)}
-          role="tab"
-          type="button"
-        />
-      ))}
-    </div>
-  );
 }
 
 function AlbumCover({ photoId }: { readonly photoId: string | null }) {
@@ -259,6 +233,7 @@ export function PhotoLightbox({
   onSelect,
   experienceTitle = null,
   albumLabel = null,
+  countryCode = null,
   canRemoveLocation = false,
   onRemoveLocation,
   canDelete = false,
@@ -270,6 +245,8 @@ export function PhotoLightbox({
   readonly onSelect: (photoId: string) => void;
   readonly experienceTitle?: string | null;
   readonly albumLabel?: string | null;
+  /** ISO code of the destination (flag + country name in the header); derived from the place label when absent. */
+  readonly countryCode?: string | null;
   readonly canRemoveLocation?: boolean;
   readonly onRemoveLocation?: (photoId: string) => void | Promise<void>;
   readonly canDelete?: boolean;
@@ -317,11 +294,48 @@ export function PhotoLightbox({
   const [deleting, setDeleting] = useState(false);
   const [dismissDragY, setDismissDragY] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [chromeHidden, setChromeHidden] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const tapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const noticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Album id → its share link (or why there is none), fetched when the album's photos are on screen.
+  const shareLinksRef = useRef(new Map<string, AlbumShareLink>());
+  const shareLookupsRef = useRef(new Map<string, Promise<AlbumShareLink>>());
+  const currentAlbumId = photo?.albumId ?? null;
+
+  function ensureShareLink(albumId: string | null): Promise<AlbumShareLink> {
+    if (!albumId) return Promise.resolve({ status: "unavailable" });
+    const known = shareLinksRef.current.get(albumId);
+    if (known) return Promise.resolve(known);
+    let pending = shareLookupsRef.current.get(albumId);
+    if (!pending) {
+      pending = fetchAlbumShareLink(albumId).then((result) => {
+        // A failed lookup is not remembered, so the next tap tries again.
+        if (result.status !== "error") shareLinksRef.current.set(albumId, result);
+        shareLookupsRef.current.delete(albumId);
+        return result;
+      });
+      shareLookupsRef.current.set(albumId, pending);
+    }
+    return pending;
+  }
+
+  useEffect(() => {
+    if (currentAlbumId) void ensureShareLink(currentAlbumId);
+  }, [currentAlbumId]);
 
   useEffect(() => {
     setDismissDragY(0);
     setMenuOpen(false);
   }, [photoId]);
+
+  useEffect(
+    () => () => {
+      if (tapTimerRef.current) clearTimeout(tapTimerRef.current);
+      if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
+    },
+    [],
+  );
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -337,7 +351,10 @@ export function PhotoLightbox({
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") {
+        onClose();
+        return;
+      }
       if (!photo || photos.length < 2) return;
       if (event.key === "ArrowRight") {
         const next = photos[index + 1];
@@ -389,19 +406,68 @@ export function PhotoLightbox({
   const placeLabel = currentPhoto.locationLabel?.trim() || null;
   const tripLabel = experienceTitle?.trim() || null;
   const folderLabel = albumLabel?.trim() || null;
-  // Prefer the trip/place name so the bottom never looks empty.
-  const locationHeadline =
-    placeLabel || folderLabel || tripLabel || "Momento";
-  const secondaryParts = [
-    capturedLabel,
-    placeLabel && folderLabel && placeLabel !== folderLabel ? folderLabel : null,
-    tripLabel && tripLabel !== locationHeadline ? tripLabel : null,
-    hasGpsHint(currentPhoto) ? "com localização" : null,
-  ].filter((part): part is string => Boolean(part));
+  const flagCode =
+    countryCode ?? countryCodeFromPlaceLabel(placeLabel ?? folderLabel ?? tripLabel);
+  const heading = lightboxHeading({
+    countryCode: flagCode,
+    albumLabel: folderLabel,
+    experienceTitle: tripLabel,
+    placeLabel,
+  });
+  const pinLabel = placeLabel || folderLabel || null;
+  const gps =
+    hasValidCoordinates(currentPhoto.exactLatitude, currentPhoto.exactLongitude) &&
+    currentPhoto.exactLongitude !== null
+      ? { latitude: currentPhoto.exactLatitude as number, longitude: currentPhoto.exactLongitude }
+      : null;
   const showRemoveLocation =
     canRemoveLocation && Boolean(onRemoveLocation) && hasGpsHint(currentPhoto);
-  const showOwnerMenu =
-    showRemoveLocation || (canDelete && Boolean(onDelete));
+  const showDelete = canDelete && Boolean(onDelete);
+  function flashNotice(message: string) {
+    setNotice(message);
+    if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
+    noticeTimerRef.current = setTimeout(() => setNotice(null), 2200);
+  }
+
+  async function handleShare() {
+    setMenuOpen(false);
+    const albumId = currentPhoto.albumId;
+    // A photo has no page of its own: what is shared is the album's real link (/a/{code}), already fetched ahead
+    // of the tap so the share sheet opens inside the tap (iOS refuses it after a network wait).
+    const cached = albumId ? shareLinksRef.current.get(albumId) : undefined;
+    const link = cached ?? (await ensureShareLink(albumId));
+    if (link.status === "unavailable") {
+      flashNotice(NO_PUBLIC_ALBUM_LINK_MESSAGE);
+      return;
+    }
+    if (link.status === "error") {
+      flashNotice(SHARE_LINK_ERROR_MESSAGE);
+      return;
+    }
+    const result = await shareLink({
+      url: link.url,
+      title: heading.title,
+      text: "Veja esta viagem no Moments Forever.",
+    });
+    if (result === "copied") flashNotice("Link copiado");
+    else if (result === "failed") window.prompt("Copie o link:", link.url);
+    // "shared" / "cancelled": the system sheet already handled it.
+  }
+
+  // One tap on the photo hides / shows the controls; a double tap (zoom) leaves them as they were.
+  function handleStageClick(event: React.MouseEvent<HTMLDivElement>) {
+    if (event.target instanceof Element && event.target.closest("button, a")) return;
+    if (tapTimerRef.current) {
+      clearTimeout(tapTimerRef.current);
+      tapTimerRef.current = null;
+      return;
+    }
+    tapTimerRef.current = setTimeout(() => {
+      tapTimerRef.current = null;
+      setMenuOpen(false);
+      setChromeHidden((hidden) => !hidden);
+    }, 300);
+  }
 
   async function handleRemoveLocation() {
     if (!onRemoveLocation || removingLocation || deleting) return;
@@ -434,12 +500,14 @@ export function PhotoLightbox({
 
   const dismissProgress = Math.min(1, Math.abs(dismissDragY) / 220);
   const lightboxOpacity = Math.max(0.28, 1 - dismissProgress * 0.72);
+  const chromeOpacity = chromeHidden ? 0 : Math.max(0.15, 1 - dismissProgress);
 
   const dialog = (
     <div
       aria-label="Visualização da foto"
       aria-modal="true"
       className={styles.lightbox}
+      data-chrome={chromeHidden ? "hidden" : "visible"}
       onClick={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
@@ -450,24 +518,29 @@ export function PhotoLightbox({
     >
       <header
         className={styles.lightboxTop}
-        style={{ opacity: Math.max(0.2, 1 - dismissProgress) }}
+        style={{ opacity: chromeOpacity, pointerEvents: chromeHidden ? "none" : undefined }}
       >
-        <AppWordmark className={styles.lightboxBrand} />
-        <div className={styles.lightboxTopActions}>
-          {showOwnerMenu ? (
+        <LightboxHeader
+          brand={<AppWordmark className={styles.lightboxBrand} />}
+          dateLabel={capturedLabel}
+          flagCode={flagCode}
+          menu={
             <div className={styles.lightboxMenu}>
               <button
                 aria-expanded={menuOpen}
                 aria-haspopup="menu"
                 aria-label="Mais opções"
-                className={styles.lightboxMenuButton}
+                className={styles.lightboxRoundButton}
                 onClick={() => setMenuOpen((value) => !value)}
                 type="button"
               >
-                ⋯
+                <IconMore />
               </button>
               {menuOpen ? (
                 <div className={styles.lightboxMenuPanel} role="menu">
+                  <button onClick={() => void handleShare()} role="menuitem" type="button">
+                    <IconShare /> Compartilhar
+                  </button>
                   {showRemoveLocation ? (
                     <button
                       disabled={removingLocation || deleting}
@@ -475,12 +548,10 @@ export function PhotoLightbox({
                       role="menuitem"
                       type="button"
                     >
-                      {removingLocation
-                        ? "Removendo…"
-                        : "Remover localização"}
+                      <IconLocationOff /> {removingLocation ? "Removendo…" : "Remover localização"}
                     </button>
                   ) : null}
-                  {canDelete && onDelete ? (
+                  {showDelete ? (
                     <button
                       data-danger="true"
                       disabled={deleting || removingLocation}
@@ -488,25 +559,20 @@ export function PhotoLightbox({
                       role="menuitem"
                       type="button"
                     >
-                      {deleting ? "Excluindo…" : "Excluir foto"}
+                      <IconTrash /> {deleting ? "Excluindo…" : "Excluir foto"}
                     </button>
                   ) : null}
                 </div>
               ) : null}
             </div>
-          ) : null}
-          <button
-            aria-label="Fechar visualização"
-            className={styles.lightboxClose}
-            onClick={onClose}
-            type="button"
-          >
-            ✕
-          </button>
-        </div>
+          }
+          onBack={onClose}
+          subtitle={heading.subtitle}
+          title={heading.title}
+        />
       </header>
 
-      <div className={styles.lightboxStageWrap}>
+      <div className={styles.lightboxStageWrap} onClick={handleStageClick}>
         {index > 0 ? (
           <button
             aria-label="Foto anterior"
@@ -557,24 +623,55 @@ export function PhotoLightbox({
       </div>
 
       <div
-        className={styles.lightboxMeta}
-        style={{ opacity: Math.max(0.15, 1 - dismissProgress) }}
+        className={styles.lightboxOverlay}
+        style={{ opacity: chromeOpacity, pointerEvents: chromeHidden ? "none" : undefined }}
       >
-        <LightboxDots
-          count={photos.length}
-          index={index}
-          onSelectIndex={(nextIndex) => {
-            const next = photos[nextIndex];
-            if (next) onSelect(next.id);
-          }}
-        />
-        <p className={styles.lightboxMetaLine}>{locationHeadline}</p>
-        {secondaryParts.length > 0 ? (
-          <p className={styles.lightboxMetaSecondary}>
-            {secondaryParts.join(" · ")}
-          </p>
+        {pinLabel ? (
+          gps ? (
+            <a
+              className={styles.lightboxPlacePill}
+              href={`https://maps.apple.com/?ll=${gps.latitude.toFixed(5)},${gps.longitude.toFixed(5)}&z=14&q=${encodeURIComponent(pinLabel)}`}
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              <IconPin className={styles.lightboxPlacePillIcon} />
+              <span>{pinLabel}</span>
+              <IconChevronRight className={styles.lightboxPlacePillIcon} />
+            </a>
+          ) : (
+            <p className={styles.lightboxPlacePill}>
+              <IconPin className={styles.lightboxPlacePillIcon} />
+              <span>{pinLabel}</span>
+            </p>
+          )
+        ) : (
+          <span />
+        )}
+        {gps ? (
+          <LightboxMiniMap
+            label={pinLabel}
+            latitude={gps.latitude}
+            longitude={gps.longitude}
+          />
         ) : null}
       </div>
+
+      <footer
+        className={styles.lightboxFooter}
+        style={{ opacity: chromeOpacity, pointerEvents: chromeHidden ? "none" : undefined }}
+      >
+        <p aria-live="polite" className={styles.lightboxCounter}>
+          {index + 1} de {photos.length}
+        </p>
+        <LightboxThumbStrip index={index} onSelect={onSelect} photos={photos} />
+      </footer>
+
+      {notice ? (
+        <p className={styles.lightboxNotice} role="status">
+          {notice}
+        </p>
+      ) : null}
+
     </div>
   );
 

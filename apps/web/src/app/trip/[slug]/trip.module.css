@@ -601,6 +601,10 @@
 }
 
 .lightbox {
+  /* Height of the counter + thumbnail strip under the photo (the photo never goes behind them). */
+  --lb-footer: calc(112px + env(safe-area-inset-bottom));
+  --lb-serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+
   position: fixed;
   inset: 0;
   z-index: var(--z-modal);
@@ -649,17 +653,20 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  align-items: flex-start;
   padding:
-    max(8px, env(safe-area-inset-top))
-    max(10px, env(safe-area-inset-right))
-    12px
-    max(10px, env(safe-area-inset-left));
+    max(10px, env(safe-area-inset-top))
+    max(14px, env(safe-area-inset-right))
+    34px
+    max(14px, env(safe-area-inset-left));
   background: linear-gradient(
     180deg,
-    rgb(0 0 0 / 72%) 0%,
-    rgb(0 0 0 / 28%) 62%,
+    rgb(0 0 0 / 74%) 0%,
+    rgb(0 0 0 / 46%) 42%,
+    rgb(0 0 0 / 14%) 78%,
     transparent 100%
   );
+  transition: opacity 180ms ease;
   pointer-events: none;
 }
 
@@ -671,9 +678,11 @@
   /* navlogo.png is cropped tight to the visible mark at a 2.8:1 aspect
      ratio (see public/brand) — contain + center displays it correctly
      centered with no hand-tuned crop offset needed. */
-  width: 134px;
-  height: 48px;
+  width: 112px;
+  height: 40px;
   flex: 0 0 auto;
+  align-self: center;
+  opacity: 0.9;
   overflow: hidden;
   background-image: url("/brand/navlogo.png");
   background-position: center;
@@ -720,7 +729,7 @@
   right: 0;
   z-index: 5;
   display: grid;
-  min-width: 198px;
+  min-width: 236px;
   padding: 6px;
   border: 1px solid rgb(245 242 236 / 14%);
   border-radius: 14px;
@@ -730,9 +739,11 @@
 }
 
 .lightboxMenuPanel button {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 10px;
   width: 100%;
-  min-height: 42px;
+  min-height: 46px;
   border: 0;
   border-radius: 10px;
   padding: 0 12px;
@@ -747,6 +758,15 @@
 
 .lightboxMenuPanel button:hover {
   background: rgb(255 255 255 / 8%);
+}
+
+.lightboxMenuPanel button svg {
+  flex: none;
+  color: var(--accent, #c4694a);
+}
+
+.lightboxMenuPanel button[data-danger="true"] svg {
+  color: inherit;
 }
 
 .lightboxMenuPanel button:disabled {
@@ -791,11 +811,10 @@
 
 .lightboxStageWrap {
   position: absolute;
-  inset: 0;
+  inset: 0 0 var(--lb-footer) 0;
   display: grid;
   min-height: 0;
   width: 100%;
-  height: 100%;
   align-items: stretch;
 }
 
@@ -1044,6 +1063,337 @@
 .lightboxDeleteButton:disabled {
   opacity: 0.6;
   cursor: wait;
+}
+
+
+/* ---- Photo viewer: floating header, map, counter and thumbnails ---- */
+
+.lightboxRoundButton {
+  position: relative;
+  z-index: 4;
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 999px;
+  padding: 0;
+  color: #f5f2ec;
+  background: rgb(0 0 0 / 40%);
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.lightboxRoundButton:hover {
+  background: rgb(0 0 0 / 58%);
+}
+
+.lightboxRoundButton:focus-visible {
+  outline: 2px solid var(--accent, #c4694a);
+  outline-offset: 2px;
+}
+
+.lightboxHeading {
+  display: flex;
+  flex: 1 1 0;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+}
+
+.lightboxFlag {
+  display: block;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  overflow: hidden;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px rgb(255 255 255 / 85%), 0 6px 16px rgb(0 0 0 / 35%);
+}
+
+.lightboxFlagImage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.lightboxHeadingText {
+  display: grid;
+  flex: 1 1 0;
+  gap: 2px;
+  min-width: 0;
+  overflow: hidden;
+  padding-top: 1px;
+  text-shadow: 0 1px 12px rgb(0 0 0 / 55%);
+}
+
+.lightboxTitle {
+  margin: 0;
+  overflow: hidden;
+  font-family: var(--lb-serif);
+  font-size: clamp(1.5rem, 6.2vw, 2rem);
+  font-weight: 500;
+  line-height: 1.08;
+  letter-spacing: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lightboxSubtitle {
+  margin: 0;
+  overflow: hidden;
+  color: rgb(245 242 236 / 84%);
+  font-family: var(--lb-serif);
+  font-size: clamp(0.92rem, 3.9vw, 1.1rem);
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.lightboxDate {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 7px;
+  margin: 4px 0 0;
+  color: rgb(245 242 236 / 72%);
+  font-size: 0.78rem;
+  font-weight: 500;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.lightboxDate > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lightboxDateIcon {
+  flex: none;
+  width: 16px;
+  height: 16px;
+}
+
+.lightboxOverlay {
+  position: absolute;
+  right: max(14px, env(safe-area-inset-right));
+  bottom: calc(var(--lb-footer) + 12px);
+  left: max(14px, env(safe-area-inset-left));
+  z-index: 3;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  transition: opacity 180ms ease;
+  pointer-events: none;
+}
+
+.lightboxOverlay > * {
+  pointer-events: auto;
+}
+
+.lightboxPlacePill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: calc(100% - 140px);
+  min-height: 42px;
+  margin: 0;
+  border-radius: 999px;
+  padding: 0 12px 0 11px;
+  color: #f5f2ec;
+  background: rgb(18 18 18 / 56%);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 10%);
+  font-size: 0.88rem;
+  font-weight: 550;
+  text-decoration: none;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.lightboxPlacePill > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lightboxPlacePillIcon {
+  flex: none;
+  width: 18px;
+  height: 18px;
+}
+
+.lightboxMiniMap {
+  position: relative;
+  display: block;
+  flex: none;
+  width: 120px;
+  height: 96px;
+  overflow: hidden;
+  border-radius: 16px;
+  color: #fff;
+  background: #1c2a2e;
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 16%), 0 10px 26px rgb(0 0 0 / 45%);
+}
+
+.lightboxMiniMapTiles {
+  position: absolute;
+  inset: 0;
+  /* Dark, muted tiles so the map reads as part of the viewer, not as a bright card. */
+  filter: brightness(0.62) saturate(0.7) contrast(1.05);
+}
+
+.lightboxMiniMapTiles img {
+  position: absolute;
+  width: 256px;
+  height: 256px;
+  max-width: none;
+}
+
+.lightboxMiniMapDot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: var(--accent, #c4694a);
+  box-shadow: 0 0 0 5px rgb(196 105 74 / 30%);
+  transform: translate(-50%, -50%);
+}
+
+.lightboxMiniMapExpand {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  width: 18px;
+  height: 18px;
+  filter: drop-shadow(0 1px 3px rgb(0 0 0 / 70%));
+}
+
+.lightboxFooter {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 3;
+  height: var(--lb-footer);
+  box-sizing: border-box;
+  padding-bottom: env(safe-area-inset-bottom);
+  background: linear-gradient(180deg, transparent 0%, rgb(0 0 0 / 55%) 40%, #050505 100%);
+  transition: opacity 180ms ease;
+}
+
+.lightboxCounter {
+  margin: 0;
+  padding-top: 12px;
+  color: rgb(245 242 236 / 66%);
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.lightboxStrip {
+  display: flex;
+  gap: 8px;
+  height: 72px;
+  margin-top: 4px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 4px max(14px, env(safe-area-inset-left));
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  touch-action: pan-x;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+
+.lightboxStrip::-webkit-scrollbar {
+  display: none;
+}
+
+.lightboxThumb {
+  position: relative;
+  flex: none;
+  width: 64px;
+  height: 64px;
+  overflow: hidden;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  padding: 0;
+  background: #1d1d1d;
+  cursor: pointer;
+  opacity: 0.78;
+  scroll-snap-align: center;
+  transition: opacity 120ms ease, transform 120ms ease, border-color 120ms ease;
+}
+
+.lightboxThumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.lightboxThumb[data-active="true"] {
+  border-color: var(--accent, #c4694a);
+  opacity: 1;
+  transform: scale(1.03);
+}
+
+.lightboxThumb:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+.lightboxNotice {
+  position: absolute;
+  bottom: calc(var(--lb-footer) + 128px);
+  left: 50%;
+  z-index: 6;
+  margin: 0;
+  border-radius: 999px;
+  padding: 9px 16px;
+  color: #f5f2ec;
+  background: rgb(18 18 18 / 88%);
+  font-size: 0.88rem;
+  font-weight: 600;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+@media (max-width: 719px) {
+  .lightboxBrand {
+    display: none;
+  }
+}
+
+@media (min-width: 720px) {
+  .lightbox {
+    --lb-footer: calc(120px + env(safe-area-inset-bottom));
+  }
+
+  .lightboxStrip {
+    justify-content: flex-start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lightboxThumb,
+  .lightboxTop,
+  .lightboxOverlay,
+  .lightboxFooter {
+    transition: none;
+  }
 }
 
 /* Phone: swipe + dots; arrows sit on the photo stage on larger screens. */

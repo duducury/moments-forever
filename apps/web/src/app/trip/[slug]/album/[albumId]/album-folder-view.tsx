@@ -65,6 +65,7 @@ import { TripRouteArt } from "../../trip-route-art";
 import { TripStamp } from "../../trip-stamp";
 import { TripMap } from "../../trip-map";
 import { PhotoOrganizeGrid } from "./photo-organize-grid";
+import { CountryFlagImage } from "@/components/country-flag-image";
 
 interface Props {
   readonly experience: TripExperience;
@@ -663,14 +664,13 @@ export function AlbumFolderView({
             <div className={styles.albumHeroCopy}>
               <div className={styles.albumHeroTitleRow}>
                 {countryCode ? (
-                  // eslint-disable-next-line @next/next/no-img-element -- small flag CDN asset
-                  <img
+                  <CountryFlagImage
+                    code={countryCode}
                     alt=""
                     className={styles.albumHeroFlag}
-                    decoding="async"
                     height={22}
-                    src={`https://flagcdn.com/w80/${countryCode.toLowerCase()}.png`}
                     width={30}
+                    resolution="w80"
                   />
                 ) : null}
                 <h1 className={styles.albumHeroTitle}>

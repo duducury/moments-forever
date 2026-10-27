@@ -12,6 +12,7 @@ import {
 import { isWebNfcSupported } from "@/lib/nfc/web-nfc";
 
 import styles from "./nfc-manager.module.css";
+import { CountryFlagImage } from "@/components/country-flag-image";
 
 interface TripNfcInfo {
   readonly experienceId: string;
@@ -437,13 +438,11 @@ export function NfcManagerClient() {
                 <div className={styles.meta}>
                   <div className={styles.titleRow}>
                     {trip.countryCode ? (
-                      // eslint-disable-next-line @next/next/no-img-element -- small flag CDN asset
-                      <img
+                      <CountryFlagImage
+                        code={trip.countryCode}
                         alt=""
                         className={styles.flag}
-                        decoding="async"
                         height={15}
-                        src={`https://flagcdn.com/w40/${trip.countryCode.toLowerCase()}.png`}
                         width={20}
                       />
                     ) : null}

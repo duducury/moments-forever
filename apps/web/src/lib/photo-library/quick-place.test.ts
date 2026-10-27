@@ -54,3 +54,19 @@ test("with the city list: the city is named only where it really is, in the same
   // Open country, no listed city nearby: only the state.
   assert.equal(withCity(41.7658, -72.6734)?.label, "CT, USA");
 });
+
+test("GPS places use the canonical pt-BR name of the country or territory, never the Mapa spelling", () => {
+  const cases: [string, number, number, string, string][] = [
+    ["San Juan", 18.4655, -66.1057, "Porto Rico", "PR"],
+    ["Nuuk", 64.1835, -51.7216, "Groenlândia", "GL"],
+    ["Kinshasa", -4.4419, 15.2663, "República Democrática do Congo", "CD"],
+    ["Pointe-Noire", -4.7692, 11.8664, "República do Congo", "CG"],
+    ["Tbilisi", 41.7151, 44.8271, "Geórgia", "GE"],
+    ["Hong Kong", 22.3193, 114.1694, "Hong Kong", "HK"],
+  ];
+  for (const [name, lat, lng, label, countryCode] of cases) {
+    const place = at(lat, lng);
+    assert.equal(place?.countryCode, countryCode, name);
+    assert.equal(place?.label, label, name);
+  }
+});

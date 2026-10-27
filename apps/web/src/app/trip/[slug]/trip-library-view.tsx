@@ -27,6 +27,7 @@ import { OrganizePlacesPanel } from "./organize-places-panel";
 import { buildTripHeroDisplay } from "./trip-display";
 import { TripMap } from "./trip-map";
 import styles from "./trip.module.css";
+import { CountryFlagImage } from "@/components/country-flag-image";
 
 type TripTab = "fotos" | "lugares";
 
@@ -271,13 +272,11 @@ export function TripLibraryView({
               {heroDisplay.locationLine ? (
                 <p className={styles.eyebrow}>
                   {heroDisplay.countryCode ? (
-                    // eslint-disable-next-line @next/next/no-img-element -- small flag CDN asset
-                    <img
+                    <CountryFlagImage
+                      code={heroDisplay.countryCode}
                       alt=""
                       className={styles.heroFlag}
-                      decoding="async"
                       height={16}
-                      src={`https://flagcdn.com/w40/${heroDisplay.countryCode.toLowerCase()}.png`}
                       width={22}
                     />
                   ) : null}

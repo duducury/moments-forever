@@ -7,6 +7,7 @@ import type { ProfileCarouselPhoto } from "@/lib/experiences/load-owner-carousel
 import { profileTripAlbumPath } from "@/lib/routes/app-routes";
 
 import styles from "./perfil.module.css";
+import { CountryFlagImage } from "@/components/country-flag-image";
 
 function folderHrefForPhoto(photo: ProfileCarouselPhoto): string | null {
   if (!photo.experienceSlug || !photo.albumId) return null;
@@ -45,13 +46,11 @@ export function ProfileCarousel({
           return (
             <span className={styles.carouselPlaceCaption}>
               {caption.countryCode ? (
-                // eslint-disable-next-line @next/next/no-img-element -- small flag CDN asset
-                <img
+                <CountryFlagImage
+                  code={caption.countryCode}
                   alt=""
                   className={styles.carouselPlaceFlag}
-                  decoding="async"
                   height={14}
-                  src={`https://flagcdn.com/w40/${caption.countryCode.toLowerCase()}.png`}
                   width={18}
                 />
               ) : null}

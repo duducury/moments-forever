@@ -14,6 +14,7 @@ import {
   flagEmojiFromCountryCode,
 } from "./country-flag";
 import { COUNTRY_NAMES_BY_ISO } from "./country-names.generated";
+import { PT_BR_NAME_OVERRIDES } from "./country-registry";
 
 // "Georgia" is also a US state; the state reading wins for bare names (existing
 // behaviour), so the country is only reachable via its other spellings.
@@ -77,6 +78,20 @@ test("country name table has no cross-country collisions", () => {
         `"${name}" is used by both ${previous} and ${code}`,
       );
       owner.set(key, code);
+    }
+  }
+});
+
+test("countryNameFromCode returns the pt-BR name for every country, even when it equals the English one", () => {
+  const ptBr = new Intl.DisplayNames(["pt-BR"], { type: "region", fallback: "none" });
+  assert.equal(countryNameFromCode("JM"), "Jamaica");
+  for (const code of ["AR", "CL", "CN", "CU", "HT", "IL", "KW", "MT", "ME"]) {
+    assert.equal(countryNameFromCode(code), ptBr.of(code), code);
+  }
+  for (const code of KNOWN_COUNTRY_CODES) {
+    const expected = PT_BR_NAME_OVERRIDES[code] ?? ptBr.of(code);
+    if (expected && expected !== code) {
+      assert.equal(countryNameFromCode(code), expected, code);
     }
   }
 });

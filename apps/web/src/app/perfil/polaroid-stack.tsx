@@ -15,6 +15,7 @@ import {
 import { profileTripAlbumPath } from "@/lib/routes/app-routes";
 
 import styles from "./perfil.module.css";
+import { CountryFlagImage } from "@/components/country-flag-image";
 
 /** Photos in the stack at once. More would make each cycle too long and the stack too busy. */
 const MAX_STACK = 6;
@@ -96,13 +97,11 @@ function PolaroidPhoto({
         {caption ? (
           <span className={styles.carouselPlaceCaption}>
             {caption.countryCode ? (
-              // eslint-disable-next-line @next/next/no-img-element -- small flag CDN asset
-              <img
+              <CountryFlagImage
+                code={caption.countryCode}
                 alt=""
                 className={styles.carouselPlaceFlag}
-                decoding="async"
                 height={14}
-                src={`https://flagcdn.com/w40/${caption.countryCode.toLowerCase()}.png`}
                 width={18}
               />
             ) : null}

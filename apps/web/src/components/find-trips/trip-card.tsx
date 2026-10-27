@@ -12,6 +12,7 @@ import {
 
 import styles from "./find-trips.module.css";
 import { useVisibleOnce } from "./use-visible";
+import { CountryFlagImage } from "@/components/country-flag-image";
 
 export const PREVIEW_COUNT = 5;
 
@@ -40,13 +41,11 @@ export function photosLabel(count: number): string {
 export function Flag({ code }: { readonly code: string | null }) {
   if (!code) return null;
   return (
-    // eslint-disable-next-line @next/next/no-img-element -- small flag CDN asset
-    <img
+    <CountryFlagImage
+      code={code}
       alt=""
       className={styles.flag}
-      decoding="async"
       height={16}
-      src={`https://flagcdn.com/w40/${code.toLowerCase()}.png`}
       width={22}
     />
   );

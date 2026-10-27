@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import type { Candidate } from "./selection";
-import { applyFilter, buildFilterChips, mainCountryOf } from "./trip-filters";
+import { applyFilter, buildFilterChips, countryChipLabel, mainCountryOf } from "./trip-filters";
 
 function candidate(key: string, kind: "new" | "existing", country: string | null, early: string | null = null): Candidate {
   return {
@@ -51,4 +51,12 @@ test("chips that would show everything are left out, and so is a useless row", (
   const same = [candidate("a", "new", "US"), candidate("b", "new", "US")];
   assert.deepEqual(buildFilterChips(same), []);
   assert.deepEqual(buildFilterChips([]).map((chip) => chip.id), ["all"]);
+});
+
+test("the country chip names territories in pt-BR, not as their sovereign", () => {
+  assert.equal(countryChipLabel("US"), "EUA");
+  assert.equal(countryChipLabel("PR"), "Porto Rico");
+  assert.equal(countryChipLabel("HK"), "Hong Kong");
+  assert.equal(countryChipLabel("VI"), "Ilhas Virgens (EUA)");
+  assert.equal(countryChipLabel("CD"), "RD Congo");
 });

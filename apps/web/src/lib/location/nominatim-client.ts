@@ -11,8 +11,10 @@
  */
 
 import {
+  asUsTerritoryResult,
   normalizeCountryCode,
   pickTravelPlaceName,
+  usTerritoryOfReverseResult,
   type NominatimReverseLike,
 } from "@moments-forever/shared";
 
@@ -123,7 +125,10 @@ export function createNominatimClient(options: NominatimClientOptions = {}) {
         };
       }
 
-      const payload = (await response.json()) as NominatimReverseLike;
+      const raw = (await response.json()) as NominatimReverseLike;
+      // Nominatim files Puerto Rico, Guam… under the United States ("us"): answer as the territory it really is.
+      const territory = usTerritoryOfReverseResult(raw, latitude, longitude);
+      const payload = territory ? asUsTerritoryResult(raw, territory) : raw;
       const label = pickTravelPlaceName(payload);
       const countryCode = normalizeCountryCode(payload.address?.country_code);
       return {

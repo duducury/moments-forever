@@ -1,6 +1,8 @@
 import {
   placeLabelCityFirst,
+  relabelForTerritory,
   resolveLocationDisplayName,
+  usTerritoryAtCoordinates,
 } from "@moments-forever/shared";
 
 import { loadCoverFocusByAlbum } from "@/lib/experiences/cover-focus";
@@ -26,7 +28,13 @@ type PlaceRow = {
   readonly id: string;
   readonly name: string;
   readonly confirmed_by_user: boolean;
+  /** US territory the coordinates sit in, for a place filed under the US (server-side only; see below). */
+  readonly territory?: string | null;
 };
+
+function territoryLabel(label: string, territory: string | null): string {
+  return territory ? relabelForTerritory(label, territory) : label;
+}
 
 /**
  * Loads albums for an experience and resolves display names from linked places.
@@ -78,13 +86,20 @@ export async function loadTripAlbums(
     if (placeIds.length > 0) {
       const placesResult = await supabase
         .from("places")
-        .select("id, name, confirmed_by_user")
+        .select("id, name, confirmed_by_user, country_code, exact_latitude, exact_longitude")
         .in("id", placeIds);
       for (const place of placesResult.data ?? []) {
+        const stored = typeof place.country_code === "string" ? place.country_code.trim().toUpperCase() : "";
         placesById.set(place.id, {
           id: place.id,
           name: place.name,
           confirmed_by_user: place.confirmed_by_user,
+          // Saved before territories were told apart: Nominatim filed Porto Rico under "us". Never for a place
+          // the person named themselves, and the coordinates stay on the server.
+          territory:
+            place.confirmed_by_user || (stored && stored !== "US")
+              ? null
+              : usTerritoryAtCoordinates(place.exact_latitude as number | null, place.exact_longitude as number | null),
         });
       }
     }
@@ -114,12 +129,15 @@ export async function loadTripAlbums(
       name: album.name,
       // Shown as "Cidade, País" (stored names keep "País, Localidade"); display only.
       displayName: placeLabelCityFirst(
-        resolveLocationDisplayName({
-          albumName: album.name,
-          placeName,
-          placeConfirmedByUser,
-          fallbackIndex: album.position,
-        }),
+        territoryLabel(
+          resolveLocationDisplayName({
+            albumName: album.name,
+            placeName,
+            placeConfirmedByUser,
+            fallbackIndex: album.position,
+          }),
+          place?.territory ?? null,
+        ),
       ),
       description: album.description,
       coverPhotoId: album.cover_photo_id,

@@ -3,6 +3,8 @@
  * I/O lives in the web app; this module never calls the network.
  */
 
+import { countryCodeFromName, countryNameFromCode } from "./country-flag";
+import { usTerritoryAtCoordinates, usTerritoryFromIso3166Subdivision } from "./country-registry";
 import { isGenericLocationLabel } from "./location-name";
 
 /** ~110 m — enough to reuse labels for the same settlement cluster. */
@@ -76,6 +78,8 @@ const COUNTRY_NAMES_PT: Readonly<Record<string, string>> = {
   brazil: "Brasil",
   "united states": "Estados Unidos",
   "united states of america": "Estados Unidos",
+  "estados unidos da america": "Estados Unidos",
+  "estados unidos da américa": "Estados Unidos",
   usa: "Estados Unidos",
   "estados unidos": "Estados Unidos",
   portugal: "Portugal",
@@ -161,6 +165,47 @@ export interface NominatimReverseLike {
   readonly addresstype?: string | null;
   readonly display_name?: string | null;
   readonly address?: NominatimAddress | null;
+}
+
+/**
+ * Nominatim files US territories under the United States (`country: "Estados Unidos da América"`,
+ * `country_code: "us"`, `state: "Porto Rico"`, `ISO3166-2-lvl4: "US-PR"`). Returns the territory's own ISO code when
+ * the answer proves the place is one: the ISO subdivision, or the coordinates inside the territory for a place
+ * already filed as US. Null for every real US place.
+ */
+export function usTerritoryOfReverseResult(
+  result: NominatimReverseLike | null | undefined,
+  latitude?: number,
+  longitude?: number,
+): string | null {
+  const address = result?.address;
+  if (!address) return null;
+  const filedUnderUs =
+    address.country_code?.trim().toLowerCase() === "us" ||
+    countryCodeFromName(address.country ?? "") === "US";
+  if (!filedUnderUs) return null;
+  for (const [key, value] of Object.entries(address)) {
+    if (/^ISO3166-2-lvl\d$/u.test(key)) {
+      const fromIso = usTerritoryFromIso3166Subdivision(value);
+      if (fromIso) return fromIso;
+    }
+  }
+  return usTerritoryAtCoordinates(latitude, longitude);
+}
+
+/** The same reverse result, answered as the territory it really is (own country name and code). */
+export function asUsTerritoryResult(
+  result: NominatimReverseLike,
+  territoryCode: string,
+): NominatimReverseLike {
+  return {
+    ...result,
+    address: {
+      ...(result.address ?? {}),
+      country: countryNameFromCode(territoryCode) ?? result.address?.country,
+      country_code: territoryCode.toLowerCase(),
+    },
+  };
 }
 
 export function geocodeCacheKey(
@@ -268,6 +313,10 @@ export function pickTravelPlaceName(
   result: NominatimReverseLike | null | undefined,
 ): string | null {
   if (!result) return null;
+
+  // A US territory (Porto Rico, Guam…) is its own destination, never "Estados Unidos".
+  const territory = usTerritoryOfReverseResult(result);
+  if (territory) return pickTravelPlaceName(asUsTerritoryResult(result, territory));
 
   const address = result.address ?? null;
   const locality = pickLocality(result, address);

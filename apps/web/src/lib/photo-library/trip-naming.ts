@@ -16,6 +16,7 @@ import {
   countryCodeFromName,
   countryCodeFromPlaceLabel,
   countryNameFromCode,
+  sovereignCountryOf,
   usStateNameFromCode,
 } from "@moments-forever/shared";
 
@@ -99,8 +100,18 @@ function cityIsTheState(city: string, stateCode: string, stateName: string): boo
  */
 function stopPlaceOf(stop: TripStop, label: string | undefined, quickPlace: QuickPlace | undefined): StopPlace {
   const parsed = label ? parsePlaceLabel(label) : { country: null, locality: null };
-  const country =
+  let country =
     parsed.country ?? (quickPlace?.countryCode ? countryNameFromCode(quickPlace.countryCode) : null);
+  // The geocoder filed the place under its sovereign ("Estados Unidos da América") while the offline map puts it
+  // in a territory of that country (Porto Rico): the territory is the destination.
+  if (
+    quickPlace?.countryCode &&
+    sovereignCountryOf(quickPlace.countryCode) !== null &&
+    parsed.country &&
+    countryCodeFromName(parsed.country) === sovereignCountryOf(quickPlace.countryCode)
+  ) {
+    country = countryNameFromCode(quickPlace.countryCode);
+  }
   // "PA, USA" (offline) → Pennsylvania: two different US trips never end up with the same name.
   const stateCode = quickPlace?.countryCode === "US" ? quickPlace.label.split(",")[0]!.trim().toUpperCase() : null;
   const stateName = usStateNameFromCode(stateCode);
@@ -241,10 +252,16 @@ export function describeTrip(input: {
     };
   }
   const firstLabel = stops.map((stop) => labels[stop.id]).find((label) => Boolean(label)) ?? null;
+  const labelCountry = countryCodeFromPlaceLabel(firstLabel);
+  // A territory found offline wins over the sovereign the geocoder named (Porto Rico over Estados Unidos).
+  const territory =
+    early.quickCountryCode && labelCountry && sovereignCountryOf(early.quickCountryCode) === labelCountry
+      ? early.quickCountryCode
+      : null;
   return {
     title: text.title,
     name: text.name,
-    countryCode: countryCodeFromPlaceLabel(firstLabel) ?? early.quickCountryCode,
+    countryCode: territory ?? labelCountry ?? early.quickCountryCode,
     state: "named",
     locationNote: null,
     ...early,

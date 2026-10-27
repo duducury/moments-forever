@@ -1,9 +1,11 @@
+import { readFileSync } from "node:fs";
 import assert from "node:assert/strict";
 import test from "node:test";
 
 import { usStateCodeFromPlaceLabel, usStateNameFromCode } from "@moments-forever/shared";
 
 import { nearestKnownCity, parseKnownCities } from "./place-fallback";
+import { quickPlace, type AdminGeo } from "./quick-place";
 import {
   describeTrip,
   LIMITED_LOCATION_NOTE,
@@ -346,4 +348,78 @@ test("usStateNameFromCode gives the English state name", () => {
   assert.equal(usStateNameFromCode("HI"), "Hawaii");
   assert.equal(usStateNameFromCode("DC"), "District of Columbia");
   assert.equal(usStateNameFromCode("XX"), null);
+});
+
+// ---- Porto Rico × Estados Unidos (regression: "Estados Unidos da América — San Juan → Vieques → Culebra") ----
+
+
+
+const adminGeo = JSON.parse(
+  readFileSync(new URL("../../../public/geo/admin-v1.json", import.meta.url), "utf8"),
+) as AdminGeo;
+const knownCities = parseKnownCities(
+  JSON.parse(readFileSync(new URL("../../../public/geo/places-v1.json", import.meta.url), "utf8")),
+);
+
+const SAN_JUAN = { latitude: 18.4655, longitude: -66.1057 };
+const VIEQUES = { latitude: 18.1263, longitude: -65.4401 };
+const CULEBRA = { latitude: 18.3, longitude: -65.3 };
+
+function puertoRicoTrip(labels: { a: string; b: string; c: string }) {
+  const stops: TripStop[] = [
+    { id: "a", center: SAN_JUAN, photoCount: 10, firstDay: "2026-08-22" },
+    { id: "b", center: VIEQUES, photoCount: 10, firstDay: "2026-08-23" },
+    { id: "c", center: CULEBRA, photoCount: 10, firstDay: "2026-08-24" },
+  ];
+  return describeTrip({
+    locationQuality: "located",
+    stops,
+    labels,
+    settled: new Set(["a", "b", "c"]),
+    quick: {
+      a: quickPlace(SAN_JUAN, adminGeo, knownCities) ?? undefined,
+      b: quickPlace(VIEQUES, adminGeo, knownCities) ?? undefined,
+      c: quickPlace(CULEBRA, adminGeo, knownCities) ?? undefined,
+    },
+  });
+}
+
+test("offline map puts San Juan, Vieques and Culebra in Porto Rico (PR), not in the US", () => {
+  for (const point of [SAN_JUAN, VIEQUES, CULEBRA]) {
+    const place = quickPlace(point, adminGeo, knownCities);
+    assert.equal(place?.countryCode, "PR");
+    assert.equal(place?.label, "Porto Rico");
+  }
+});
+
+test("Porto Rico trip, labels already filed as the territory by the geocoder", () => {
+  const trip = puertoRicoTrip({ a: "Porto Rico, San Juan", b: "Porto Rico, Vieques", c: "Porto Rico, Culebra" });
+  assert.equal(trip.title, "Porto Rico — San Juan → Vieques → Culebra");
+  assert.equal(trip.name, "Porto Rico, San Juan → Vieques → Culebra");
+  assert.equal(trip.countryCode, "PR");
+});
+
+test("Porto Rico trip whose geocoder labels still say Estados Unidos da América: the offline territory wins", () => {
+  const trip = puertoRicoTrip({
+    a: "Estados Unidos da América, San Juan",
+    b: "Estados Unidos da América, Vieques",
+    c: "Estados Unidos da América, Culebra",
+  });
+  assert.equal(trip.title, "Porto Rico — San Juan → Vieques → Culebra");
+  assert.equal(trip.name, "Porto Rico, San Juan → Vieques → Culebra");
+  assert.equal(trip.countryCode, "PR");
+  assert.ok(!/Estados Unidos/u.test(trip.title));
+});
+
+test("a real US trip (Miami) stays Estados Unidos / US", () => {
+  const miami = { latitude: 25.7617, longitude: -80.1918 };
+  const trip = describeTrip({
+    locationQuality: "located",
+    stops: [{ id: "m", center: miami, photoCount: 10, firstDay: "2026-08-22" }],
+    labels: { m: "Estados Unidos, Miami" },
+    settled: new Set(["m"]),
+    quick: { m: quickPlace(miami, adminGeo, knownCities) ?? undefined },
+  });
+  assert.ok(trip.title.startsWith("Estados Unidos — Miami"), trip.title);
+  assert.equal(trip.countryCode, "US");
 });

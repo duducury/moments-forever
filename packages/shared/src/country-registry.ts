@@ -124,3 +124,48 @@ export const TERRITORY_PARENT: Readonly<Record<string, string>> = {
   FO: "DK", GL: "DK",
 };
 
+
+/**
+ * Where the US territories are. Used ONLY to tell that a place the geocoder filed under the United States is really
+ * a territory (Nominatim answers `country_code: "us"` for San Juan, Vieques or Culebra): mainland US has no land
+ * inside these boxes, and they are never applied to a place that is not already US. Rough boxes, tuned to the islands.
+ */
+const US_TERRITORY_BOXES: readonly {
+  readonly code: string;
+  readonly south: number;
+  readonly north: number;
+  readonly west: number;
+  readonly east: number;
+}[] = [
+  // Puerto Rico: main island, Vieques, Culebra, Mona, Desecheo.
+  { code: "PR", south: 17.6, north: 18.6, west: -68.1, east: -65.1 },
+  // US Virgin Islands: St. Thomas, St. John, St. Croix (British Virgin Islands start above ~18.42).
+  { code: "VI", south: 17.6, north: 18.42, west: -65.1, east: -64.5 },
+  // Guam and the Northern Mariana Islands.
+  { code: "GU", south: 13.2, north: 13.7, west: 144.5, east: 145.0 },
+  { code: "MP", south: 14.0, north: 20.6, west: 144.8, east: 146.2 },
+  // American Samoa.
+  { code: "AS", south: -14.6, north: -11.0, west: -171.2, east: -168.0 },
+];
+
+/** US territory (own ISO code) containing the point, or null. Only meaningful for places already filed under the US. */
+export function usTerritoryAtCoordinates(
+  latitude: number | null | undefined,
+  longitude: number | null | undefined,
+): string | null {
+  if (typeof latitude !== "number" || typeof longitude !== "number") return null;
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+  for (const box of US_TERRITORY_BOXES) {
+    if (latitude >= box.south && latitude <= box.north && longitude >= box.west && longitude <= box.east) {
+      return box.code;
+    }
+  }
+  return null;
+}
+
+/** "US-PR" (Nominatim `ISO3166-2-lvl*`) → "PR" for US territories, else null. */
+export function usTerritoryFromIso3166Subdivision(value: string | null | undefined): string | null {
+  const match = /^US-([A-Z]{2})$/u.exec(value?.trim().toUpperCase() ?? "");
+  const code = match?.[1];
+  return code && ["PR", "GU", "VI", "AS", "MP", "UM"].includes(code) ? code : null;
+}

@@ -149,3 +149,51 @@ test("every name stored in the Mapa geo data resolves to its own country", () =>
     assert.ok(countryNameFromCode(country.c), country.c);
   }
 });
+
+import { relabelForTerritory } from "./country-flag";
+import { asUsTerritoryResult, pickTravelPlaceName, usTerritoryOfReverseResult } from "./geocode-place-name";
+import { usTerritoryAtCoordinates, usTerritoryFromIso3166Subdivision } from "./country-registry";
+
+test("US territories are told apart by ISO subdivision or by coordinates, never for real US places", () => {
+  assert.equal(usTerritoryFromIso3166Subdivision("US-PR"), "PR");
+  assert.equal(usTerritoryFromIso3166Subdivision("US-FL"), null);
+  assert.equal(usTerritoryFromIso3166Subdivision("BR-SP"), null);
+  // San Juan, Vieques, Culebra, St. Thomas, Hagåtña, Pago Pago.
+  assert.equal(usTerritoryAtCoordinates(18.4655, -66.1057), "PR");
+  assert.equal(usTerritoryAtCoordinates(18.1263, -65.4401), "PR");
+  assert.equal(usTerritoryAtCoordinates(18.3, -65.3), "PR");
+  assert.equal(usTerritoryAtCoordinates(18.3358, -64.8963), "VI");
+  assert.equal(usTerritoryAtCoordinates(13.4443, 144.7937), "GU");
+  assert.equal(usTerritoryAtCoordinates(-14.2756, -170.702), "AS");
+  // Miami, Key West, Honolulu, Anchorage, Tortola (British), Santo Domingo.
+  for (const [lat, lon] of [[25.7617, -80.1918], [24.5551, -81.78], [21.3069, -157.8583], [61.2181, -149.9003], [18.43, -64.62], [18.4861, -69.9312]] as const) {
+    assert.equal(usTerritoryAtCoordinates(lat, lon), null, `${lat},${lon}`);
+  }
+  assert.equal(usTerritoryAtCoordinates(null, null), null);
+});
+
+test("a Nominatim answer for San Juan is the territory PR; Miami is not", () => {
+  const sanJuan = {
+    addresstype: "city",
+    name: "San Juan",
+    address: { city: "San Juan", state: "Porto Rico", "ISO3166-2-lvl4": "US-PR", country: "Estados Unidos da América", country_code: "us" },
+  };
+  assert.equal(usTerritoryOfReverseResult(sanJuan), "PR");
+  assert.equal(pickTravelPlaceName(sanJuan), "Porto Rico, San Juan");
+  assert.equal(asUsTerritoryResult(sanJuan, "PR").address?.country_code, "pr");
+  const miami = { addresstype: "city", name: "Miami", address: { city: "Miami", state: "Flórida", "ISO3166-2-lvl4": "US-FL", country: "Estados Unidos da América", country_code: "us" } };
+  assert.equal(usTerritoryOfReverseResult(miami, 25.7617, -80.1918), null);
+  assert.equal(pickTravelPlaceName(miami), "Estados Unidos, Miami");
+  // Filed under another country: coordinates alone never make it a US territory.
+  assert.equal(usTerritoryOfReverseResult({ address: { island: "Tortola", country: "Ilhas Virgens Britânicas", country_code: "vg" } }, 18.4, -64.6), null);
+});
+
+test("relabelForTerritory swaps only the sovereign country part", () => {
+  assert.equal(relabelForTerritory("Estados Unidos da América, San Juan", "PR"), "Porto Rico, San Juan");
+  assert.equal(relabelForTerritory("Estados Unidos, Vieques", "PR"), "Porto Rico, Vieques");
+  assert.equal(relabelForTerritory("Estados Unidos", "PR"), "Porto Rico");
+  assert.equal(relabelForTerritory("Porto Rico, San Juan", "PR"), "Porto Rico, San Juan");
+  assert.equal(relabelForTerritory("Meu verão em Culebra", "PR"), "Meu verão em Culebra");
+  assert.equal(relabelForTerritory("França, Paris", "PR"), "França, Paris");
+  assert.equal(countryCodeFromPlaceLabel(relabelForTerritory("Estados Unidos da América, San Juan", "PR")), "PR");
+});

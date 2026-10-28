@@ -647,12 +647,12 @@
   position: relative;
   z-index: 4;
   flex: none;
-  /* Row 1: back · flag + country · (logo) · menu. Row 2: route. Row 3: date. */
+  /* Row 1: back · (logo) · menu. Row 2: flag + place + date, and the mini map opposite. */
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   column-gap: 12px;
-  row-gap: 4px;
+  row-gap: 6px;
   padding:
     max(10px, env(safe-area-inset-top))
     max(14px, env(safe-area-inset-right))
@@ -660,6 +660,48 @@
     max(14px, env(safe-area-inset-left));
   background: #000;
   transition: opacity 180ms ease;
+}
+
+/* Explicit cells, so hiding the logo on phones never shifts the menu next to the back button. */
+.lightboxTop > .lightboxRoundButton {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.lightboxTop > .lightboxBrand {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: center;
+}
+
+.lightboxTop > .lightboxMenu {
+  grid-column: 3;
+  grid-row: 1;
+  justify-self: end;
+}
+
+.lightboxIdentity {
+  display: flex;
+  grid-column: 1 / 3;
+  grid-row: 2;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.lightboxIdentity[data-has-map="false"] {
+  grid-column: 1 / -1;
+}
+
+.lightboxTop > .lightboxMiniMap {
+  grid-column: 3;
+  grid-row: 2;
+}
+
+.lightboxIdentityText {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
 }
 
 .lightboxBrand {
@@ -1088,13 +1130,6 @@
   outline-offset: 2px;
 }
 
-.lightboxHeading {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
-}
-
 .lightboxFlag {
   display: block;
   flex: none;
@@ -1113,33 +1148,21 @@
 }
 
 .lightboxTitle {
-  margin: 0;
-  overflow: hidden;
-  font-family: var(--lb-serif);
-  font-size: clamp(1.5rem, 6.2vw, 2rem);
-  font-weight: 500;
-  line-height: 1.08;
-  letter-spacing: 0;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.lightboxSubtitle {
-  margin: 0;
-  overflow: hidden;
-  color: rgb(245 242 236 / 84%);
-  font-family: var(--lb-serif);
-  grid-column: 1 / -1;
-  font-size: clamp(0.95rem, 4.1vw, 1.1rem);
-  line-height: 1.25;
   display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  font-family: var(--lb-serif);
+  font-size: clamp(1.2rem, 5.2vw, 1.7rem);
+  font-weight: 500;
+  line-height: 1.12;
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
 }
 
 .lightboxDate {
   display: flex;
-  grid-column: 1 / -1;
   min-width: 0;
   align-items: center;
   gap: 7px;
@@ -1148,66 +1171,16 @@
   font-size: 0.78rem;
   font-weight: 500;
   line-height: 1.3;
-  white-space: nowrap;
 }
 
 .lightboxDate > span {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .lightboxDateIcon {
   flex: none;
   width: 16px;
   height: 16px;
-}
-
-/* Place and mini map sit in their own row under the photo — never on top of it. */
-.lightboxInfoRow {
-  position: relative;
-  z-index: 3;
-  display: flex;
-  flex: none;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 10px max(14px, env(safe-area-inset-right)) 4px max(14px, env(safe-area-inset-left));
-  background: #050505;
-  transition: opacity 180ms ease;
-}
-
-.lightboxPlacePill {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  max-width: calc(100% - 124px);
-  min-height: 42px;
-  margin: 0;
-  border-radius: 999px;
-  padding: 0 12px 0 11px;
-  color: #f5f2ec;
-  background: rgb(18 18 18 / 56%);
-  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 10%);
-  font-size: 0.88rem;
-  font-weight: 550;
-  text-decoration: none;
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-}
-
-.lightboxPlacePill > span {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.lightboxPlacePillIcon {
-  flex: none;
-  width: 18px;
-  height: 18px;
 }
 
 .lightboxMiniMap {
@@ -1333,7 +1306,7 @@
 
 .lightboxNotice {
   position: absolute;
-  bottom: 124px;
+  bottom: 16px;
   left: 50%;
   z-index: 6;
   margin: 0;
@@ -1362,7 +1335,6 @@
 @media (prefers-reduced-motion: reduce) {
   .lightboxThumb,
   .lightboxTop,
-  .lightboxInfoRow,
   .lightboxFooter {
     transition: none;
   }

@@ -7,7 +7,8 @@ import {
   createBrowserPhotoDerivatives,
   extractBrowserPhotoMetadata,
 } from "@/lib/photo-import/browser-metadata";
-import { uploadManyPhotoBlobsToR2 } from "@/lib/storage/upload-photo-to-r2";
+import { startImportTimer } from "@/lib/perf/import-timing";
+import { uploadPhotoBatchToR2 } from "@/lib/storage/upload-photo-to-r2";
 
 export async function createTripAlbum(
   experienceId: string,
@@ -65,11 +66,14 @@ export async function uploadFilesToAlbum(input: {
     };
   };
 
-  // CPU-bound (EXIF + resized preview/thumbnail): two at a time, in input order.
+  const timer = startImportTimer("add-to-album");
+
+  // CPU-bound (EXIF + one decode + resized preview/thumbnail): three at a time (one decoded
+  // ≤1600 px bitmap each, ~8 MB), in input order.
   let read = 0;
   const prepared: PreparedPhoto[] = await mapWithConcurrency(
     files,
-    2,
+    3,
     async (file, index): Promise<PreparedPhoto> => {
       const id = crypto.randomUUID();
       const origin = origins?.get(file);
@@ -113,6 +117,7 @@ export async function uploadFilesToAlbum(input: {
     },
   );
 
+  timer.mark("prepare");
   onProgress?.("Salvando fotos neste aparelho…");
   await putLocalPhotoBlobs(
     prepared.map((item) => ({
@@ -122,6 +127,7 @@ export async function uploadFilesToAlbum(input: {
     })),
   );
 
+  timer.mark("save-local");
   onProgress?.("Confirmando no álbum…");
   const response = await fetch(`/api/experiences/${experienceId}/photos`, {
     method: "POST",
@@ -139,9 +145,12 @@ export async function uploadFilesToAlbum(input: {
     throw new Error(payload.error ?? "Não foi possível adicionar as fotos.");
   }
 
+  timer.mark("add-to-album");
+
   onProgress?.("Enviando ao armazenamento permanente…");
+  const photoIds = prepared.map((item) => item.id);
   try {
-    await uploadManyPhotoBlobsToR2(
+    const outcome = await uploadPhotoBatchToR2(
       experienceId,
       prepared.map((item) => ({
         id: item.id,
@@ -152,10 +161,22 @@ export async function uploadFilesToAlbum(input: {
         onProgress?.(`Enviando foto ${done} de ${total}…`);
       },
     );
-    return { cloudWarning: null, photoIds: prepared.map((item) => item.id) };
-  } catch (cloudError) {
+    timer.mark("upload");
+    timer.finish({ photos: photoIds.length, failed: outcome.failed.length });
+    if (outcome.failed.length === 0) return { cloudWarning: null, photoIds };
+    // Only the photos that did not make it are retried (the others are already in the cloud).
+    const reason = outcome.failed[0]?.error ?? "Falha ao enviar ao armazenamento permanente.";
     return {
-      photoIds: prepared.map((item) => item.id),
+      photoIds: outcome.failed.map((item) => item.id),
+      cloudWarning:
+        outcome.failed.length < photoIds.length
+          ? `${outcome.failed.length} de ${photoIds.length} fotos ainda não foram enviadas. ${reason}`
+          : reason,
+    };
+  } catch (cloudError) {
+    timer.finish({ photos: photoIds.length, failed: photoIds.length });
+    return {
+      photoIds,
       cloudWarning:
         cloudError instanceof Error
           ? cloudError.message

@@ -12,7 +12,7 @@ import {
   buildSeedCacheFromPlaces,
   enrichImportDraftPlaces,
 } from "@/lib/location/resolve-place-labels";
-import { persistExperiencePlaceCountryCodes } from "@/lib/location/place-country-code";
+import { persistExperiencePlaceCountryCodesAfterResponse } from "@/lib/location/persist-after-response";
 import { getUserLicense } from "@/lib/licensing/get-user-license";
 import {
   NO_ACTIVE_LICENSE_MESSAGE,
@@ -134,8 +134,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // Best-effort: reuses the country codes the geocoder just returned.
-    await persistExperiencePlaceCountryCodes(supabase, result.id);
+    // Best-effort and idempotent: fills the country codes AFTER the response (see persist-after-response).
+    persistExperiencePlaceCountryCodesAfterResponse(supabase, result.id);
 
     return NextResponse.json(result);
   } catch (error) {

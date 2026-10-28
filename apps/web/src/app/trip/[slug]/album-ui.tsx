@@ -623,8 +623,15 @@ export function PhotoLightbox({
         ) : null}
       </div>
 
+      {notice ? (
+        <p className={styles.lightboxNotice} role="status">
+          {notice}
+        </p>
+      ) : null}
+      </div>
+
       <div
-        className={styles.lightboxOverlay}
+        className={styles.lightboxInfoRow}
         style={{ opacity: chromeOpacity, pointerEvents: chromeHidden ? "none" : undefined }}
       >
         {pinLabel ? (
@@ -655,13 +662,6 @@ export function PhotoLightbox({
             longitude={gps.longitude}
           />
         ) : null}
-      </div>
-
-      {notice ? (
-        <p className={styles.lightboxNotice} role="status">
-          {notice}
-        </p>
-      ) : null}
       </div>
 
       <footer

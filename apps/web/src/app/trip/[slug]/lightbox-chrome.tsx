@@ -153,8 +153,8 @@ export function LightboxHeader({
 
 /* ------------------------------------------------------------- mini map */
 
-const MINI_MAP_WIDTH = 120;
-const MINI_MAP_HEIGHT = 96;
+const MINI_MAP_WIDTH = 104;
+const MINI_MAP_HEIGHT = 76;
 
 /** Small tile preview of where the photo was taken; tapping opens the position in the maps app. */
 export function LightboxMiniMap({

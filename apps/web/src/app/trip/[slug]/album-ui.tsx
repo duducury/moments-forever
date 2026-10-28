@@ -48,13 +48,11 @@ import {
 import {
   IconLocationOff,
   IconMore,
-  IconPin,
   IconShare,
   IconTrash,
   LightboxHeader,
   LightboxMiniMap,
   LightboxThumbStrip,
-  IconChevronRight,
 } from "./lightbox-chrome";
 import { LightboxZoomStage } from "./lightbox-zoom-stage";
 import styles from "./trip.module.css";
@@ -521,6 +519,15 @@ export function PhotoLightbox({
         style={{ opacity: chromeOpacity, pointerEvents: chromeHidden ? "none" : undefined }}
       >
         <LightboxHeader
+          map={
+            gps ? (
+              <LightboxMiniMap
+                label={pinLabel}
+                latitude={gps.latitude}
+                longitude={gps.longitude}
+              />
+            ) : null
+          }
           brand={<AppWordmark className={styles.lightboxBrand} />}
           dateLabel={capturedLabel}
           flagCode={flagCode}
@@ -567,8 +574,7 @@ export function PhotoLightbox({
             </div>
           }
           onBack={onClose}
-          subtitle={heading.subtitle}
-          title={heading.title}
+          name={heading.subtitle ?? heading.title}
         />
       </header>
 
@@ -628,40 +634,6 @@ export function PhotoLightbox({
           {notice}
         </p>
       ) : null}
-      </div>
-
-      <div
-        className={styles.lightboxInfoRow}
-        style={{ opacity: chromeOpacity, pointerEvents: chromeHidden ? "none" : undefined }}
-      >
-        {pinLabel ? (
-          gps ? (
-            <a
-              className={styles.lightboxPlacePill}
-              href={`https://maps.apple.com/?ll=${gps.latitude.toFixed(5)},${gps.longitude.toFixed(5)}&z=14&q=${encodeURIComponent(pinLabel)}`}
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              <IconPin className={styles.lightboxPlacePillIcon} />
-              <span>{pinLabel}</span>
-              <IconChevronRight className={styles.lightboxPlacePillIcon} />
-            </a>
-          ) : (
-            <p className={styles.lightboxPlacePill}>
-              <IconPin className={styles.lightboxPlacePillIcon} />
-              <span>{pinLabel}</span>
-            </p>
-          )
-        ) : (
-          <span />
-        )}
-        {gps ? (
-          <LightboxMiniMap
-            label={pinLabel}
-            latitude={gps.latitude}
-            longitude={gps.longitude}
-          />
-        ) : null}
       </div>
 
       <footer

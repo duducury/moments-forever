@@ -96,19 +96,21 @@ export function IconTrash(props: IconProps) {
 export function LightboxHeader({
   onBack,
   flagCode,
-  title,
-  subtitle,
+  name,
   dateLabel,
   menu,
   brand,
+  map,
 }: {
   readonly onBack: () => void;
   readonly flagCode: string | null;
-  readonly title: string;
-  readonly subtitle: string | null;
+  /** The one place name shown in the viewer. */
+  readonly name: string;
   readonly dateLabel: string | null;
   readonly menu: ReactNode;
   readonly brand: ReactNode;
+  /** Mini map (only when the photo has valid coordinates); sits on the right, opposite the name. */
+  readonly map: ReactNode;
 }) {
   return (
     <>
@@ -121,7 +123,11 @@ export function LightboxHeader({
         <IconChevronLeft />
       </button>
 
-      <div className={styles.lightboxHeading}>
+      {brand}
+      {menu}
+
+      {/* Second row: flag + place + date on one side, the mini map on the other. */}
+      <div className={styles.lightboxIdentity} data-has-map={map ? "true" : "false"}>
         {flagCode ? (
           <span className={styles.lightboxFlag}>
             <CountryFlagImage
@@ -133,20 +139,17 @@ export function LightboxHeader({
             />
           </span>
         ) : null}
-        <h2 className={styles.lightboxTitle}>{title}</h2>
+        <div className={styles.lightboxIdentityText}>
+          <h2 className={styles.lightboxTitle}>{name}</h2>
+          {dateLabel ? (
+            <p className={styles.lightboxDate}>
+              <IconCalendar className={styles.lightboxDateIcon} />
+              <span>{dateLabel}</span>
+            </p>
+          ) : null}
+        </div>
       </div>
-
-      {brand}
-      {menu}
-
-      {/* Rows 2 and 3 of the header grid: the route, then the date — each on its own full-width line. */}
-      {subtitle ? <p className={styles.lightboxSubtitle}>{subtitle}</p> : null}
-      {dateLabel ? (
-        <p className={styles.lightboxDate}>
-          <IconCalendar className={styles.lightboxDateIcon} />
-          <span>{dateLabel}</span>
-        </p>
-      ) : null}
+      {map}
     </>
   );
 }

@@ -601,14 +601,14 @@
 }
 
 .lightbox {
-  /* Height of the counter + thumbnail strip under the photo (the photo never goes behind them). */
-  --lb-footer: calc(112px + env(safe-area-inset-bottom));
   --lb-serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
 
   position: fixed;
   inset: 0;
   z-index: var(--z-modal);
-  display: block;
+  /* Header, photo area and footer are stacked in the flow: nothing floats over the photo. */
+  display: flex;
+  flex-direction: column;
   width: 100%;
   height: 100%;
   max-height: 100dvh;
@@ -644,34 +644,22 @@
 }
 
 .lightboxTop {
-  position: absolute;
-  top: 0;
-  right: 0;
-  left: 0;
+  position: relative;
   z-index: 4;
-  display: flex;
+  flex: none;
+  /* Row 1: back · flag + country · (logo) · menu. Row 2: route. Row 3: date. */
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: flex-start;
+  column-gap: 12px;
+  row-gap: 4px;
   padding:
     max(10px, env(safe-area-inset-top))
     max(14px, env(safe-area-inset-right))
-    34px
+    10px
     max(14px, env(safe-area-inset-left));
-  background: linear-gradient(
-    180deg,
-    rgb(0 0 0 / 74%) 0%,
-    rgb(0 0 0 / 46%) 42%,
-    rgb(0 0 0 / 14%) 78%,
-    transparent 100%
-  );
+  background: #000;
   transition: opacity 180ms ease;
-  pointer-events: none;
-}
-
-.lightboxTop > * {
-  pointer-events: auto;
 }
 
 .lightboxBrand {
@@ -681,7 +669,6 @@
   width: 112px;
   height: 40px;
   flex: 0 0 auto;
-  align-self: center;
   opacity: 0.9;
   overflow: hidden;
   background-image: url("/brand/navlogo.png");
@@ -809,9 +796,15 @@
   right: max(8px, env(safe-area-inset-right));
 }
 
+.lightboxMain {
+  position: relative;
+  flex: 1 1 0;
+  min-height: 0;
+}
+
 .lightboxStageWrap {
   position: absolute;
-  inset: 0 0 var(--lb-footer) 0;
+  inset: 0;
   display: grid;
   min-height: 0;
   width: 100%;
@@ -1097,8 +1090,7 @@
 
 .lightboxHeading {
   display: flex;
-  flex: 1 1 0;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
   min-width: 0;
 }
@@ -1120,16 +1112,6 @@
   object-fit: cover;
 }
 
-.lightboxHeadingText {
-  display: grid;
-  flex: 1 1 0;
-  gap: 2px;
-  min-width: 0;
-  overflow: hidden;
-  padding-top: 1px;
-  text-shadow: 0 1px 12px rgb(0 0 0 / 55%);
-}
-
 .lightboxTitle {
   margin: 0;
   overflow: hidden;
@@ -1147,7 +1129,8 @@
   overflow: hidden;
   color: rgb(245 242 236 / 84%);
   font-family: var(--lb-serif);
-  font-size: clamp(0.92rem, 3.9vw, 1.1rem);
+  grid-column: 1 / -1;
+  font-size: clamp(0.95rem, 4.1vw, 1.1rem);
   line-height: 1.25;
   display: -webkit-box;
   -webkit-box-orient: vertical;
@@ -1156,10 +1139,11 @@
 
 .lightboxDate {
   display: flex;
+  grid-column: 1 / -1;
   min-width: 0;
   align-items: center;
   gap: 7px;
-  margin: 4px 0 0;
+  margin: 0;
   color: rgb(245 242 236 / 72%);
   font-size: 0.78rem;
   font-weight: 500;
@@ -1182,7 +1166,7 @@
 .lightboxOverlay {
   position: absolute;
   right: max(14px, env(safe-area-inset-right));
-  bottom: calc(var(--lb-footer) + 12px);
+  bottom: 12px;
   left: max(14px, env(safe-area-inset-left));
   z-index: 3;
   display: flex;
@@ -1280,15 +1264,11 @@
 }
 
 .lightboxFooter {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  left: 0;
+  position: relative;
   z-index: 3;
-  height: var(--lb-footer);
-  box-sizing: border-box;
+  flex: none;
   padding-bottom: env(safe-area-inset-bottom);
-  background: linear-gradient(180deg, transparent 0%, rgb(0 0 0 / 55%) 40%, #050505 100%);
+  background: #050505;
   transition: opacity 180ms ease;
 }
 
@@ -1357,7 +1337,7 @@
 
 .lightboxNotice {
   position: absolute;
-  bottom: calc(var(--lb-footer) + 128px);
+  bottom: 124px;
   left: 50%;
   z-index: 6;
   margin: 0;
@@ -1378,10 +1358,6 @@
 }
 
 @media (min-width: 720px) {
-  .lightbox {
-    --lb-footer: calc(120px + env(safe-area-inset-bottom));
-  }
-
   .lightboxStrip {
     justify-content: flex-start;
   }

@@ -1163,22 +1163,18 @@
   height: 16px;
 }
 
-.lightboxOverlay {
-  position: absolute;
-  right: max(14px, env(safe-area-inset-right));
-  bottom: 12px;
-  left: max(14px, env(safe-area-inset-left));
+/* Place and mini map sit in their own row under the photo — never on top of it. */
+.lightboxInfoRow {
+  position: relative;
   z-index: 3;
   display: flex;
-  align-items: flex-end;
+  flex: none;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
+  padding: 10px max(14px, env(safe-area-inset-right)) 4px max(14px, env(safe-area-inset-left));
+  background: #050505;
   transition: opacity 180ms ease;
-  pointer-events: none;
-}
-
-.lightboxOverlay > * {
-  pointer-events: auto;
 }
 
 .lightboxPlacePill {
@@ -1186,7 +1182,7 @@
   align-items: center;
   gap: 8px;
   min-width: 0;
-  max-width: calc(100% - 140px);
+  max-width: calc(100% - 124px);
   min-height: 42px;
   margin: 0;
   border-radius: 999px;
@@ -1218,8 +1214,8 @@
   position: relative;
   display: block;
   flex: none;
-  width: 120px;
-  height: 96px;
+  width: 104px;
+  height: 76px;
   overflow: hidden;
   border-radius: 16px;
   color: #fff;
@@ -1274,7 +1270,7 @@
 
 .lightboxCounter {
   margin: 0;
-  padding-top: 12px;
+  padding-top: 6px;
   color: rgb(245 242 236 / 66%);
   font-size: 0.9rem;
   font-weight: 500;
@@ -1366,7 +1362,7 @@
 @media (prefers-reduced-motion: reduce) {
   .lightboxThumb,
   .lightboxTop,
-  .lightboxOverlay,
+  .lightboxInfoRow,
   .lightboxFooter {
     transition: none;
   }

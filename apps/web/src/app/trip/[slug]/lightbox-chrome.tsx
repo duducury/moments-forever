@@ -133,20 +133,20 @@ export function LightboxHeader({
             />
           </span>
         ) : null}
-        <div className={styles.lightboxHeadingText}>
-          <h2 className={styles.lightboxTitle}>{title}</h2>
-          {subtitle ? <p className={styles.lightboxSubtitle}>{subtitle}</p> : null}
-          {dateLabel ? (
-            <p className={styles.lightboxDate}>
-              <IconCalendar className={styles.lightboxDateIcon} />
-              <span>{dateLabel}</span>
-            </p>
-          ) : null}
-        </div>
+        <h2 className={styles.lightboxTitle}>{title}</h2>
       </div>
 
       {brand}
       {menu}
+
+      {/* Rows 2 and 3 of the header grid: the route, then the date — each on its own full-width line. */}
+      {subtitle ? <p className={styles.lightboxSubtitle}>{subtitle}</p> : null}
+      {dateLabel ? (
+        <p className={styles.lightboxDate}>
+          <IconCalendar className={styles.lightboxDateIcon} />
+          <span>{dateLabel}</span>
+        </p>
+      ) : null}
     </>
   );
 }

@@ -572,6 +572,7 @@ export function PhotoLightbox({
         />
       </header>
 
+      <div className={styles.lightboxMain}>
       <div className={styles.lightboxStageWrap} onClick={handleStageClick}>
         {index > 0 ? (
           <button
@@ -656,6 +657,13 @@ export function PhotoLightbox({
         ) : null}
       </div>
 
+      {notice ? (
+        <p className={styles.lightboxNotice} role="status">
+          {notice}
+        </p>
+      ) : null}
+      </div>
+
       <footer
         className={styles.lightboxFooter}
         style={{ opacity: chromeOpacity, pointerEvents: chromeHidden ? "none" : undefined }}
@@ -665,13 +673,6 @@ export function PhotoLightbox({
         </p>
         <LightboxThumbStrip index={index} onSelect={onSelect} photos={photos} />
       </footer>
-
-      {notice ? (
-        <p className={styles.lightboxNotice} role="status">
-          {notice}
-        </p>
-      ) : null}
-
     </div>
   );
 
